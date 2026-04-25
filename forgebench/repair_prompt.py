@@ -27,6 +27,9 @@ def build_repair_prompt(task_text: str, report: ForgeBenchReport, guardrails: Gu
     else:
         lines.append("- No static or guardrail findings.")
 
+    lines.extend(["", "Suppressed or policy-calibrated findings:"])
+    lines.extend(_format_policy_notes(report))
+
     lines.extend(
         [
             "",
@@ -151,3 +154,25 @@ def _single_line(value: str) -> str:
     if len(collapsed) <= 500:
         return collapsed
     return collapsed[:497].rstrip() + "..."
+
+
+def _format_policy_notes(report: ForgeBenchReport) -> list[str]:
+    notes: list[str] = []
+    for finding in report.policy.suppressed_findings:
+        notes.append(
+            f"- {finding.finding_id} was suppressed by {finding.matched_rule}: {finding.reason} "
+            "Do not repair this unless the policy is wrong."
+        )
+    for adjustment in report.policy.finding_adjustments:
+        if adjustment.action == "suppress":
+            continue
+        notes.append(
+            f"- {adjustment.finding_id} was calibrated by {adjustment.matched_rule}: "
+            f"{adjustment.reason or 'No reason provided.'}"
+        )
+    if report.policy.posture_ceiling:
+        notes.append(
+            f"- Merge posture was capped at {report.policy.posture_ceiling.value}: "
+            f"{report.policy.posture_ceiling_reason or 'No reason provided.'}"
+        )
+    return notes or ["- None."]

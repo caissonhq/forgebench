@@ -8,6 +8,7 @@ from forgebench.check_runner import checks_not_run, findings_from_check_results,
 from forgebench.diff_parser import parse_diff_file
 from forgebench.guardrails import evaluate_guardrails, load_guardrails
 from forgebench.models import Finding, ForgeBenchReport, Guardrails
+from forgebench.policy import apply_guardrails_policy
 from forgebench.posture import determine_posture
 from forgebench.report_writer import write_reports
 from forgebench.static_checks import run_static_checks
@@ -51,7 +52,8 @@ def run_review(
     static_findings, static_signals = run_static_checks(diff_summary)
     guardrail_findings, guardrail_hits = evaluate_guardrails(diff_summary, guardrails)
     findings = _dedupe_findings(deterministic_findings + static_findings + guardrail_findings)
-    posture, summary = determine_posture(findings, static_signals, guardrail_hits, deterministic_checks)
+    findings, static_signals, policy_decision = apply_guardrails_policy(diff_summary, findings, static_signals, guardrails)
+    posture, summary = determine_posture(findings, static_signals, guardrail_hits, deterministic_checks, policy_decision)
 
     report = ForgeBenchReport(
         posture=posture,
@@ -62,6 +64,7 @@ def run_review(
         static_signals=static_signals,
         guardrail_hits=guardrail_hits,
         deterministic_checks=deterministic_checks,
+        policy=policy_decision,
         generated_at=datetime.now(timezone.utc).isoformat(timespec="seconds"),
     )
 

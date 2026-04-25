@@ -3,7 +3,20 @@ from __future__ import annotations
 import fnmatch
 from pathlib import Path
 
-from forgebench.models import Confidence, DiffSummary, EvidenceType, Finding, Guardrails, Severity
+from forgebench.models import (
+    Confidence,
+    DiffSummary,
+    EvidenceType,
+    Finding,
+    FindingOverride,
+    Guardrails,
+    GuardrailsPolicy,
+    MergePosture,
+    PathCategory,
+    PostureOverride,
+    Severity,
+    SuppressFindingRule,
+)
 
 
 def load_guardrails(path: str | Path | None) -> Guardrails:
@@ -13,84 +26,21 @@ def load_guardrails(path: str | Path | None) -> Guardrails:
 
 
 def parse_guardrails(text: str) -> Guardrails:
-    project: str | None = None
-    protected_behavior: list[str] = []
-    risk_files_high: list[str] = []
-    risk_files_medium: list[str] = []
-    forbidden_patterns: list[str] = []
-    checks: dict[str, str | None] = {}
-    custom_checks: dict[str, str | None] = {}
-    checks_present = False
-    check_timeout_seconds = 120
-
-    current_key: str | None = None
-    current_nested_key: str | None = None
-
-    for raw_line in text.splitlines():
-        if not raw_line.strip() or raw_line.lstrip().startswith("#"):
-            continue
-
-        indent = len(raw_line) - len(raw_line.lstrip(" "))
-        line = raw_line.strip()
-
-        if indent == 0:
-            current_nested_key = None
-            if ":" not in line:
-                continue
-            key, value = line.split(":", 1)
-            current_key = key.strip()
-            value = _clean_scalar(value.strip())
-            if current_key == "project" and value:
-                project = value
-            elif current_key == "check_timeout_seconds" and value is not None:
-                check_timeout_seconds = _parse_timeout(value)
-            elif current_key == "checks":
-                checks_present = True
-            continue
-
-        if indent == 2:
-            if current_key == "risk_files" and line.endswith(":"):
-                current_nested_key = line[:-1].strip()
-                continue
-            if current_key == "checks":
-                if line.endswith(":"):
-                    current_nested_key = line[:-1].strip()
-                    continue
-                if ":" in line:
-                    key, value = line.split(":", 1)
-                    checks[key.strip()] = _clean_scalar(value.strip())
-                continue
-            if line.startswith("- "):
-                item = _clean_scalar(line[2:].strip())
-                if current_key == "protected_behavior":
-                    protected_behavior.append(item)
-                elif current_key == "forbidden_patterns":
-                    forbidden_patterns.append(item)
-            continue
-
-        if indent == 4 and current_key == "risk_files" and current_nested_key and line.startswith("- "):
-            item = _clean_scalar(line[2:].strip())
-            if current_nested_key == "high":
-                risk_files_high.append(item)
-            elif current_nested_key == "medium":
-                risk_files_medium.append(item)
-            continue
-
-        if indent == 4 and current_key == "checks" and current_nested_key == "custom" and ":" in line:
-            key, value = line.split(":", 1)
-            custom_checks[key.strip()] = _clean_scalar(value.strip())
-            continue
+    payload = _parse_yaml_like(text)
+    risk_files = _as_dict(payload.get("risk_files"))
+    checks_payload = _as_dict(payload.get("checks"))
 
     return Guardrails(
-        project=project,
-        protected_behavior=protected_behavior,
-        risk_files_high=risk_files_high,
-        risk_files_medium=risk_files_medium,
-        forbidden_patterns=forbidden_patterns,
-        checks=checks,
-        custom_checks=custom_checks,
-        checks_present=checks_present,
-        check_timeout_seconds=check_timeout_seconds,
+        project=_optional_string(payload.get("project")),
+        protected_behavior=_string_list(payload.get("protected_behavior")),
+        risk_files_high=_string_list(risk_files.get("high")),
+        risk_files_medium=_string_list(risk_files.get("medium")),
+        forbidden_patterns=_string_list(payload.get("forbidden_patterns")),
+        checks=_checks_dict(checks_payload, include_custom=False),
+        custom_checks=_checks_dict(_as_dict(checks_payload.get("custom")), include_custom=True),
+        checks_present="checks" in payload,
+        check_timeout_seconds=_parse_timeout(payload.get("check_timeout_seconds", 120)),
+        policy=_parse_policy(_as_dict(payload.get("policy"))),
     )
 
 
@@ -196,6 +146,10 @@ def _matches_pattern(path: str, pattern: str) -> bool:
     return any(fnmatch.fnmatch(path, candidate) or fnmatch.fnmatch("/" + path, candidate) for candidate in candidates)
 
 
+def matches_path_pattern(path: str, pattern: str) -> bool:
+    return _matches_pattern(path.replace("\\", "/"), pattern)
+
+
 def _find_forbidden_pattern_hits(diff: DiffSummary, patterns: list[str]) -> list[dict[str, str]]:
     hits: list[dict[str, str]] = []
     lowered_patterns = [(pattern, pattern.lower()) for pattern in patterns]
@@ -226,6 +180,200 @@ def _format_file_pattern_evidence(label: str, matches: dict[str, list[str]]) -> 
         for pattern in matches[file_path]:
             evidence.append(f"{label} guardrail pattern '{pattern}' matched {file_path}")
     return evidence
+
+
+def _parse_policy(payload: dict[str, object]) -> GuardrailsPolicy:
+    finding_overrides_payload = _as_dict(payload.get("finding_overrides"))
+    path_categories_payload = _as_dict(payload.get("path_categories"))
+    posture_overrides_payload = _as_dict(payload.get("posture_overrides"))
+
+    finding_overrides: dict[str, FindingOverride] = {}
+    for finding_id, value in finding_overrides_payload.items():
+        config = _as_dict(value)
+        finding_overrides[str(finding_id)] = FindingOverride(
+            finding_id=str(finding_id),
+            severity=_parse_severity(config.get("severity")),
+            confidence=_parse_confidence(config.get("confidence")),
+            applies_to=_string_list(config.get("applies_to")),
+            suppress_paths=_string_list(config.get("suppress_paths")),
+            suppress_if_all_files_match=_string_list(config.get("suppress_if_all_files_match")),
+            reason=_optional_string(config.get("reason")) or "",
+        )
+
+    path_categories: dict[str, PathCategory] = {}
+    for category_name, value in path_categories_payload.items():
+        config = _as_dict(value)
+        path_categories[str(category_name)] = PathCategory(
+            name=str(category_name),
+            patterns=_string_list(config.get("patterns")),
+            default_severity=_parse_severity(config.get("default_severity")),
+        )
+
+    suppress_findings: list[SuppressFindingRule] = []
+    for item in _dict_list(payload.get("suppress_findings")):
+        finding_id = _optional_string(item.get("finding_id"))
+        if not finding_id:
+            continue
+        suppress_findings.append(
+            SuppressFindingRule(
+                finding_id=finding_id,
+                paths=_string_list(item.get("paths")),
+                when_all_changed_files_match=_string_list(item.get("when_all_changed_files_match")),
+                reason=_optional_string(item.get("reason")) or "",
+            )
+        )
+
+    posture_overrides: dict[str, PostureOverride] = {}
+    for override_name, value in posture_overrides_payload.items():
+        config = _as_dict(value)
+        posture_overrides[str(override_name)] = PostureOverride(
+            name=str(override_name),
+            posture_ceiling=_parse_posture(config.get("posture_ceiling")),
+            reason=_optional_string(config.get("reason")) or "",
+        )
+
+    return GuardrailsPolicy(
+        finding_overrides=finding_overrides,
+        path_categories=path_categories,
+        advisory_only=_string_list(payload.get("advisory_only")),
+        suppress_findings=suppress_findings,
+        posture_overrides=posture_overrides,
+    )
+
+
+def _parse_yaml_like(text: str) -> dict[str, object]:
+    lines = [
+        (len(raw_line) - len(raw_line.lstrip(" ")), raw_line.strip())
+        for raw_line in text.splitlines()
+        if raw_line.strip() and not raw_line.lstrip().startswith("#")
+    ]
+    if not lines:
+        return {}
+    parsed, _ = _parse_block(lines, 0, lines[0][0])
+    return _as_dict(parsed)
+
+
+def _parse_block(lines: list[tuple[int, str]], index: int, indent: int) -> tuple[object, int]:
+    if index >= len(lines):
+        return {}, index
+    if lines[index][1].startswith("- "):
+        return _parse_list_block(lines, index, indent)
+    return _parse_dict_block(lines, index, indent)
+
+
+def _parse_dict_block(lines: list[tuple[int, str]], index: int, indent: int) -> tuple[dict[str, object], int]:
+    payload: dict[str, object] = {}
+    while index < len(lines):
+        line_indent, line = lines[index]
+        if line_indent < indent:
+            break
+        if line_indent > indent:
+            index += 1
+            continue
+        if line.startswith("- ") or ":" not in line:
+            break
+
+        key, value = line.split(":", 1)
+        key = key.strip()
+        value = value.strip()
+        if value:
+            payload[key] = _clean_scalar(value)
+            index += 1
+            continue
+
+        index += 1
+        if index < len(lines) and lines[index][0] > line_indent:
+            payload[key], index = _parse_block(lines, index, lines[index][0])
+        else:
+            payload[key] = None
+    return payload, index
+
+
+def _parse_list_block(lines: list[tuple[int, str]], index: int, indent: int) -> tuple[list[object], int]:
+    items: list[object] = []
+    while index < len(lines):
+        line_indent, line = lines[index]
+        if line_indent < indent:
+            break
+        if line_indent > indent:
+            index += 1
+            continue
+        if not line.startswith("- "):
+            break
+
+        item = line[2:].strip()
+        if ":" in item:
+            key, value = item.split(":", 1)
+            item_payload: dict[str, object] = {}
+            item_payload[key.strip()] = _clean_scalar(value.strip()) if value.strip() else None
+            index += 1
+            if index < len(lines) and lines[index][0] > line_indent:
+                nested, index = _parse_block(lines, index, lines[index][0])
+                if isinstance(nested, dict):
+                    item_payload.update(nested)
+                elif value.strip() == "":
+                    item_payload[key.strip()] = nested
+            items.append(item_payload)
+        else:
+            items.append(_clean_scalar(item))
+            index += 1
+    return items, index
+
+
+def _as_dict(value: object) -> dict[str, object]:
+    return value if isinstance(value, dict) else {}
+
+
+def _string_list(value: object) -> list[str]:
+    if value is None:
+        return []
+    if isinstance(value, list):
+        return [str(item) for item in value if item is not None]
+    return [str(value)]
+
+
+def _dict_list(value: object) -> list[dict[str, object]]:
+    if not isinstance(value, list):
+        return []
+    return [item for item in value if isinstance(item, dict)]
+
+
+def _checks_dict(payload: dict[str, object], include_custom: bool) -> dict[str, str | None]:
+    checks: dict[str, str | None] = {}
+    for key, value in payload.items():
+        if key == "custom" and not include_custom:
+            continue
+        if isinstance(value, dict):
+            continue
+        checks[str(key)] = _optional_string(value)
+    return checks
+
+
+def _optional_string(value: object) -> str | None:
+    if value is None:
+        return None
+    return str(value)
+
+
+def _parse_severity(value: object) -> Severity | None:
+    if value is None:
+        return None
+    normalized = str(value).strip().upper()
+    return Severity.__members__.get(normalized)
+
+
+def _parse_confidence(value: object) -> Confidence | None:
+    if value is None:
+        return None
+    normalized = str(value).strip().upper()
+    return Confidence.__members__.get(normalized)
+
+
+def _parse_posture(value: object) -> MergePosture | None:
+    if value is None:
+        return None
+    normalized = str(value).strip().upper()
+    return MergePosture.__members__.get(normalized)
 
 
 def _clean_scalar(value: str) -> str | None:

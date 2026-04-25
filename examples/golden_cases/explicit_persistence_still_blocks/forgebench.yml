@@ -1,0 +1,13 @@
+project: Persistence Policy
+
+policy:
+  path_categories:
+    persistence:
+      patterns:
+        - "**/schema/**"
+        - "**/migrations/**"
+        - "**/*Migration*"
+        - "**/*Entity*"
+        - "**/SwiftData/**"
+        - "**/CoreData/**"
+      default_severity: high

@@ -1,0 +1,25 @@
+project: ForgeBench Docs Policy
+
+policy:
+  path_categories:
+    docs:
+      patterns:
+        - "README.md"
+        - "docs/**"
+        - "**/*.md"
+      default_severity: advisory
+  advisory_only:
+    - "README.md"
+    - "docs/**"
+    - "**/*.md"
+  suppress_findings:
+    - finding_id: ui_copy_changed
+      paths:
+        - "README.md"
+        - "docs/**"
+        - "**/*.md"
+      reason: "Docs-only copy changes are not merge-risk relevant for this case."
+  posture_overrides:
+    docs_only_changes:
+      posture_ceiling: LOW_CONCERN
+      reason: "Docs-only changes should not escalate above LOW_CONCERN unless a blocker is present."

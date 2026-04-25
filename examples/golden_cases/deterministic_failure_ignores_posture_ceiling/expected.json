@@ -1,0 +1,15 @@
+{
+  "case_name": "deterministic_failure_ignores_posture_ceiling",
+  "run_checks": true,
+  "expected_posture": "BLOCK",
+  "required_finding_ids": [
+    "tests_failed"
+  ],
+  "allowed_extra_finding_ids": [],
+  "forbidden_finding_ids": [
+    "implementation_without_tests",
+    "broad_file_surface"
+  ],
+  "allow_unlisted_findings": false,
+  "rationale": "Failing tests are deterministic blockers even when changed files are docs-only."
+}

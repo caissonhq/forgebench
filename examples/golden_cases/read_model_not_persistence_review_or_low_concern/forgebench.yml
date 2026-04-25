@@ -1,0 +1,19 @@
+project: Read Model Policy
+
+policy:
+  path_categories:
+    read_models:
+      patterns:
+        - "**/read_model.py"
+        - "**/view_model.py"
+        - "**/*ReadModel*"
+        - "**/*ViewModel*"
+      default_severity: low
+  finding_overrides:
+    persistence_schema_changed:
+      suppress_paths:
+        - "**/read_model.py"
+        - "**/view_model.py"
+        - "**/*ReadModel*"
+        - "**/*ViewModel*"
+      reason: "Read/view models are not persistence schema changes."

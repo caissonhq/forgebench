@@ -102,6 +102,9 @@ def build_markdown_report(report: ForgeBenchReport, guardrails: Guardrails, inpu
     else:
         lines.append("- None.")
 
+    lines.extend(["", "## Guardrails Policy", ""])
+    lines.extend(_format_policy_decision(report))
+
     lines.extend(["", "## Repair Prompt", "", "See repair-prompt.md.", ""])
     return "\n".join(lines)
 
@@ -238,3 +241,51 @@ def _has_timed_out_check(report: ForgeBenchReport) -> bool:
 def _configured_checks_passed(results: list[CheckResult]) -> bool:
     configured = [result for result in results if result.status != CheckStatus.NOT_CONFIGURED]
     return bool(configured) and all(result.status == CheckStatus.PASSED for result in configured)
+
+
+def _format_policy_decision(report: ForgeBenchReport) -> list[str]:
+    policy = report.policy
+    lines: list[str] = ["Active categories:"]
+    if policy.active_categories:
+        for category in policy.active_categories:
+            files = ", ".join(category.files)
+            severity = category.default_severity.value if category.default_severity else "none"
+            lines.append(f"- {category.name}: {files} (default severity: {severity})")
+    else:
+        lines.append("- None.")
+
+    lines.extend(["", "Suppressed findings:"])
+    if policy.suppressed_findings:
+        for finding in policy.suppressed_findings:
+            files = ", ".join(finding.files) if finding.files else "unknown"
+            lines.append(f"- {finding.finding_id} suppressed by {finding.matched_rule} for {files}. Reason: {finding.reason}")
+    else:
+        lines.append("- None.")
+
+    lines.extend(["", "Severity/confidence overrides:"])
+    overrides = [adjustment for adjustment in policy.finding_adjustments if adjustment.action != "suppress"]
+    if overrides:
+        for adjustment in overrides:
+            severity = _format_adjusted_value(adjustment.original_severity, adjustment.new_severity)
+            confidence = _format_adjusted_value(adjustment.original_confidence, adjustment.new_confidence)
+            lines.append(
+                f"- {adjustment.finding_id} changed by {adjustment.matched_rule}: "
+                f"severity {severity}, confidence {confidence}. Reason: {adjustment.reason or 'No reason provided.'}"
+            )
+    else:
+        lines.append("- None.")
+
+    lines.extend(["", "Posture ceiling:"])
+    if policy.posture_ceiling:
+        reason = policy.posture_ceiling_reason or "No reason provided."
+        rule = policy.posture_ceiling_rule or "policy"
+        lines.append(f"- {policy.posture_ceiling.value} by {rule}. Reason: {reason}")
+    else:
+        lines.append("- None.")
+    return lines
+
+
+def _format_adjusted_value(original, new) -> str:
+    original_value = original.value if original else "none"
+    new_value = new.value if new else original_value
+    return f"{original_value} -> {new_value}"

@@ -1,0 +1,16 @@
+{
+  "case_name": "forbidden_pattern_ignores_docs_ceiling",
+  "run_checks": false,
+  "expected_posture": "BLOCK",
+  "required_finding_ids": [
+    "forbidden_pattern_added"
+  ],
+  "allowed_extra_finding_ids": [],
+  "forbidden_finding_ids": [
+    "implementation_without_tests",
+    "broad_file_surface",
+    "ui_copy_changed"
+  ],
+  "allow_unlisted_findings": false,
+  "rationale": "Forbidden patterns remain high-confidence guardrail risks even in docs-only paths."
+}

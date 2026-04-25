@@ -65,6 +65,7 @@ class ReportWriterTests(unittest.TestCase):
             self.assertEqual(payload["posture"], report.posture.value)
             self.assertIn("findings", payload)
             self.assertIn("deterministic_checks", payload)
+            self.assertIn("policy", payload)
 
     def test_markdown_report_includes_suggested_next_action(self) -> None:
         report, guardrails, task_text = _sample_report()
@@ -81,6 +82,7 @@ class ReportWriterTests(unittest.TestCase):
 
             self.assertIn("## Suggested Next Action", markdown)
             self.assertIn("## Deterministic Checks", markdown)
+            self.assertIn("## Guardrails Policy", markdown)
             self.assertIn("Finding counts by severity", markdown)
 
     def test_repair_prompt_includes_guardrails(self) -> None:

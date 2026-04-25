@@ -317,11 +317,18 @@ def _is_persistence_file(path: str) -> bool:
     parsed = PurePosixPath(lower)
     if parsed.suffix in {".md", ".markdown", ".txt", ".rst"}:
         return False
+    basename = parsed.name
+    if any(marker in lower for marker in ("read_model", "view_model", "readmodel", "viewmodel")):
+        return False
+    if any(marker in lower for marker in ("dto", "response_model", "presentation_model")):
+        return False
 
     long_markers = {
         "schema",
         "migration",
+        "migrations",
         "database",
+        "persistence",
         "swiftdata",
         "coredata",
         "prisma",
@@ -333,12 +340,9 @@ def _is_persistence_file(path: str) -> bool:
         return True
 
     tokens = [token for token in re.split(r"[^a-z0-9]+", lower) if token]
-    basename = parsed.name
-    if "db" in tokens or "entity" in tokens or "entities" in tokens or "models" in tokens:
+    if "db" in tokens or "entity" in tokens or "entities" in tokens or "store" in tokens:
         return True
-    if "model" in tokens:
-        return True
-    return basename.endswith("model" + parsed.suffix) and "viewmodel" not in basename
+    return basename.endswith("entity" + parsed.suffix) or basename.endswith("store" + parsed.suffix)
 
 
 def _is_generated_file(path: str) -> bool:

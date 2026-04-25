@@ -1,0 +1,17 @@
+{
+  "case_name": "docs_only_policy_low_concern",
+  "run_checks": false,
+  "expected_posture": "LOW_CONCERN",
+  "required_finding_ids": [],
+  "allowed_extra_finding_ids": [],
+  "forbidden_finding_ids": [
+    "implementation_without_tests",
+    "broad_file_surface",
+    "ui_copy_changed",
+    "deleted_tests",
+    "dependency_surface_changed",
+    "persistence_schema_changed"
+  ],
+  "allow_unlisted_findings": false,
+  "rationale": "Docs-only changes should not escalate merge posture when policy marks docs as advisory-only."
+}

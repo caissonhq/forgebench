@@ -1,0 +1,9 @@
+diff --git a/operator/read_model.py b/operator/read_model.py
+index 1111111..2222222 100644
+--- a/operator/read_model.py
++++ b/operator/read_model.py
+@@ -4,6 +4,7 @@ class SignalReadModel:
+     market: str
+     probability: float
+     confidence: float
++    last_seen_at: str | None = None

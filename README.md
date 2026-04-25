@@ -72,7 +72,7 @@ No LLM or network dependency is required in the current version.
 
 ## Guardrails File
 
-ForgeBench supports `project`, `protected_behavior`, `risk_files.high`, `risk_files.medium`, `forbidden_patterns`, `checks`, and `check_timeout_seconds`.
+ForgeBench supports `project`, `protected_behavior`, `risk_files.high`, `risk_files.medium`, `forbidden_patterns`, `checks`, `check_timeout_seconds`, and optional Guardrails v2 policy rules.
 
 ```yaml
 project: Quarterly
@@ -107,7 +107,105 @@ checks:
 check_timeout_seconds: 120
 ```
 
-Guardrails are applied by matching changed file paths and searching added lines for forbidden patterns.
+Guardrails are applied by matching changed file paths, searching added lines for forbidden patterns, and applying repo-specific policy calibration.
+
+## Guardrails v2 Policy
+
+Guardrails v2 lets a repo tune generic static findings into project-specific review policy. The intent is not to hide risk. It is to explain when a finding is suppressed, downgraded, or capped because the repo has declared a path category or review rule.
+
+Supported policy controls:
+
+- `path_categories`: classify paths such as `docs`, `assets`, `read_models`, or `persistence`.
+- `finding_overrides`: adjust severity/confidence for a finding on matching paths.
+- `suppress_findings`: suppress specific findings on matching paths or when all changed files match a pattern set.
+- `advisory_only`: mark paths that should not escalate posture on their own.
+- `posture_overrides`: cap posture for docs-only or asset-only changes.
+
+Example docs-only policy:
+
+```yaml
+policy:
+  path_categories:
+    docs:
+      patterns:
+        - "README.md"
+        - "docs/**"
+        - "**/*.md"
+      default_severity: advisory
+
+  advisory_only:
+    - "README.md"
+    - "docs/**"
+    - "**/*.md"
+
+  suppress_findings:
+    - finding_id: ui_copy_changed
+      paths:
+        - "README.md"
+        - "docs/**"
+        - "**/*.md"
+      reason: "Docs-only copy changes are not merge-risk relevant."
+
+  posture_overrides:
+    docs_only_changes:
+      posture_ceiling: LOW_CONCERN
+      reason: "Docs-only changes should not escalate unless a blocker is present."
+```
+
+Example asset-only policy:
+
+```yaml
+policy:
+  path_categories:
+    assets:
+      patterns:
+        - "**/*.png"
+        - "**/*.jpg"
+        - "**/*.svg"
+        - "**/*.ico"
+        - "**/Assets.xcassets/**"
+      default_severity: advisory
+
+  suppress_findings:
+    - finding_id: broad_file_surface
+      when_all_changed_files_match:
+        - "**/*.png"
+        - "**/*.jpg"
+        - "**/*.svg"
+        - "**/*.ico"
+        - "**/Assets.xcassets/**"
+      reason: "Asset-only large diffs should not be treated as broad code risk."
+
+  posture_overrides:
+    asset_only_changes:
+      posture_ceiling: LOW_CONCERN
+      reason: "Asset-only changes should not escalate unless a blocker is present."
+```
+
+Example read-model refinement:
+
+```yaml
+policy:
+  path_categories:
+    read_models:
+      patterns:
+        - "**/read_model.py"
+        - "**/view_model.py"
+        - "**/*ReadModel*"
+        - "**/*ViewModel*"
+      default_severity: low
+
+  finding_overrides:
+    persistence_schema_changed:
+      suppress_paths:
+        - "**/read_model.py"
+        - "**/view_model.py"
+      reason: "Read/view models are not persistence schema changes."
+```
+
+Deterministic blockers are not suppressed by posture ceilings. A failing configured build, test, or typecheck command can still produce `BLOCK` even when the diff is docs-only or asset-only. Forbidden patterns, deleted tests, and explicit high-risk guardrail hits also bypass docs/assets posture ceilings.
+
+Policy decisions appear in the Markdown report under `Guardrails Policy`, in JSON under `policy`, and in the repair prompt as suppressed or calibrated findings. Suppressed findings are not listed as required repairs.
 
 ## Deterministic Checks
 
@@ -198,7 +296,7 @@ ForgeBench detects:
 - Deleted or weakened tests.
 - Dependency and lockfile changes.
 - Build or configuration changes.
-- Persistence, schema, model, or migration changes.
+- Persistence, schema, entity, store, database, ORM, or migration changes.
 - Broad patches touching more than 10 files.
 - Generated output, cache, or local machine files in the diff.
 - User-facing copy, documentation, or UI surface changes.
@@ -271,7 +369,8 @@ PYTHONDONTWRITEBYTECODE=1 python -m forgebench calibrate --cases examples/golden
 ## Known Limitations
 
 - The diff parser targets common local `git diff` output, not every possible patch format.
-- The guardrails parser supports the documented Sprint 2 YAML shape, not arbitrary YAML.
+- The guardrails parser supports the documented ForgeBench YAML shapes, not arbitrary YAML.
+- Guardrails v2 policy is path-pattern based. It does not interpret copy intent or program semantics.
 - Command execution is opt-in and limited to commands you configure locally.
 - ForgeBench does not understand full program behavior.
 - Current output is local files only. There is no GitHub integration, hosted service, dashboard, or external LLM call.

@@ -1,0 +1,24 @@
+project: Docs Forbidden Pattern
+
+forbidden_patterns:
+  - Stripe
+
+policy:
+  path_categories:
+    docs:
+      patterns:
+        - "README.md"
+        - "docs/**"
+        - "**/*.md"
+      default_severity: advisory
+  suppress_findings:
+    - finding_id: ui_copy_changed
+      paths:
+        - "README.md"
+        - "docs/**"
+        - "**/*.md"
+      reason: "Docs copy is not merge-risk relevant unless it violates an explicit guardrail."
+  posture_overrides:
+    docs_only_changes:
+      posture_ceiling: LOW_CONCERN
+      reason: "Docs-only changes would normally be LOW_CONCERN."

@@ -1,9 +1,20 @@
 from __future__ import annotations
 
-from forgebench.models import CheckStatus, Confidence, DeterministicChecks, Finding, MergePosture, Severity
+from forgebench.models import CheckStatus, Confidence, DeterministicChecks, EvidenceType, Finding, MergePosture, PolicyDecision, Severity
 
 
 def determine_posture(
+    findings: list[Finding],
+    static_signals: dict[str, object],
+    guardrail_hits: list[str],
+    deterministic_checks: DeterministicChecks | None = None,
+    policy_decision: PolicyDecision | None = None,
+) -> tuple[MergePosture, str]:
+    posture, summary = _determine_posture(findings, static_signals, guardrail_hits, deterministic_checks)
+    return _apply_posture_ceiling(posture, summary, findings, policy_decision)
+
+
+def _determine_posture(
     findings: list[Finding],
     static_signals: dict[str, object],
     guardrail_hits: list[str],
@@ -144,6 +155,59 @@ def determine_posture(
         MergePosture.LOW_CONCERN,
         _low_concern_summary(deterministic_checks),
     )
+
+
+def _apply_posture_ceiling(
+    posture: MergePosture,
+    summary: str,
+    findings: list[Finding],
+    policy_decision: PolicyDecision | None,
+) -> tuple[MergePosture, str]:
+    if policy_decision is None or policy_decision.posture_ceiling is None:
+        return posture, summary
+    if _posture_rank(posture) <= _posture_rank(policy_decision.posture_ceiling):
+        return posture, summary
+    if _ceiling_bypass_present(findings):
+        return posture, summary
+    reason = policy_decision.posture_ceiling_reason or "Guardrails policy capped this posture."
+    if policy_decision.posture_ceiling == MergePosture.LOW_CONCERN:
+        capped_summary = (
+            f"Low concern after guardrails calibration. {reason} "
+            "ForgeBench found no high-confidence merge blockers after applying repo policy, "
+            "but this is not a substitute for human review."
+        )
+    else:
+        capped_summary = f"Review before merge after guardrails calibration. {reason}"
+    return policy_decision.posture_ceiling, capped_summary
+
+
+def _posture_rank(posture: MergePosture) -> int:
+    return {
+        MergePosture.LOW_CONCERN: 0,
+        MergePosture.REVIEW: 1,
+        MergePosture.BLOCK: 2,
+    }[posture]
+
+
+def _ceiling_bypass_present(findings: list[Finding]) -> bool:
+    bypass_ids = {
+        "deleted_tests",
+        "forbidden_pattern_added",
+        "high_risk_guardrail_file",
+        "build_failed",
+        "tests_failed",
+        "typecheck_failed",
+        "custom_check_failed",
+        "build_timed_out",
+        "tests_timed_out",
+        "typecheck_timed_out",
+        "custom_check_timed_out",
+    }
+    if any(finding.severity == Severity.BLOCKER for finding in findings):
+        return True
+    if any(finding.id in bypass_ids for finding in findings):
+        return True
+    return any(finding.evidence_type == EvidenceType.DETERMINISTIC for finding in findings)
 
 
 def _with_check_context(summary: str, deterministic_checks: DeterministicChecks | None) -> str:

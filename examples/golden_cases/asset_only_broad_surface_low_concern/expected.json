@@ -1,0 +1,15 @@
+{
+  "case_name": "asset_only_broad_surface_low_concern",
+  "run_checks": false,
+  "expected_posture": "LOW_CONCERN",
+  "required_finding_ids": [],
+  "allowed_extra_finding_ids": [],
+  "forbidden_finding_ids": [
+    "broad_file_surface",
+    "implementation_without_tests",
+    "persistence_schema_changed",
+    "dependency_surface_changed"
+  ],
+  "allow_unlisted_findings": false,
+  "rationale": "More than 10 asset files changed, but policy treats asset-only broad surfaces as low concern."
+}

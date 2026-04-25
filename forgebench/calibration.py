@@ -133,6 +133,7 @@ def validate_markdown_report(path: str | Path) -> list[str]:
         "## Merge Posture",
         "## Deterministic Checks",
         "## Suggested Next Action",
+        "## Guardrails Policy",
     ]:
         if required not in text:
             errors.append(f"Markdown report missing section: {required}")
@@ -150,7 +151,7 @@ def validate_json_report(path: str | Path) -> list[str]:
     except json.JSONDecodeError as exc:
         return [f"JSON report is invalid: {exc}"]
     errors: list[str] = []
-    for key in ["posture", "findings", "deterministic_checks"]:
+    for key in ["posture", "findings", "deterministic_checks", "policy"]:
         if key not in payload:
             errors.append(f"JSON report missing key: {key}")
     return errors

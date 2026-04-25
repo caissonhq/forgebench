@@ -1,0 +1,14 @@
+{
+  "case_name": "read_model_not_persistence_review_or_low_concern",
+  "run_checks": false,
+  "expected_posture": "REVIEW",
+  "required_finding_ids": [
+    "implementation_without_tests"
+  ],
+  "allowed_extra_finding_ids": [],
+  "forbidden_finding_ids": [
+    "persistence_schema_changed"
+  ],
+  "allow_unlisted_findings": false,
+  "rationale": "Read model implementation changes without tests should be REVIEW, not BLOCK from persistence/schema heuristics."
+}

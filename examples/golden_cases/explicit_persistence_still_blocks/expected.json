@@ -1,0 +1,12 @@
+{
+  "case_name": "explicit_persistence_still_blocks",
+  "run_checks": false,
+  "expected_posture": "BLOCK",
+  "required_finding_ids": [
+    "persistence_schema_changed"
+  ],
+  "allowed_extra_finding_ids": [],
+  "forbidden_finding_ids": [],
+  "allow_unlisted_findings": false,
+  "rationale": "Migration changes without test updates should remain a BLOCK-level review posture."
+}

@@ -1,0 +1,26 @@
+project: Docs With Checks
+
+checks:
+  test: "python3 -c 'import sys; print(\"bad test\"); sys.exit(1)'"
+
+check_timeout_seconds: 5
+
+policy:
+  path_categories:
+    docs:
+      patterns:
+        - "README.md"
+        - "docs/**"
+        - "**/*.md"
+      default_severity: advisory
+  suppress_findings:
+    - finding_id: ui_copy_changed
+      paths:
+        - "README.md"
+        - "docs/**"
+        - "**/*.md"
+      reason: "Docs copy is not a required repair in this case."
+  posture_overrides:
+    docs_only_changes:
+      posture_ceiling: LOW_CONCERN
+      reason: "Docs-only changes would normally be LOW_CONCERN."

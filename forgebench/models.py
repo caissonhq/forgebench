@@ -153,6 +153,133 @@ class Guardrails:
     custom_checks: dict[str, str | None] = field(default_factory=dict)
     checks_present: bool = False
     check_timeout_seconds: int = 120
+    policy: "GuardrailsPolicy" = field(default_factory=lambda: GuardrailsPolicy())
+
+
+@dataclass(frozen=True)
+class FindingOverride:
+    finding_id: str
+    severity: Severity | None = None
+    confidence: Confidence | None = None
+    applies_to: list[str] = field(default_factory=list)
+    suppress_paths: list[str] = field(default_factory=list)
+    suppress_if_all_files_match: list[str] = field(default_factory=list)
+    reason: str = ""
+
+
+@dataclass(frozen=True)
+class PathCategory:
+    name: str
+    patterns: list[str] = field(default_factory=list)
+    default_severity: Severity | None = None
+
+
+@dataclass(frozen=True)
+class SuppressFindingRule:
+    finding_id: str
+    paths: list[str] = field(default_factory=list)
+    when_all_changed_files_match: list[str] = field(default_factory=list)
+    reason: str = ""
+
+
+@dataclass(frozen=True)
+class PostureOverride:
+    name: str
+    posture_ceiling: MergePosture | None = None
+    reason: str = ""
+
+
+@dataclass(frozen=True)
+class GuardrailsPolicy:
+    finding_overrides: dict[str, FindingOverride] = field(default_factory=dict)
+    path_categories: dict[str, PathCategory] = field(default_factory=dict)
+    advisory_only: list[str] = field(default_factory=list)
+    suppress_findings: list[SuppressFindingRule] = field(default_factory=list)
+    posture_overrides: dict[str, PostureOverride] = field(default_factory=dict)
+
+
+@dataclass(frozen=True)
+class ActivePathCategory:
+    name: str
+    files: list[str]
+    patterns: list[str]
+    default_severity: Severity | None = None
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "name": self.name,
+            "files": list(self.files),
+            "patterns": list(self.patterns),
+            "default_severity": self.default_severity.value if self.default_severity else None,
+        }
+
+
+@dataclass(frozen=True)
+class FindingAdjustment:
+    finding_id: str
+    action: str
+    original_severity: Severity | None = None
+    new_severity: Severity | None = None
+    original_confidence: Confidence | None = None
+    new_confidence: Confidence | None = None
+    matched_rule: str = ""
+    reason: str = ""
+    files: list[str] = field(default_factory=list)
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "finding_id": self.finding_id,
+            "action": self.action,
+            "original_severity": self.original_severity.value if self.original_severity else None,
+            "new_severity": self.new_severity.value if self.new_severity else None,
+            "original_confidence": self.original_confidence.value if self.original_confidence else None,
+            "new_confidence": self.new_confidence.value if self.new_confidence else None,
+            "matched_rule": self.matched_rule,
+            "reason": self.reason,
+            "files": list(self.files),
+        }
+
+
+@dataclass(frozen=True)
+class SuppressedFinding:
+    finding_id: str
+    title: str
+    original_severity: Severity
+    original_confidence: Confidence
+    reason: str
+    matched_rule: str
+    files: list[str] = field(default_factory=list)
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "finding_id": self.finding_id,
+            "title": self.title,
+            "original_severity": self.original_severity.value,
+            "original_confidence": self.original_confidence.value,
+            "reason": self.reason,
+            "matched_rule": self.matched_rule,
+            "files": list(self.files),
+        }
+
+
+@dataclass(frozen=True)
+class PolicyDecision:
+    active_categories: list[ActivePathCategory] = field(default_factory=list)
+    finding_adjustments: list[FindingAdjustment] = field(default_factory=list)
+    suppressed_findings: list[SuppressedFinding] = field(default_factory=list)
+    posture_ceiling: MergePosture | None = None
+    posture_ceiling_reason: str | None = None
+    posture_ceiling_rule: str | None = None
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "active_categories": [category.to_dict() for category in self.active_categories],
+            "finding_adjustments": [adjustment.to_dict() for adjustment in self.finding_adjustments],
+            "suppressed_findings": [finding.to_dict() for finding in self.suppressed_findings],
+            "posture_ceiling": self.posture_ceiling.value if self.posture_ceiling else None,
+            "posture_ceiling_reason": self.posture_ceiling_reason,
+            "posture_ceiling_rule": self.posture_ceiling_rule,
+        }
 
 
 @dataclass(frozen=True)
@@ -239,6 +366,7 @@ class ForgeBenchReport:
     guardrail_hits: list[str]
     generated_at: str
     deterministic_checks: DeterministicChecks = field(default_factory=DeterministicChecks)
+    policy: PolicyDecision = field(default_factory=PolicyDecision)
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -250,5 +378,6 @@ class ForgeBenchReport:
             "static_signals": self.static_signals,
             "guardrail_hits": list(self.guardrail_hits),
             "deterministic_checks": self.deterministic_checks.to_dict(),
+            "policy": self.policy.to_dict(),
             "generated_at": self.generated_at,
         }
