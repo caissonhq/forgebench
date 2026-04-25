@@ -70,6 +70,9 @@ def _run_review_pr(args: argparse.Namespace) -> int:
             llm_command=args.llm_command,
             llm_timeout=args.llm_timeout,
             llm_max_diff_chars=args.llm_max_diff_chars,
+            checkout_pr=args.checkout_pr,
+            keep_worktree=args.keep_worktree,
+            worktree_dir=args.worktree_dir,
         )
     except (ReviewInputError, GitHubPRError) as exc:
         _fail(str(exc))
@@ -114,6 +117,9 @@ def _build_parser() -> argparse.ArgumentParser:
     review_pr.add_argument("--guardrails", required=False, help="Optional path to forgebench.yml.")
     review_pr.add_argument("--out", required=False, help="Output directory. Defaults to ./forgebench-output/pr-OWNER-REPO-NUMBER/.")
     review_pr.add_argument("--run-checks", action="store_true", help="Execute configured local deterministic checks from forgebench.yml.")
+    review_pr.add_argument("--checkout-pr", action="store_true", help="Checkout the PR code into a temporary git worktree before running checks.")
+    review_pr.add_argument("--keep-worktree", action="store_true", help="Do not delete the temporary PR worktree after review. Prints the path in the report.")
+    review_pr.add_argument("--worktree-dir", required=False, help="Optional parent directory for temporary PR worktrees.")
     review_pr.add_argument("--post-comment", action="store_true", help="Post the ForgeBench Markdown report as a GitHub PR comment.")
     review_pr.add_argument("--comment-file", required=False, help="Path to write the PR comment Markdown. Defaults to pr-comment.md in the output directory.")
     review_pr.add_argument("--dry-run", action="store_true", help="Write local artifacts but do not post a PR comment.")
@@ -167,6 +173,14 @@ def _print_pr_summary(result: GitHubPRReviewResult) -> None:
     print()
     _print_summary(result.review_result.report, result.review_result.written_paths)
     print(f"- {result.comment_path}")
+    print()
+    print("PR checkout:")
+    print(f"- status: {result.pr_checkout.status}")
+    print(f"- checks target: {result.pr_checkout.checks_target}")
+    if result.pr_checkout.worktree_path:
+        print(f"- worktree: {result.pr_checkout.worktree_path}")
+    if result.pr_checkout.cleanup_error:
+        print(f"- cleanup warning: {result.pr_checkout.cleanup_error}")
     print()
     print("GitHub comment:")
     if result.comment_posted:

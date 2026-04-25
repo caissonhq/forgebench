@@ -66,6 +66,10 @@ def build_markdown_report(report: ForgeBenchReport, guardrails: Guardrails, inpu
         f"- Guardrails: {inputs.get('guardrails', 'none')}",
         *_format_input_notes(inputs.get("notes")),
         "",
+        "## PR Checkout",
+        "",
+        *_format_pr_checkout(report),
+        "",
         "## Deterministic Checks",
         "",
         *_format_deterministic_checks(report),
@@ -146,12 +150,40 @@ def _format_input_notes(notes) -> list[str]:
     return ["- Notes:"] + [f"  - {note}" for note in notes]
 
 
+def _format_pr_checkout(report: ForgeBenchReport) -> list[str]:
+    checkout = report.pr_checkout
+    lines = [
+        f"- Status: {_display_checkout_status(checkout.status)}",
+        f"- Worktree path: {checkout.worktree_path or 'none'}",
+        f"- Checks target: {_display_checks_target(checkout.checks_target)}",
+    ]
+    if checkout.error_message:
+        lines.append(f"- Error: {checkout.error_message}")
+    if checkout.cleanup_error:
+        lines.append(f"- Cleanup error: {checkout.cleanup_error}")
+    if checkout.kept and checkout.worktree_path:
+        lines.append("- Kept: yes")
+    return lines
+
+
 def _posture_heading(posture: str) -> str:
     if posture == "BLOCK":
         return "BLOCK MERGE"
     if posture == "REVIEW":
         return "REVIEW BEFORE MERGE"
     return "LOW CONCERN"
+
+
+def _display_checkout_status(status: str) -> str:
+    return status.replace("_", " ")
+
+
+def _display_checks_target(target: str) -> str:
+    if target == "current_checkout":
+        return "current checkout"
+    if target == "pr_worktree":
+        return "PR worktree"
+    return "not run"
 
 
 def _suggested_next_action(report: ForgeBenchReport) -> str:

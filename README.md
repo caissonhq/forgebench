@@ -109,7 +109,29 @@ To include configured local checks:
 forgebench review-pr https://github.com/OWNER/REPO/pull/123 --run-checks
 ```
 
-Important: `review-pr` fetches the PR diff, but it does not automatically check out the PR branch. If `--run-checks` is used, deterministic checks run against the current local repo checkout.
+Important: without `--checkout-pr`, deterministic checks run against the current local repo checkout, not the PR branch.
+
+To run configured checks against the actual PR code, ask ForgeBench to prepare a temporary git worktree:
+
+```bash
+forgebench review-pr https://github.com/OWNER/REPO/pull/123 --checkout-pr --run-checks
+```
+
+ForgeBench fetches the PR head into a temporary namespaced ref, creates a detached worktree, runs checks from that worktree, and removes the worktree/ref by default. It does not mutate your current checkout.
+
+To keep the worktree for inspection:
+
+```bash
+forgebench review-pr https://github.com/OWNER/REPO/pull/123 --checkout-pr --run-checks --keep-worktree
+```
+
+You can choose the parent directory for temporary worktrees:
+
+```bash
+forgebench review-pr https://github.com/OWNER/REPO/pull/123 --checkout-pr --worktree-dir /tmp/forgebench-worktrees
+```
+
+PR checkout depends on local `git`, GitHub CLI auth, the local repo remote, and permissions to fetch the PR ref.
 
 To write the PR comment Markdown somewhere specific:
 

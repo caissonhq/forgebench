@@ -16,7 +16,11 @@ from forgebench.github_pr import (
     GitHubPRError,
     GitHubPRClient,
     GitHubPRMetadata,
+    PreparedPRWorktree,
+    PRCheckoutInfo,
+    finalize_pr_worktree,
     parse_pr_url,
+    prepare_pr_worktree,
     run_github_pr_review,
 )
 
@@ -189,9 +193,200 @@ class GitHubPRTests(unittest.TestCase):
             markdown = result.review_result.written_paths["markdown"].read_text(encoding="utf-8")
             comment = result.comment_path.read_text(encoding="utf-8")
 
-        caveat = "Deterministic checks were run against the local repo checkout, not automatically against the PR branch."
+        caveat = "Deterministic checks were run against the current local checkout, not the PR checkout."
         self.assertIn(caveat, markdown)
         self.assertIn(caveat, comment)
+        self.assertEqual(result.pr_checkout.checks_target, "current_checkout")
+
+    def test_checkout_pr_creates_checkout_metadata(self) -> None:
+        with TemporaryDirectory() as tmp:
+            temp = Path(tmp)
+            worktree = temp / "worktree"
+            worktree.mkdir()
+            prepared = _prepared_worktree(worktree)
+            cleaned = PRCheckoutInfo(
+                requested=True,
+                status="cleaned_up",
+                worktree_path=str(worktree),
+                checks_target="not_run",
+            )
+            with patch("forgebench.github_pr.prepare_pr_worktree", return_value=prepared), patch(
+                "forgebench.github_pr.finalize_pr_worktree", return_value=cleaned
+            ):
+                result = run_github_pr_review(
+                    repo_path=ROOT,
+                    pr_url=PR_URL,
+                    output_dir=temp / "out",
+                    checkout_pr=True,
+                    client=FakeGitHubPRClient(),
+                )
+
+            self.assertEqual(result.pr_checkout.status, "cleaned_up")
+            self.assertEqual(result.pr_checkout.worktree_path, str(worktree))
+            self.assertEqual(result.review_result.report.pr_checkout.status, "cleaned_up")
+
+    def test_run_checks_with_checkout_pr_uses_worktree_path(self) -> None:
+        with TemporaryDirectory() as tmp:
+            temp = Path(tmp)
+            worktree = temp / "worktree"
+            worktree.mkdir()
+            prepared = _prepared_worktree(worktree)
+            cleaned = PRCheckoutInfo(
+                requested=True,
+                status="cleaned_up",
+                worktree_path=str(worktree),
+                checks_target="pr_worktree",
+            )
+            with patch("forgebench.github_pr.prepare_pr_worktree", return_value=prepared), patch(
+                "forgebench.github_pr.finalize_pr_worktree", return_value=cleaned
+            ):
+                result = run_github_pr_review(
+                    repo_path=ROOT,
+                    pr_url=PR_URL,
+                    guardrails_path=FIXTURES / "checks_all_pass.yml",
+                    output_dir=temp / "out",
+                    run_checks=True,
+                    checkout_pr=True,
+                    client=FakeGitHubPRClient(),
+                )
+
+            markdown = result.review_result.written_paths["markdown"].read_text(encoding="utf-8")
+            comment = result.comment_path.read_text(encoding="utf-8")
+
+        self.assertEqual(result.pr_checkout.checks_target, "pr_worktree")
+        self.assertIn(f"- Repo: {worktree}", markdown)
+        self.assertIn("Deterministic checks were run against the checked-out PR worktree.", markdown)
+        self.assertIn("Ran against PR worktree.", comment)
+
+    def test_failed_checkout_still_produces_static_review_artifacts(self) -> None:
+        with TemporaryDirectory() as tmp:
+            out = Path(tmp) / "out"
+            with patch("forgebench.github_pr.prepare_pr_worktree", side_effect=GitHubPRError("fetch failed")):
+                result = run_github_pr_review(
+                    repo_path=ROOT,
+                    pr_url=PR_URL,
+                    guardrails_path=FIXTURES / "checks_all_pass.yml",
+                    output_dir=out,
+                    run_checks=True,
+                    checkout_pr=True,
+                    client=FakeGitHubPRClient(),
+                )
+
+            self.assertEqual(result.pr_checkout.status, "failed")
+            self.assertFalse(result.review_result.report.deterministic_checks.run_requested)
+            self.assertTrue((out / "forgebench-report.md").exists())
+            self.assertTrue((out / "forgebench-report.json").exists())
+            self.assertTrue((out / "pr-comment.md").exists())
+
+    def test_worktree_cleanup_happens_by_default(self) -> None:
+        commands: list[list[str]] = []
+
+        def fake_run(command, **kwargs):
+            commands.append(list(command))
+            return _completed(stdout="")
+
+        prepared = _prepared_worktree(Path("/tmp/forgebench-pr-smoke"))
+        with patch("forgebench.github_pr.subprocess.run", side_effect=fake_run):
+            checkout = finalize_pr_worktree(prepared, ROOT, checks_target="pr_worktree")
+
+        self.assertEqual(checkout.status, "cleaned_up")
+        self.assertTrue(any(command[3:5] == ["worktree", "remove"] for command in commands))
+        self.assertTrue(any(command[3:5] == ["update-ref", "-d"] for command in commands))
+
+    def test_keep_worktree_preserves_worktree_path(self) -> None:
+        commands: list[list[str]] = []
+
+        def fake_run(command, **kwargs):
+            commands.append(list(command))
+            return _completed(stdout="")
+
+        prepared = _prepared_worktree(Path("/tmp/forgebench-pr-smoke"))
+        with patch("forgebench.github_pr.subprocess.run", side_effect=fake_run):
+            checkout = finalize_pr_worktree(prepared, ROOT, checks_target="pr_worktree", keep_worktree=True)
+
+        self.assertEqual(checkout.status, "kept")
+        self.assertEqual(checkout.worktree_path, "/tmp/forgebench-pr-smoke")
+        self.assertFalse(any(command[3:5] == ["worktree", "remove"] for command in commands))
+
+    def test_cleanup_failure_is_reported(self) -> None:
+        def fake_run(command, **kwargs):
+            if command[3:5] == ["worktree", "remove"]:
+                return _completed(returncode=1, stderr="dirty worktree")
+            return _completed(stdout="")
+
+        prepared = _prepared_worktree(Path("/tmp/forgebench-pr-smoke"))
+        with patch("forgebench.github_pr.subprocess.run", side_effect=fake_run):
+            checkout = finalize_pr_worktree(prepared, ROOT, checks_target="pr_worktree")
+
+        self.assertEqual(checkout.status, "cleanup_failed")
+        self.assertTrue(checkout.kept)
+        self.assertIn("dirty worktree", checkout.cleanup_error or "")
+
+    def test_report_includes_pr_checkout_section_and_json_object(self) -> None:
+        with TemporaryDirectory() as tmp:
+            out = Path(tmp) / "out"
+            result = run_github_pr_review(repo_path=ROOT, pr_url=PR_URL, output_dir=out, client=FakeGitHubPRClient())
+            markdown = result.review_result.written_paths["markdown"].read_text(encoding="utf-8")
+            payload = json.loads(result.review_result.written_paths["json"].read_text(encoding="utf-8"))
+
+        self.assertIn("## PR Checkout", markdown)
+        self.assertIn("pr_checkout", payload)
+        self.assertEqual(payload["pr_checkout"]["status"], "not_requested")
+
+    def test_pr_comment_includes_checks_target(self) -> None:
+        with TemporaryDirectory() as tmp:
+            temp = Path(tmp)
+            worktree = temp / "worktree"
+            worktree.mkdir()
+            prepared = _prepared_worktree(worktree)
+            cleaned = PRCheckoutInfo(
+                requested=True,
+                status="cleaned_up",
+                worktree_path=str(worktree),
+                checks_target="pr_worktree",
+            )
+            with patch("forgebench.github_pr.prepare_pr_worktree", return_value=prepared), patch(
+                "forgebench.github_pr.finalize_pr_worktree", return_value=cleaned
+            ):
+                result = run_github_pr_review(
+                    repo_path=ROOT,
+                    pr_url=PR_URL,
+                    guardrails_path=FIXTURES / "checks_all_pass.yml",
+                    output_dir=temp / "out",
+                    run_checks=True,
+                    checkout_pr=True,
+                    client=FakeGitHubPRClient(),
+                )
+                comment = result.comment_path.read_text(encoding="utf-8")
+
+        self.assertIn("Ran against PR worktree.", comment)
+
+    def test_prepare_pr_worktree_uses_no_destructive_git_commands(self) -> None:
+        commands: list[list[str]] = []
+
+        def fake_run(command, **kwargs):
+            commands.append(list(command))
+            return _completed(stdout="")
+
+        with TemporaryDirectory() as tmp, patch("forgebench.github_pr.subprocess.run", side_effect=fake_run):
+            prepare_pr_worktree(parse_pr_url(PR_URL), ROOT, worktree_dir=tmp)
+
+        forbidden = {"checkout", "reset", "clean", "rebase", "merge"}
+        used = {part for command in commands for part in command}
+        self.assertTrue(forbidden.isdisjoint(used))
+        self.assertTrue(any("pull/42/head:" in part for command in commands for part in command))
+        self.assertTrue(any(command[3:6] == ["worktree", "add", "--detach"] for command in commands))
+
+    def test_worktree_paths_are_unique_and_safe(self) -> None:
+        def fake_run(command, **kwargs):
+            return _completed(stdout="")
+
+        with TemporaryDirectory() as tmp, patch("forgebench.github_pr.subprocess.run", side_effect=fake_run):
+            first = prepare_pr_worktree(parse_pr_url(PR_URL), ROOT, worktree_dir=tmp)
+            second = prepare_pr_worktree(parse_pr_url(PR_URL), ROOT, worktree_dir=tmp)
+
+        self.assertNotEqual(first.info.worktree_path, second.info.worktree_path)
+        self.assertIn("forgebench-pr-caissonhq-forgebench-42-", first.info.worktree_path or "")
 
     def test_review_pr_works_with_llm_review_command_provider(self) -> None:
         with TemporaryDirectory() as tmp:
@@ -237,6 +432,50 @@ class GitHubPRTests(unittest.TestCase):
             self.assertTrue((out_dir / "task.md").exists())
             self.assertTrue((out_dir / "pr-comment.md").exists())
 
+    def test_cli_review_pr_accepts_checkout_flags(self) -> None:
+        with TemporaryDirectory() as tmp:
+            temp = Path(tmp)
+            bin_dir = temp / "bin"
+            bin_dir.mkdir()
+            _write_fake_gh(bin_dir / "gh")
+            out_dir = temp / "out"
+            worktree = temp / "worktree"
+            worktree.mkdir()
+            prepared = _prepared_worktree(worktree)
+            cleaned = PRCheckoutInfo(
+                requested=True,
+                status="cleaned_up",
+                worktree_path=str(worktree),
+                checks_target="not_run",
+            )
+            original_path = os.environ.get("PATH", "")
+            os.environ["PATH"] = str(bin_dir) + os.pathsep + original_path
+            try:
+                stdout = StringIO()
+                with patch("forgebench.github_pr.prepare_pr_worktree", return_value=prepared), patch(
+                    "forgebench.github_pr.finalize_pr_worktree", return_value=cleaned
+                ), redirect_stdout(stdout):
+                    result = main(
+                        [
+                            "review-pr",
+                            PR_URL,
+                            "--repo",
+                            str(ROOT),
+                            "--out",
+                            str(out_dir),
+                            "--checkout-pr",
+                            "--keep-worktree",
+                            "--worktree-dir",
+                            str(temp / "worktrees"),
+                        ]
+                    )
+            finally:
+                os.environ["PATH"] = original_path
+
+            self.assertEqual(result, 0)
+            self.assertIn("PR checkout:", stdout.getvalue())
+            self.assertIn("status: cleaned_up", stdout.getvalue())
+
 
 class FakeGitHubPRClient(GitHubPRClient):
     def __init__(self, comment_error: str | None = None) -> None:
@@ -269,6 +508,18 @@ class FakeGitHubPRClient(GitHubPRClient):
         if self.comment_error:
             raise GitHubPRError(self.comment_error)
         self.comments.append(Path(comment_path).read_text(encoding="utf-8"))
+
+
+def _prepared_worktree(path: Path) -> PreparedPRWorktree:
+    return PreparedPRWorktree(
+        info=PRCheckoutInfo(
+            requested=True,
+            status="prepared",
+            worktree_path=str(path),
+            checks_target="not_run",
+        ),
+        temp_ref="refs/forgebench/pr-42-test",
+    )
 
 
 def _write_fake_gh(path: Path) -> None:

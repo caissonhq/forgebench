@@ -8,7 +8,7 @@ from forgebench.check_runner import checks_not_run, findings_from_check_results,
 from forgebench.diff_parser import parse_diff_file
 from forgebench.guardrails import evaluate_guardrails, load_guardrails
 from forgebench.llm_review import apply_llm_posture, build_review_bundle, llm_review_not_run, run_llm_review
-from forgebench.models import Finding, ForgeBenchReport, Guardrails, LLMReviewerConfig
+from forgebench.models import Finding, ForgeBenchReport, Guardrails, LLMReviewerConfig, PRCheckoutInfo
 from forgebench.policy import apply_guardrails_policy
 from forgebench.posture import determine_posture
 from forgebench.report_writer import write_reports
@@ -42,6 +42,7 @@ def run_review(
     llm_max_diff_chars: int = 20000,
     llm_mock_response: dict | None = None,
     input_notes: list[str] | None = None,
+    pr_checkout: PRCheckoutInfo | None = None,
 ) -> ReviewResult:
     repo = Path(repo_path)
     diff = _resolve_input_path(Path(diff_path), repo)
@@ -104,6 +105,7 @@ def run_review(
         policy=policy_decision,
         llm_review=llm_result,
         pre_llm_posture=pre_llm_posture,
+        pr_checkout=pr_checkout or PRCheckoutInfo(),
         generated_at=datetime.now(timezone.utc).isoformat(timespec="seconds"),
     )
 

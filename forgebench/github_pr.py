@@ -1,12 +1,17 @@
 from __future__ import annotations
 
 import json
+import re
 import subprocess
-from dataclasses import dataclass
+import tempfile
+import time
+import uuid
+from dataclasses import dataclass, field
 from pathlib import Path
 from urllib.parse import urlparse
 
-from forgebench.models import CheckStatus, Confidence, ForgeBenchReport
+from forgebench.models import CheckStatus, Confidence, ForgeBenchReport, PRCheckoutInfo
+from forgebench.report_writer import write_reports
 from forgebench.review import ReviewInputError, ReviewResult, run_review
 
 
@@ -71,10 +76,17 @@ class GitHubPRReviewResult:
     review_result: ReviewResult
     intake: GitHubPRIntakeResult
     comment_path: Path
+    pr_checkout: PRCheckoutInfo = field(default_factory=PRCheckoutInfo)
     comment_posted: bool = False
     comment_error: str | None = None
     comment_requested: bool = False
     dry_run: bool = True
+
+
+@dataclass(frozen=True)
+class PreparedPRWorktree:
+    info: PRCheckoutInfo
+    temp_ref: str | None = None
 
 
 # Backward-compatible names from the first local prototype.
@@ -289,7 +301,10 @@ def generate_pr_comment(
         lines.append("- None.")
 
     lines.extend(["", "Deterministic checks:"])
-    lines.extend(_deterministic_comment_lines(report, checks_run_against_local_checkout))
+    checkout = report.pr_checkout
+    if checks_run_against_local_checkout and checkout.checks_target == "not_run":
+        checkout = PRCheckoutInfo(requested=False, status="not_requested", checks_target="current_checkout")
+    lines.extend(_deterministic_comment_lines(report, checkout))
     lines.extend(["", "Guardrails:"])
     lines.extend(_guardrail_comment_lines(report))
     lines.extend(["", "LLM review:"])
@@ -320,6 +335,84 @@ def post_pr_comment(ref: GitHubPRRef, comment_body: str, client: GitHubPRClient 
             pass
 
 
+def prepare_pr_worktree(
+    ref: GitHubPRRef,
+    repo_path: str | Path,
+    worktree_dir: str | Path | None = None,
+) -> PreparedPRWorktree:
+    repo = Path(repo_path)
+    _validate_git_repo_for_worktree(repo)
+
+    parent = Path(worktree_dir) if worktree_dir else Path(tempfile.gettempdir()) / "forgebench-worktrees"
+    parent.mkdir(parents=True, exist_ok=True)
+
+    unique = f"{int(time.time())}-{uuid.uuid4().hex[:8]}"
+    temp_ref = f"refs/forgebench/pr-{ref.number}-{unique}"
+    worktree_name = f"forgebench-pr-{_safe_path_part(ref.owner)}-{_safe_path_part(ref.repo)}-{ref.number}-{unique}"
+    worktree_path = parent / worktree_name
+
+    try:
+        _run_git(repo, ["fetch", "origin", f"pull/{ref.number}/head:{temp_ref}"])
+        _run_git(repo, ["worktree", "add", "--detach", str(worktree_path), temp_ref])
+    except GitHubPRError:
+        _delete_temp_ref(repo, temp_ref)
+        raise
+
+    return PreparedPRWorktree(
+        info=PRCheckoutInfo(
+            requested=True,
+            status="prepared",
+            worktree_path=str(worktree_path),
+            checks_target="not_run",
+            kept=False,
+        ),
+        temp_ref=temp_ref,
+    )
+
+
+def finalize_pr_worktree(
+    prepared: PreparedPRWorktree | None,
+    repo_path: str | Path,
+    checks_target: str,
+    keep_worktree: bool = False,
+) -> PRCheckoutInfo:
+    if prepared is None:
+        return PRCheckoutInfo()
+
+    repo = Path(repo_path)
+    worktree_path = prepared.info.worktree_path
+    cleanup_error: str | None = None
+    status = "kept" if keep_worktree else "cleaned_up"
+    kept = keep_worktree
+
+    if keep_worktree:
+        ref_error = _delete_temp_ref(repo, prepared.temp_ref)
+        cleanup_error = ref_error
+    else:
+        if worktree_path:
+            try:
+                _run_git(repo, ["worktree", "remove", "--force", worktree_path])
+            except GitHubPRError as exc:
+                cleanup_error = str(exc)
+                status = "cleanup_failed"
+                kept = True
+        ref_error = _delete_temp_ref(repo, prepared.temp_ref)
+        if ref_error:
+            cleanup_error = _join_errors(cleanup_error, ref_error)
+            if status == "cleaned_up":
+                status = "cleanup_failed"
+
+    return PRCheckoutInfo(
+        requested=True,
+        status=status,
+        worktree_path=worktree_path,
+        checks_target=checks_target,
+        error_message=prepared.info.error_message,
+        kept=kept,
+        cleanup_error=cleanup_error,
+    )
+
+
 def run_github_pr_review(
     repo_path: str | Path,
     pr_url: str,
@@ -334,6 +427,9 @@ def run_github_pr_review(
     llm_command: str | None = None,
     llm_timeout: int = 60,
     llm_max_diff_chars: int = 20000,
+    checkout_pr: bool = False,
+    keep_worktree: bool = False,
+    worktree_dir: str | Path | None = None,
     client: GitHubPRClient | None = None,
 ) -> GitHubPRReviewResult:
     repo = Path(repo_path)
@@ -351,29 +447,82 @@ def run_github_pr_review(
     metadata_path = out_dir / "github-pr-metadata.json"
     metadata_path.write_text(json.dumps(metadata.to_dict(), indent=2, sort_keys=True) + "\n", encoding="utf-8")
 
-    resolved_guardrails = _resolve_guardrails(repo, guardrails_path)
-    input_notes = []
-    if run_checks:
-        input_notes.append("Deterministic checks were run against the local repo checkout, not automatically against the PR branch.")
+    prepared_worktree: PreparedPRWorktree | None = None
+    checkout_info = _initial_checkout_info(checkout_pr, run_checks)
+    review_repo = repo
+    run_checks_for_review = run_checks
+    input_notes = _input_notes_for_checkout(checkout_info, run_checks)
+
+    if checkout_pr:
+        try:
+            prepared_worktree = prepare_pr_worktree(ref, repo, worktree_dir=worktree_dir)
+            review_repo = Path(prepared_worktree.info.worktree_path or repo)
+            checks_target = "pr_worktree" if run_checks else "not_run"
+            checkout_info = PRCheckoutInfo(
+                requested=True,
+                status="prepared",
+                worktree_path=prepared_worktree.info.worktree_path,
+                checks_target=checks_target,
+                kept=False,
+            )
+            input_notes = _input_notes_for_checkout(checkout_info, run_checks)
+        except GitHubPRError as exc:
+            checkout_info = PRCheckoutInfo(
+                requested=True,
+                status="failed",
+                worktree_path=None,
+                checks_target="not_run",
+                error_message=str(exc),
+                kept=False,
+            )
+            run_checks_for_review = False
+            input_notes = _input_notes_for_checkout(checkout_info, run_checks)
+
+    resolved_guardrails = _resolve_guardrails(review_repo, guardrails_path)
 
     review_result = run_review(
-        repo_path=repo,
-        diff_path=patch_path,
-        task_path=task_path,
+        repo_path=review_repo,
+        diff_path=patch_path.resolve(),
+        task_path=task_path.resolve(),
         guardrails_path=resolved_guardrails,
         output_dir=out_dir,
-        run_checks=run_checks,
+        run_checks=run_checks_for_review,
         llm_review=llm_review,
         llm_provider=llm_provider,
         llm_command=llm_command,
         llm_timeout=llm_timeout,
         llm_max_diff_chars=llm_max_diff_chars,
         input_notes=input_notes,
+        pr_checkout=checkout_info,
     )
+
+    if prepared_worktree is not None:
+        checkout_info = finalize_pr_worktree(
+            prepared_worktree,
+            repo,
+            checks_target="pr_worktree" if run_checks else "not_run",
+            keep_worktree=keep_worktree,
+        )
+        review_result.report.pr_checkout = checkout_info
+        review_result.written_paths.update(
+            write_reports(
+                out_dir,
+                review_result.report,
+                review_result.guardrails,
+                review_result.task_text,
+                inputs={
+                    "repo": str(review_repo),
+                    "diff": str(patch_path.resolve()),
+                    "task": str(task_path.resolve()),
+                    "guardrails": str(resolved_guardrails) if resolved_guardrails else "none",
+                    "notes": input_notes,
+                },
+            )
+        )
 
     pr_comment_path = Path(comment_file) if comment_file else out_dir / "pr-comment.md"
     pr_comment_path.parent.mkdir(parents=True, exist_ok=True)
-    pr_comment_path.write_text(generate_pr_comment(review_result.report, metadata, run_checks), encoding="utf-8")
+    pr_comment_path.write_text(generate_pr_comment(review_result.report, metadata), encoding="utf-8")
 
     comment_posted = False
     comment_error: str | None = None
@@ -389,6 +538,7 @@ def run_github_pr_review(
         review_result=review_result,
         intake=GitHubPRIntakeResult(ref=ref, metadata=metadata, patch_path=patch_path, task_path=task_path),
         comment_path=pr_comment_path,
+        pr_checkout=checkout_info,
         comment_posted=comment_posted,
         comment_error=comment_error,
         comment_requested=post_comment,
@@ -401,6 +551,69 @@ def _resolve_guardrails(repo: Path, guardrails_path: str | Path | None) -> Path 
         return Path(guardrails_path)
     candidate = repo / "forgebench.yml"
     return candidate if candidate.exists() else None
+
+
+def _validate_git_repo_for_worktree(repo: Path) -> None:
+    _run_git(repo, ["rev-parse", "--git-dir"])
+    _run_git(repo, ["worktree", "list", "--porcelain"])
+    _run_git(repo, ["remote", "get-url", "origin"])
+
+
+def _run_git(repo: Path, args: list[str]) -> str:
+    command = ["git", "-C", str(repo), *args]
+    try:
+        completed = subprocess.run(command, text=True, capture_output=True, check=False)
+    except FileNotFoundError as exc:
+        raise GitHubPRError("PR checkout requires git to be installed and available on PATH.") from exc
+    except OSError as exc:
+        raise GitHubPRError(f"failed to run git: {exc}") from exc
+    if completed.returncode != 0:
+        detail = completed.stderr.strip() or completed.stdout.strip() or f"exit code {completed.returncode}"
+        raise GitHubPRError(f"git command failed: {detail}")
+    return completed.stdout
+
+
+def _delete_temp_ref(repo: Path, temp_ref: str | None) -> str | None:
+    if not temp_ref:
+        return None
+    try:
+        _run_git(repo, ["update-ref", "-d", temp_ref])
+    except GitHubPRError as exc:
+        return str(exc)
+    return None
+
+
+def _initial_checkout_info(checkout_pr: bool, run_checks: bool) -> PRCheckoutInfo:
+    if checkout_pr:
+        return PRCheckoutInfo(requested=True, status="requested", checks_target="not_run")
+    if run_checks:
+        return PRCheckoutInfo(requested=False, status="not_requested", checks_target="current_checkout")
+    return PRCheckoutInfo()
+
+
+def _input_notes_for_checkout(checkout_info: PRCheckoutInfo, run_checks_requested: bool) -> list[str]:
+    if checkout_info.status == "failed":
+        notes = ["PR checkout failed; ForgeBench ran static review from the fetched patch."]
+        if run_checks_requested:
+            notes.append("Deterministic checks were skipped because the PR checkout could not be prepared.")
+        return notes
+    if checkout_info.checks_target == "pr_worktree":
+        return ["Deterministic checks were run against the checked-out PR worktree."]
+    if checkout_info.checks_target == "current_checkout":
+        return ["Deterministic checks were run against the current local checkout, not the PR checkout."]
+    if checkout_info.requested and checkout_info.status == "prepared":
+        return ["PR checkout was prepared, but deterministic checks were not run because --run-checks was not passed."]
+    return []
+
+
+def _join_errors(first: str | None, second: str | None) -> str | None:
+    if first and second:
+        return f"{first}; {second}"
+    return first or second
+
+
+def _safe_path_part(value: str) -> str:
+    return re.sub(r"[^A-Za-z0-9._-]+", "-", value).strip("-") or "repo"
 
 
 def _canonical_pr_url(owner: str, repo: str, number: int) -> str:
@@ -431,10 +644,15 @@ def _display_count(value: int | None) -> str:
     return str(value) if value is not None else "unknown"
 
 
-def _deterministic_comment_lines(report: ForgeBenchReport, checks_run_against_local_checkout: bool) -> list[str]:
+def _deterministic_comment_lines(report: ForgeBenchReport, checkout: PRCheckoutInfo) -> list[str]:
     checks = report.deterministic_checks
     if not checks.run_requested:
-        return ["- Not run."]
+        lines = ["- Not run."]
+        if checkout.status == "failed":
+            lines.append(f"- PR checkout failed: {checkout.error_message or 'unknown error'}")
+        elif checkout.requested and checkout.worktree_path:
+            lines.append("- PR checkout was prepared, but checks were not run.")
+        return lines
     summary = checks.summary
     lines = [
         (
@@ -442,8 +660,10 @@ def _deterministic_comment_lines(report: ForgeBenchReport, checks_run_against_lo
             f"not_configured={summary['not_configured']}, errors={summary['errors']}"
         )
     ]
-    if checks_run_against_local_checkout:
-        lines.append("- Note: Deterministic checks were run against the local repo checkout, not automatically against the PR branch.")
+    if checkout.checks_target == "pr_worktree":
+        lines.append("- Ran against PR worktree.")
+    elif checkout.checks_target == "current_checkout":
+        lines.append("- Deterministic checks were run against the current local checkout, not the PR checkout.")
     failed = [result for result in checks.results if result.status in {CheckStatus.FAILED, CheckStatus.ERROR, CheckStatus.TIMED_OUT}]
     for result in failed[:4]:
         lines.append(f"- {result.name}: {result.status.value}")

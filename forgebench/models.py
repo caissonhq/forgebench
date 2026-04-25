@@ -49,6 +49,28 @@ class LLMReviewStatus(str, Enum):
 
 
 @dataclass(frozen=True)
+class PRCheckoutInfo:
+    requested: bool = False
+    status: str = "not_requested"
+    worktree_path: str | None = None
+    checks_target: str = "not_run"
+    error_message: str | None = None
+    kept: bool = False
+    cleanup_error: str | None = None
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "requested": self.requested,
+            "status": self.status,
+            "worktree_path": self.worktree_path,
+            "checks_target": self.checks_target,
+            "error_message": self.error_message,
+            "kept": self.kept,
+            "cleanup_error": self.cleanup_error,
+        }
+
+
+@dataclass(frozen=True)
 class Finding:
     id: str
     title: str
@@ -411,6 +433,7 @@ class ForgeBenchReport:
     policy: PolicyDecision = field(default_factory=PolicyDecision)
     llm_review: LLMReviewResult = field(default_factory=LLMReviewResult)
     pre_llm_posture: MergePosture | None = None
+    pr_checkout: PRCheckoutInfo = field(default_factory=PRCheckoutInfo)
 
     def to_dict(self) -> dict[str, Any]:
         pre_llm_posture = self.pre_llm_posture or self.posture
@@ -427,5 +450,6 @@ class ForgeBenchReport:
             "deterministic_checks": self.deterministic_checks.to_dict(),
             "policy": self.policy.to_dict(),
             "llm_review": self.llm_review.to_dict(),
+            "pr_checkout": self.pr_checkout.to_dict(),
             "generated_at": self.generated_at,
         }
