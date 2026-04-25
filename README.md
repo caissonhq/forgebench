@@ -16,6 +16,7 @@ ForgeBench does not prove code is safe. It highlights merge risk before AI-gener
 - A deterministic static-signal pass over unified git diffs.
 - Optional local build/test/lint/typecheck command execution when explicitly requested.
 - Optional evidence-constrained LLM review when explicitly requested.
+- Optional GitHub PR URL intake through the local `gh` CLI.
 - A sober report that classifies the patch as `BLOCK`, `REVIEW`, or `LOW_CONCERN`.
 - A focused repair prompt for tightening the original patch without expanding scope.
 
@@ -24,9 +25,10 @@ ForgeBench does not prove code is safe. It highlights merge risk before AI-gener
 - Not a web app or dashboard.
 - Not a hosted service.
 - Not a generic eval platform.
-- Not a source-code hosting integration.
+- Not a GitHub App or hosted PR review service.
+- Not an automatic PR commenter unless `--post-comment` is explicitly passed.
 - Not a replacement for human review.
-- Not connected to GitHub, billing, user accounts, or built-in external LLM APIs.
+- Not connected to billing, user accounts, hosted GitHub OAuth, or built-in external LLM APIs.
 
 ## Quickstart
 
@@ -73,6 +75,49 @@ Arguments:
 - `--out`: optional output directory. Defaults to `./forgebench-output/`.
 
 No LLM or network dependency is required by default.
+
+## GitHub PR Intake
+
+ForgeBench can fetch a GitHub pull request through the local `gh` CLI, derive task context from the PR title/body, run the normal ForgeBench review, and write the same local artifacts.
+
+```bash
+forgebench review-pr \
+  --repo . \
+  --pr-url https://github.com/OWNER/REPO/pull/123 \
+  --guardrails ./forgebench.yml \
+  --out ./forgebench-output
+```
+
+This writes the normal report files plus fetched input artifacts:
+
+- `forgebench-output/github-pr.diff`
+- `forgebench-output/github-pr-task.md`
+- `forgebench-output/github-pr-metadata.json`
+- `forgebench-output/forgebench-report.md`
+- `forgebench-output/forgebench-report.json`
+- `forgebench-output/repair-prompt.md`
+
+To include configured local checks:
+
+```bash
+forgebench review-pr \
+  --repo . \
+  --pr-url https://github.com/OWNER/REPO/pull/123 \
+  --guardrails ./forgebench.yml \
+  --run-checks
+```
+
+To post the Markdown report back to the PR, pass `--post-comment` explicitly:
+
+```bash
+forgebench review-pr \
+  --repo . \
+  --pr-url https://github.com/OWNER/REPO/pull/123 \
+  --guardrails ./forgebench.yml \
+  --post-comment
+```
+
+PR comments are never posted by default. This path requires `gh` to be installed, authenticated, and authorized for the target repository. ForgeBench does not store GitHub tokens or secrets.
 
 ## Guardrails File
 
@@ -437,5 +482,6 @@ PYTHONDONTWRITEBYTECODE=1 python -m forgebench calibrate --cases examples/golden
 - Guardrails v2 policy is path-pattern based. It does not interpret copy intent or program semantics.
 - Command execution is opt-in and limited to commands you configure locally.
 - LLM review is opt-in and advisory. The command provider can run any command you configure, so only use it with trusted local commands.
+- GitHub PR intake depends on the local `gh` CLI and network/auth state. It is not a GitHub App.
 - ForgeBench does not understand full program behavior.
-- Current output is local files only. There is no GitHub integration, hosted service, dashboard, or built-in external LLM call.
+- Current output is local files unless `--post-comment` is explicitly passed. There is no hosted service, dashboard, or built-in external LLM call.

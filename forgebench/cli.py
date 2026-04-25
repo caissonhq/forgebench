@@ -5,6 +5,7 @@ import sys
 from pathlib import Path
 
 from forgebench.calibration import format_calibration_result, run_calibration
+from forgebench.github_pr import GitHubPRError, GitHubPRReviewResult, run_github_pr_review
 from forgebench.models import ForgeBenchReport
 from forgebench.review import ReviewInputError, run_review
 
@@ -15,6 +16,9 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.command == "calibrate":
         return _run_calibrate(args)
+
+    if args.command == "review-pr":
+        return _run_review_pr(args)
 
     if args.command != "review":
         parser.print_help()
@@ -45,6 +49,28 @@ def _run_review(args: argparse.Namespace) -> int:
     return 0
 
 
+def _run_review_pr(args: argparse.Namespace) -> int:
+    try:
+        result = run_github_pr_review(
+            repo_path=args.repo,
+            pr_url=args.pr_url,
+            guardrails_path=args.guardrails,
+            output_dir=args.out or "forgebench-output",
+            run_checks=args.run_checks,
+            post_comment=args.post_comment,
+            llm_review=args.llm_review,
+            llm_provider=args.llm_provider,
+            llm_command=args.llm_command,
+            llm_timeout=args.llm_timeout,
+            llm_max_diff_chars=args.llm_max_diff_chars,
+        )
+    except (ReviewInputError, GitHubPRError) as exc:
+        _fail(str(exc))
+
+    _print_pr_summary(result)
+    return 1 if result.comment_error else 0
+
+
 def _run_calibrate(args: argparse.Namespace) -> int:
     try:
         result = run_calibration(cases_dir=args.cases, output_dir=args.out, repo_path=args.repo)
@@ -71,6 +97,19 @@ def _build_parser() -> argparse.ArgumentParser:
     review.add_argument("--llm-command", required=False, help="Command provider shell command. Receives the review bundle on stdin and returns JSON on stdout.")
     review.add_argument("--llm-timeout", type=int, default=60, help="LLM command timeout in seconds. Defaults to 60.")
     review.add_argument("--llm-max-diff-chars", type=int, default=20000, help="Maximum diff characters included in the LLM bundle.")
+
+    review_pr = subparsers.add_parser("review-pr", help="Fetch a GitHub PR diff, run ForgeBench, and optionally post a PR comment.")
+    review_pr.add_argument("--repo", required=False, default=".", help="Local repository path. Defaults to current directory.")
+    review_pr.add_argument("--pr-url", required=True, help="GitHub pull request URL.")
+    review_pr.add_argument("--guardrails", required=False, help="Optional path to forgebench.yml.")
+    review_pr.add_argument("--out", required=False, help="Output directory. Defaults to ./forgebench-output/.")
+    review_pr.add_argument("--run-checks", action="store_true", help="Execute configured local deterministic checks from forgebench.yml.")
+    review_pr.add_argument("--post-comment", action="store_true", help="Post the ForgeBench Markdown report as a GitHub PR comment.")
+    review_pr.add_argument("--llm-review", action="store_true", help="Run an optional advisory LLM reviewer after deterministic/static review.")
+    review_pr.add_argument("--llm-provider", choices=["mock", "command"], required=False, help="LLM provider to use when --llm-review is passed.")
+    review_pr.add_argument("--llm-command", required=False, help="Command provider shell command. Receives the review bundle on stdin and returns JSON on stdout.")
+    review_pr.add_argument("--llm-timeout", type=int, default=60, help="LLM command timeout in seconds. Defaults to 60.")
+    review_pr.add_argument("--llm-max-diff-chars", type=int, default=20000, help="Maximum diff characters included in the LLM bundle.")
 
     calibrate = subparsers.add_parser("calibrate", help="Run the golden corpus calibration suite.")
     calibrate.add_argument("--cases", required=True, help="Path to the golden cases directory.")
@@ -106,6 +145,23 @@ def _print_summary(report: ForgeBenchReport, written: dict[str, Path]) -> None:
     print(f"- {written['markdown']}")
     print(f"- {written['json']}")
     print(f"- {written['repair_prompt']}")
+
+
+def _print_pr_summary(result: GitHubPRReviewResult) -> None:
+    print("ForgeBench GitHub PR review complete.")
+    print()
+    print(f"PR: {result.pr.reference.url}")
+    print(f"Title: {result.pr.title or '(No PR title provided.)'}")
+    print()
+    _print_summary(result.review_result.report, result.review_result.written_paths)
+    print()
+    print("GitHub comment:")
+    if result.comment_posted:
+        print("- posted")
+    elif result.comment_error:
+        print(f"- failed: {result.comment_error}")
+    else:
+        print("- not requested")
 
 
 def _checks_summary(report: ForgeBenchReport) -> str:
