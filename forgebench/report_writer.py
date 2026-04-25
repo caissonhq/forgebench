@@ -64,6 +64,7 @@ def build_markdown_report(report: ForgeBenchReport, guardrails: Guardrails, inpu
         f"- Diff: {inputs.get('diff', '')}",
         f"- Task: {inputs.get('task', '')}",
         f"- Guardrails: {inputs.get('guardrails', 'none')}",
+        *_format_input_notes(inputs.get("notes")),
         "",
         "## Deterministic Checks",
         "",
@@ -137,6 +138,12 @@ def _format_findings(findings, empty_message: str) -> list[str]:
             ]
         )
     return lines
+
+
+def _format_input_notes(notes) -> list[str]:
+    if not notes:
+        return []
+    return ["- Notes:"] + [f"  - {note}" for note in notes]
 
 
 def _posture_heading(posture: str) -> str:

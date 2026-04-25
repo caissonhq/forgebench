@@ -81,43 +81,47 @@ No LLM or network dependency is required by default.
 ForgeBench can fetch a GitHub pull request through the local `gh` CLI, derive task context from the PR title/body, run the normal ForgeBench review, and write the same local artifacts.
 
 ```bash
-forgebench review-pr \
-  --repo . \
-  --pr-url https://github.com/OWNER/REPO/pull/123 \
-  --guardrails ./forgebench.yml \
-  --out ./forgebench-output
+forgebench review-pr https://github.com/OWNER/REPO/pull/123
 ```
 
-This writes the normal report files plus fetched input artifacts:
+ForgeBench requires the GitHub CLI for this flow. Install `gh`, run `gh auth login`, and make sure your local auth can read the target PR.
 
-- `forgebench-output/github-pr.diff`
-- `forgebench-output/github-pr-task.md`
-- `forgebench-output/github-pr-metadata.json`
-- `forgebench-output/forgebench-report.md`
-- `forgebench-output/forgebench-report.json`
-- `forgebench-output/repair-prompt.md`
+The default output directory is PR-scoped:
+
+```text
+forgebench-output/pr-OWNER-REPO-NUMBER/
+```
+
+Inside it, ForgeBench writes:
+
+- `patch.diff`
+- `task.md`
+- `forgebench-report.md`
+- `forgebench-report.json`
+- `repair-prompt.md`
+- `pr-comment.md`
 
 To include configured local checks:
 
 ```bash
-forgebench review-pr \
-  --repo . \
-  --pr-url https://github.com/OWNER/REPO/pull/123 \
-  --guardrails ./forgebench.yml \
-  --run-checks
+forgebench review-pr https://github.com/OWNER/REPO/pull/123 --run-checks
 ```
 
-To post the Markdown report back to the PR, pass `--post-comment` explicitly:
+Important: `review-pr` fetches the PR diff, but it does not automatically check out the PR branch. If `--run-checks` is used, deterministic checks run against the current local repo checkout.
+
+To write the PR comment Markdown somewhere specific:
 
 ```bash
-forgebench review-pr \
-  --repo . \
-  --pr-url https://github.com/OWNER/REPO/pull/123 \
-  --guardrails ./forgebench.yml \
-  --post-comment
+forgebench review-pr https://github.com/OWNER/REPO/pull/123 --comment-file /tmp/forgebench-pr-comment.md
 ```
 
-PR comments are never posted by default. This path requires `gh` to be installed, authenticated, and authorized for the target repository. ForgeBench does not store GitHub tokens or secrets.
+To post the generated comment back to the PR, pass `--post-comment` explicitly:
+
+```bash
+forgebench review-pr https://github.com/OWNER/REPO/pull/123 --post-comment
+```
+
+PR comments are never posted by default. `--dry-run` can be passed explicitly when you want local artifacts only. ForgeBench does not store GitHub tokens or secrets.
 
 ## Guardrails File
 

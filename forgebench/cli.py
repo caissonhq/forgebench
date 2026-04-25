@@ -50,14 +50,21 @@ def _run_review(args: argparse.Namespace) -> int:
 
 
 def _run_review_pr(args: argparse.Namespace) -> int:
+    pr_url = args.pr_url or args.pr_url_option
+    if not pr_url:
+        _fail("review-pr requires a GitHub PR URL.")
+    if args.post_comment and not args.dry_run:
+        print("Posting ForgeBench comment to PR...")
     try:
         result = run_github_pr_review(
             repo_path=args.repo,
-            pr_url=args.pr_url,
+            pr_url=pr_url,
             guardrails_path=args.guardrails,
-            output_dir=args.out or "forgebench-output",
+            output_dir=args.out,
             run_checks=args.run_checks,
             post_comment=args.post_comment,
+            comment_file=args.comment_file,
+            dry_run=args.dry_run or not args.post_comment,
             llm_review=args.llm_review,
             llm_provider=args.llm_provider,
             llm_command=args.llm_command,
@@ -68,7 +75,9 @@ def _run_review_pr(args: argparse.Namespace) -> int:
         _fail(str(exc))
 
     _print_pr_summary(result)
-    return 1 if result.comment_error else 0
+    if result.comment_posted:
+        print("PR comment posted.")
+    return 0
 
 
 def _run_calibrate(args: argparse.Namespace) -> int:
@@ -99,12 +108,15 @@ def _build_parser() -> argparse.ArgumentParser:
     review.add_argument("--llm-max-diff-chars", type=int, default=20000, help="Maximum diff characters included in the LLM bundle.")
 
     review_pr = subparsers.add_parser("review-pr", help="Fetch a GitHub PR diff, run ForgeBench, and optionally post a PR comment.")
+    review_pr.add_argument("pr_url", nargs="?", help="GitHub pull request URL.")
     review_pr.add_argument("--repo", required=False, default=".", help="Local repository path. Defaults to current directory.")
-    review_pr.add_argument("--pr-url", required=True, help="GitHub pull request URL.")
+    review_pr.add_argument("--pr-url", dest="pr_url_option", required=False, help="GitHub pull request URL. Kept for compatibility; positional URL is preferred.")
     review_pr.add_argument("--guardrails", required=False, help="Optional path to forgebench.yml.")
-    review_pr.add_argument("--out", required=False, help="Output directory. Defaults to ./forgebench-output/.")
+    review_pr.add_argument("--out", required=False, help="Output directory. Defaults to ./forgebench-output/pr-OWNER-REPO-NUMBER/.")
     review_pr.add_argument("--run-checks", action="store_true", help="Execute configured local deterministic checks from forgebench.yml.")
     review_pr.add_argument("--post-comment", action="store_true", help="Post the ForgeBench Markdown report as a GitHub PR comment.")
+    review_pr.add_argument("--comment-file", required=False, help="Path to write the PR comment Markdown. Defaults to pr-comment.md in the output directory.")
+    review_pr.add_argument("--dry-run", action="store_true", help="Write local artifacts but do not post a PR comment.")
     review_pr.add_argument("--llm-review", action="store_true", help="Run an optional advisory LLM reviewer after deterministic/static review.")
     review_pr.add_argument("--llm-provider", choices=["mock", "command"], required=False, help="LLM provider to use when --llm-review is passed.")
     review_pr.add_argument("--llm-command", required=False, help="Command provider shell command. Receives the review bundle on stdin and returns JSON on stdout.")
@@ -150,16 +162,19 @@ def _print_summary(report: ForgeBenchReport, written: dict[str, Path]) -> None:
 def _print_pr_summary(result: GitHubPRReviewResult) -> None:
     print("ForgeBench GitHub PR review complete.")
     print()
-    print(f"PR: {result.pr.reference.url}")
-    print(f"Title: {result.pr.title or '(No PR title provided.)'}")
+    print(f"PR: {result.intake.ref.url}")
+    print(f"Title: {result.intake.metadata.title or '(No PR title provided.)'}")
     print()
     _print_summary(result.review_result.report, result.review_result.written_paths)
+    print(f"- {result.comment_path}")
     print()
     print("GitHub comment:")
     if result.comment_posted:
         print("- posted")
     elif result.comment_error:
         print(f"- failed: {result.comment_error}")
+    elif result.comment_requested and result.dry_run:
+        print("- dry run; not posted")
     else:
         print("- not requested")
 

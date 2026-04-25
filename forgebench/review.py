@@ -41,6 +41,7 @@ def run_review(
     llm_timeout: int = 60,
     llm_max_diff_chars: int = 20000,
     llm_mock_response: dict | None = None,
+    input_notes: list[str] | None = None,
 ) -> ReviewResult:
     repo = Path(repo_path)
     diff = _resolve_input_path(Path(diff_path), repo)
@@ -116,6 +117,7 @@ def run_review(
             "diff": str(diff),
             "task": str(task),
             "guardrails": str(guardrails_file) if guardrails_file else "none",
+            "notes": list(input_notes or []),
         },
     )
     return ReviewResult(
