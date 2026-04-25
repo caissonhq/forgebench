@@ -47,6 +47,8 @@ def build_markdown_report(report: ForgeBenchReport, guardrails: Guardrails, inpu
         "## Merge Posture",
         "",
         _posture_heading(report.posture.value),
+        f"- Pre-LLM posture: {(report.pre_llm_posture or report.posture).value}",
+        f"- Final posture: {report.posture.value}",
         "",
         "## Summary",
         "",
@@ -66,6 +68,10 @@ def build_markdown_report(report: ForgeBenchReport, guardrails: Guardrails, inpu
         "## Deterministic Checks",
         "",
         *_format_deterministic_checks(report),
+        "",
+        "## LLM Review",
+        "",
+        *_format_llm_review(report),
         "",
         "## Static Signals",
         "",
@@ -204,6 +210,45 @@ def _format_deterministic_checks(report: ForgeBenchReport) -> list[str]:
         excerpt = _combined_output_excerpt(result)
         if excerpt and result.status in {CheckStatus.FAILED, CheckStatus.ERROR, CheckStatus.TIMED_OUT}:
             lines.extend(["", "Output excerpt:", "", "```text", excerpt, "```"])
+    return lines
+
+
+def _format_llm_review(report: ForgeBenchReport) -> list[str]:
+    review = report.llm_review
+    lines = ["LLM findings are advisory and do not override deterministic evidence."]
+    if not review.enabled:
+        lines.append("")
+        lines.append("LLM review was not run.")
+        return lines
+    lines.extend(
+        [
+            "",
+            f"- Provider: {review.provider or 'none'}",
+            f"- Reviewer: {review.reviewer_name or 'none'}",
+            f"- Status: {review.status.value}",
+        ]
+    )
+    if review.raw_summary:
+        lines.append(f"- Summary: {review.raw_summary}")
+    if review.error_message:
+        lines.append(f"- Error: {review.error_message}")
+    if review.status.value != "completed":
+        return lines
+    lines.extend(["", "Findings:"])
+    if review.findings:
+        for finding in review.findings:
+            files = ", ".join(finding.files) if finding.files else "unknown"
+            lines.extend(
+                [
+                    f"- {finding.severity.value}: {finding.title}",
+                    f"  - Confidence: {finding.confidence.value}",
+                    f"  - Files: {files}",
+                    f"  - Explanation: {finding.explanation}",
+                    f"  - Suggested fix: {finding.suggested_fix}",
+                ]
+            )
+    else:
+        lines.append("- None.")
     return lines
 
 

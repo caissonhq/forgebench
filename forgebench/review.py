@@ -7,7 +7,8 @@ from pathlib import Path
 from forgebench.check_runner import checks_not_run, findings_from_check_results, run_configured_checks
 from forgebench.diff_parser import parse_diff_file
 from forgebench.guardrails import evaluate_guardrails, load_guardrails
-from forgebench.models import Finding, ForgeBenchReport, Guardrails
+from forgebench.llm_review import apply_llm_posture, build_review_bundle, llm_review_not_run, run_llm_review
+from forgebench.models import Finding, ForgeBenchReport, Guardrails, LLMReviewerConfig
 from forgebench.policy import apply_guardrails_policy
 from forgebench.posture import determine_posture
 from forgebench.report_writer import write_reports
@@ -34,6 +35,12 @@ def run_review(
     guardrails_path: str | Path | None = None,
     output_dir: str | Path | None = None,
     run_checks: bool = False,
+    llm_review: bool = False,
+    llm_provider: str | None = None,
+    llm_command: str | None = None,
+    llm_timeout: int = 60,
+    llm_max_diff_chars: int = 20000,
+    llm_mock_response: dict | None = None,
 ) -> ReviewResult:
     repo = Path(repo_path)
     diff = _resolve_input_path(Path(diff_path), repo)
@@ -44,6 +51,7 @@ def run_review(
     _validate_inputs(repo, diff, task, guardrails_file)
 
     task_text = task.read_text(encoding="utf-8", errors="replace")
+    diff_text = diff.read_text(encoding="utf-8", errors="replace")
     diff_summary = parse_diff_file(diff)
     guardrails = load_guardrails(guardrails_file)
     deterministic_checks = run_configured_checks(repo, guardrails) if run_checks else checks_not_run()
@@ -53,7 +61,35 @@ def run_review(
     guardrail_findings, guardrail_hits = evaluate_guardrails(diff_summary, guardrails)
     findings = _dedupe_findings(deterministic_findings + static_findings + guardrail_findings)
     findings, static_signals, policy_decision = apply_guardrails_policy(diff_summary, findings, static_signals, guardrails)
-    posture, summary = determine_posture(findings, static_signals, guardrail_hits, deterministic_checks, policy_decision)
+    pre_llm_posture, pre_llm_summary = determine_posture(findings, static_signals, guardrail_hits, deterministic_checks, policy_decision)
+
+    llm_config = LLMReviewerConfig(
+        enabled=llm_review,
+        provider=llm_provider,
+        command=llm_command,
+        timeout_seconds=llm_timeout,
+        max_diff_chars=llm_max_diff_chars,
+        mock_response=llm_mock_response,
+    )
+    if llm_review:
+        bundle = build_review_bundle(
+            task_text=task_text,
+            diff_text=diff_text,
+            diff_summary=diff_summary,
+            guardrails=guardrails,
+            findings=findings,
+            pre_llm_posture=pre_llm_posture,
+            pre_llm_summary=pre_llm_summary,
+            deterministic_checks=deterministic_checks,
+            policy=policy_decision,
+            config=llm_config,
+        )
+        llm_result = run_llm_review(llm_config, bundle, findings)
+    else:
+        llm_result = llm_review_not_run()
+
+    findings = _dedupe_findings(findings + llm_result.findings)
+    posture, summary = apply_llm_posture(pre_llm_posture, pre_llm_summary, llm_result)
 
     report = ForgeBenchReport(
         posture=posture,
@@ -65,6 +101,8 @@ def run_review(
         guardrail_hits=guardrail_hits,
         deterministic_checks=deterministic_checks,
         policy=policy_decision,
+        llm_review=llm_result,
+        pre_llm_posture=pre_llm_posture,
         generated_at=datetime.now(timezone.utc).isoformat(timespec="seconds"),
     )
 

@@ -115,6 +115,7 @@ class CalibrationTests(unittest.TestCase):
                 "# ForgeBench Merge Risk Report\n\n"
                 "## Merge Posture\n\n"
                 "## Deterministic Checks\n\n"
+                "## LLM Review\n\n"
                 "## Suggested Next Action\n\n"
                 "```text\nunclosed\n",
                 encoding="utf-8",
@@ -148,7 +149,7 @@ class CalibrationTests(unittest.TestCase):
             result = run_calibration(GOLDEN_CASES, output_dir=Path(tmp) / "out", repo_path=ROOT)
 
         self.assertEqual(result.failed_count, 0)
-        self.assertEqual(result.passed_count, 14)
+        self.assertEqual(result.passed_count, 15)
 
     def test_cli_calibrate_command_works(self) -> None:
         with TemporaryDirectory() as tmp:
@@ -167,7 +168,7 @@ class CalibrationTests(unittest.TestCase):
                 )
 
             self.assertEqual(result, 0)
-            self.assertIn("Cases: 14", stdout.getvalue())
+            self.assertIn("Cases: 15", stdout.getvalue())
             self.assertIn("Failed: 0", stdout.getvalue())
 
     def test_cli_calibrate_returns_nonzero_when_case_fails(self) -> None:

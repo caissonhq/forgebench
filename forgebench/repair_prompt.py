@@ -21,11 +21,18 @@ def build_repair_prompt(task_text: str, report: ForgeBenchReport, guardrails: Gu
     lines.extend(_format_check_failures(report))
 
     lines.extend(["", "Static and guardrail findings:"])
-    static_findings = [finding for finding in report.findings if finding.evidence_type != EvidenceType.DETERMINISTIC]
+    static_findings = [
+        finding
+        for finding in report.findings
+        if finding.evidence_type not in {EvidenceType.DETERMINISTIC, EvidenceType.LLM}
+    ]
     if static_findings:
         lines.extend(_format_findings(static_findings))
     else:
         lines.append("- No static or guardrail findings.")
+
+    lines.extend(["", "LLM reviewer notes:"])
+    lines.extend(_format_llm_notes(report))
 
     lines.extend(["", "Suppressed or policy-calibrated findings:"])
     lines.extend(_format_policy_notes(report))
@@ -176,3 +183,21 @@ def _format_policy_notes(report: ForgeBenchReport) -> list[str]:
             f"{report.policy.posture_ceiling_reason or 'No reason provided.'}"
         )
     return notes or ["- None."]
+
+
+def _format_llm_notes(report: ForgeBenchReport) -> list[str]:
+    review = report.llm_review
+    if not review.enabled:
+        return ["- LLM review was not run."]
+    if review.status.value == "failed":
+        return [f"- LLM review failed: {review.error_message or 'unknown error'}"]
+    if review.status.value != "completed":
+        return [f"- LLM review status: {review.status.value}"]
+    if not review.findings:
+        summary = review.raw_summary or "No additional LLM findings beyond existing deterministic/static evidence."
+        return [f"- {summary}"]
+    lines = [
+        "- LLM findings are advisory. Address them where useful, but do not treat low-confidence LLM notes as mandatory repairs."
+    ]
+    lines.extend(_format_findings(review.findings))
+    return lines

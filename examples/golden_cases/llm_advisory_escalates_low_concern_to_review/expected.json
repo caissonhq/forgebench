@@ -1,0 +1,22 @@
+{
+  "case_name": "llm_advisory_escalates_low_concern_to_review",
+  "run_checks": false,
+  "llm_review": true,
+  "llm_provider": "mock",
+  "expected_pre_llm_posture": "LOW_CONCERN",
+  "expected_posture": "REVIEW",
+  "required_finding_ids": [
+    "llm_missing_test_case"
+  ],
+  "allowed_extra_finding_ids": [
+    "ui_copy_changed"
+  ],
+  "forbidden_finding_ids": [
+    "implementation_without_tests",
+    "deleted_tests",
+    "dependency_surface_changed",
+    "persistence_schema_changed"
+  ],
+  "allow_unlisted_findings": false,
+  "rationale": "LLM review is advisory but can raise a LOW_CONCERN patch to REVIEW when it finds a medium concern."
+}

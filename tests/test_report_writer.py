@@ -63,9 +63,12 @@ class ReportWriterTests(unittest.TestCase):
             payload = json.loads(written["json"].read_text(encoding="utf-8"))
 
             self.assertEqual(payload["posture"], report.posture.value)
+            self.assertEqual(payload["final_posture"], report.posture.value)
+            self.assertIn("pre_llm_posture", payload)
             self.assertIn("findings", payload)
             self.assertIn("deterministic_checks", payload)
             self.assertIn("policy", payload)
+            self.assertIn("llm_review", payload)
 
     def test_markdown_report_includes_suggested_next_action(self) -> None:
         report, guardrails, task_text = _sample_report()
@@ -82,6 +85,7 @@ class ReportWriterTests(unittest.TestCase):
 
             self.assertIn("## Suggested Next Action", markdown)
             self.assertIn("## Deterministic Checks", markdown)
+            self.assertIn("## LLM Review", markdown)
             self.assertIn("## Guardrails Policy", markdown)
             self.assertIn("Finding counts by severity", markdown)
 

@@ -6,7 +6,7 @@ Adversarial pre-merge QA for coding-agent output.
 
 SWE-Bench asks whether an agent solved a task. ForgeBench asks whether a serious engineer would merge the diff.
 
-ForgeBench turns an AI-generated diff, the original task prompt, optional repo guardrails, and optional local check results into a sober merge-risk report, machine-readable JSON, and a repair prompt that can be pasted back into Codex, Claude Code, or Cursor.
+ForgeBench turns an AI-generated diff, the original task prompt, optional repo guardrails, optional local check results, and optional advisory LLM review into a sober merge-risk report, machine-readable JSON, and a repair prompt that can be pasted back into Codex, Claude Code, or Cursor.
 
 ForgeBench does not prove code is safe. It highlights merge risk before AI-generated code reaches main.
 
@@ -15,6 +15,7 @@ ForgeBench does not prove code is safe. It highlights merge risk before AI-gener
 - A local CLI for reviewing AI-generated patches before merge.
 - A deterministic static-signal pass over unified git diffs.
 - Optional local build/test/lint/typecheck command execution when explicitly requested.
+- Optional evidence-constrained LLM review when explicitly requested.
 - A sober report that classifies the patch as `BLOCK`, `REVIEW`, or `LOW_CONCERN`.
 - A focused repair prompt for tightening the original patch without expanding scope.
 
@@ -25,7 +26,7 @@ ForgeBench does not prove code is safe. It highlights merge risk before AI-gener
 - Not a generic eval platform.
 - Not a source-code hosting integration.
 - Not a replacement for human review.
-- Not connected to GitHub, billing, user accounts, or external LLM APIs.
+- Not connected to GitHub, billing, user accounts, or built-in external LLM APIs.
 
 ## Quickstart
 
@@ -66,9 +67,12 @@ Arguments:
 - `--task`: original coding-agent task prompt.
 - `--guardrails`: optional project guardrails file.
 - `--run-checks`: optional flag that executes configured local verification commands.
+- `--llm-review`: optional flag that runs an advisory LLM review layer.
+- `--llm-provider`: optional LLM provider. Sprint 4 supports `command` and test-only `mock`.
+- `--llm-command`: local command used by the command provider.
 - `--out`: optional output directory. Defaults to `./forgebench-output/`.
 
-No LLM or network dependency is required in the current version.
+No LLM or network dependency is required by default.
 
 ## Guardrails File
 
@@ -233,6 +237,66 @@ Run with checks:
 forgebench review --repo . --diff ./patch.diff --task ./task.md --guardrails ./forgebench.yml --run-checks
 ```
 
+## Optional LLM Review
+
+ForgeBench can run an advisory LLM reviewer when `--llm-review` is passed. LLM review is off by default.
+
+The evidence hierarchy remains:
+
+1. Deterministic checks
+2. Static risk signals
+3. Guardrails policy
+4. LLM review
+
+LLM findings can raise concern, for example by moving a `LOW_CONCERN` patch to `REVIEW` when a medium advisory finding is returned. LLM findings cannot downgrade posture, approve a merge, erase static findings, override deterministic failures, create a blocker finding, or assign a numeric score.
+
+ForgeBench does not ship a hosted LLM integration in Sprint 4. The `command` provider is a local escape hatch: ForgeBench writes an evidence bundle to stdin and expects structured JSON on stdout.
+
+Example:
+
+```bash
+forgebench review \
+  --repo . \
+  --diff ./patch.diff \
+  --task ./task.md \
+  --guardrails ./forgebench.yml \
+  --llm-review \
+  --llm-provider command \
+  --llm-command "python scripts/mock_reviewer.py"
+```
+
+The command must return JSON like:
+
+```json
+{
+  "reviewer_name": "General LLM Reviewer",
+  "summary": "No additional LLM findings beyond existing deterministic/static evidence.",
+  "findings": []
+}
+```
+
+Or with findings:
+
+```json
+{
+  "reviewer_name": "General LLM Reviewer",
+  "summary": "The reviewer found one advisory edge case.",
+  "findings": [
+    {
+      "id": "llm_missing_edge_case",
+      "title": "Missing edge case review",
+      "severity": "medium",
+      "confidence": "medium",
+      "files": ["src/example.py"],
+      "explanation": "The diff changes behavior but does not show coverage for an empty-input case.",
+      "suggested_fix": "Add a focused test for the empty-input path or explain why it is covered elsewhere."
+    }
+  ]
+}
+```
+
+The `mock` provider is used by tests and golden corpus calibration. It is deterministic and local; it does not make a network call.
+
 ## Calibration Corpus
 
 ForgeBench includes a small golden corpus under `examples/golden_cases/`. Each case describes a realistic review scenario with:
@@ -372,5 +436,6 @@ PYTHONDONTWRITEBYTECODE=1 python -m forgebench calibrate --cases examples/golden
 - The guardrails parser supports the documented ForgeBench YAML shapes, not arbitrary YAML.
 - Guardrails v2 policy is path-pattern based. It does not interpret copy intent or program semantics.
 - Command execution is opt-in and limited to commands you configure locally.
+- LLM review is opt-in and advisory. The command provider can run any command you configure, so only use it with trusted local commands.
 - ForgeBench does not understand full program behavior.
-- Current output is local files only. There is no GitHub integration, hosted service, dashboard, or external LLM call.
+- Current output is local files only. There is no GitHub integration, hosted service, dashboard, or built-in external LLM call.

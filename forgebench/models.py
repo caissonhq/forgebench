@@ -8,6 +8,7 @@ from typing import Any
 class EvidenceType(str, Enum):
     DETERMINISTIC = "DETERMINISTIC"
     STATIC = "STATIC"
+    LLM = "LLM"
     INFERRED = "INFERRED"
     SPECULATIVE = "SPECULATIVE"
 
@@ -39,6 +40,12 @@ class CheckStatus(str, Enum):
     SKIPPED = "SKIPPED"
     NOT_CONFIGURED = "NOT_CONFIGURED"
     ERROR = "ERROR"
+
+
+class LLMReviewStatus(str, Enum):
+    COMPLETED = "completed"
+    SKIPPED = "skipped"
+    FAILED = "failed"
 
 
 @dataclass(frozen=True)
@@ -355,6 +362,41 @@ class DeterministicChecks:
         }
 
 
+@dataclass(frozen=True)
+class LLMReviewerConfig:
+    enabled: bool = False
+    provider: str | None = None
+    reviewer_name: str = "General LLM Reviewer"
+    command: str | None = None
+    timeout_seconds: int = 60
+    max_diff_chars: int = 20000
+    max_task_chars: int = 4000
+    max_report_chars: int = 8000
+    mock_response: dict[str, Any] | None = None
+
+
+@dataclass(frozen=True)
+class LLMReviewResult:
+    enabled: bool = False
+    provider: str | None = None
+    reviewer_name: str | None = None
+    status: LLMReviewStatus = LLMReviewStatus.SKIPPED
+    findings: list[Finding] = field(default_factory=list)
+    raw_summary: str | None = None
+    error_message: str | None = None
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "enabled": self.enabled,
+            "provider": self.provider,
+            "status": self.status.value,
+            "reviewer_name": self.reviewer_name,
+            "summary": self.raw_summary,
+            "findings": [finding.to_dict() for finding in self.findings],
+            "error_message": self.error_message,
+        }
+
+
 @dataclass
 class ForgeBenchReport:
     posture: MergePosture
@@ -367,10 +409,15 @@ class ForgeBenchReport:
     generated_at: str
     deterministic_checks: DeterministicChecks = field(default_factory=DeterministicChecks)
     policy: PolicyDecision = field(default_factory=PolicyDecision)
+    llm_review: LLMReviewResult = field(default_factory=LLMReviewResult)
+    pre_llm_posture: MergePosture | None = None
 
     def to_dict(self) -> dict[str, Any]:
+        pre_llm_posture = self.pre_llm_posture or self.posture
         return {
             "posture": self.posture.value,
+            "pre_llm_posture": pre_llm_posture.value,
+            "final_posture": self.posture.value,
             "summary": self.summary,
             "task_summary": self.task_summary,
             "changed_files": list(self.changed_files),
@@ -379,5 +426,6 @@ class ForgeBenchReport:
             "guardrail_hits": list(self.guardrail_hits),
             "deterministic_checks": self.deterministic_checks.to_dict(),
             "policy": self.policy.to_dict(),
+            "llm_review": self.llm_review.to_dict(),
             "generated_at": self.generated_at,
         }

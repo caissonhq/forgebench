@@ -1,0 +1,17 @@
+{
+  "reviewer_name": "Mock LLM Reviewer",
+  "summary": "The docs-only change could still use a small example to prevent command misuse.",
+  "findings": [
+    {
+      "id": "llm_missing_test_case",
+      "title": "LLM reviewer suggests a missing usage example",
+      "severity": "medium",
+      "confidence": "medium",
+      "files": [
+        "README.md"
+      ],
+      "explanation": "The diff clarifies review usage, but the task context does not show an example that exercises the documented command shape.",
+      "suggested_fix": "Add a focused example or confirm the existing examples already cover the documented command."
+    }
+  ]
+}
