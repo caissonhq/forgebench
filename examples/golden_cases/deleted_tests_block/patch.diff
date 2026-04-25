@@ -1,0 +1,10 @@
+diff --git a/tests/test_calculator.py b/tests/test_calculator.py
+deleted file mode 100644
+index abcd111..0000000
+--- a/tests/test_calculator.py
++++ /dev/null
+@@ -1,4 +0,0 @@
+-from src.calculator import add
+-
+-def test_add():
+-    assert add(1, 2) == 3

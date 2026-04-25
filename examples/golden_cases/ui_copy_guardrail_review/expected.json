@@ -1,0 +1,10 @@
+{
+  "case_name": "ui_copy_guardrail_review",
+  "run_checks": false,
+  "expected_posture": "BLOCK",
+  "required_finding_ids": ["ui_copy_changed", "forbidden_pattern_added"],
+  "allowed_extra_finding_ids": ["implementation_without_tests"],
+  "forbidden_finding_ids": ["deleted_tests", "tests_failed"],
+  "allow_unlisted_findings": false,
+  "rationale": "The UI copy change adds a forbidden product-scope phrase and should block under guardrail rules."
+}

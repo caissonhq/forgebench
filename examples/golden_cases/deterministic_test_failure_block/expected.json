@@ -1,0 +1,10 @@
+{
+  "case_name": "deterministic_test_failure_block",
+  "run_checks": true,
+  "expected_posture": "BLOCK",
+  "required_finding_ids": ["tests_failed"],
+  "allowed_extra_finding_ids": ["ui_copy_changed"],
+  "forbidden_finding_ids": ["implementation_without_tests"],
+  "allow_unlisted_findings": false,
+  "rationale": "The diff is low-risk, but the configured deterministic test command fails and should block."
+}

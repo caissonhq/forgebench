@@ -1,0 +1,9 @@
+project: ForgeBench Test
+
+checks:
+  build: null
+  test: null
+  lint: null
+  typecheck: null
+
+check_timeout_seconds: 5

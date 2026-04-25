@@ -1,0 +1,18 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "forgebench"
+version = "0.2.1"
+description = "Adversarial pre-merge QA for coding-agent output."
+readme = "README.md"
+requires-python = ">=3.10"
+authors = [{ name = "ForgeBench" }]
+dependencies = []
+
+[project.scripts]
+forgebench = "forgebench.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["forgebench*"]

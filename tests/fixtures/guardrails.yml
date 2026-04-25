@@ -1,0 +1,18 @@
+project: Quarterly
+
+protected_behavior:
+  - Federal + California only
+  - Tax calculation trust must be preserved
+  - Paid state must distinguish Federal and California payments
+
+risk_files:
+  high:
+    - "**/TaxEngine/**"
+    - "**/Persistence/**"
+  medium:
+    - "**/Views/**"
+
+forbidden_patterns:
+  - subscription
+  - external checkout
+  - brokered account linking

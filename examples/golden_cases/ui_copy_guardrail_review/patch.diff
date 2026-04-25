@@ -1,0 +1,14 @@
+diff --git a/src/components/PaymentStatus.tsx b/src/components/PaymentStatus.tsx
+index 1111111..2222222 100644
+--- a/src/components/PaymentStatus.tsx
++++ b/src/components/PaymentStatus.tsx
+@@ -1,7 +1,8 @@
+ export function PaymentStatus({ paid }: { paid: boolean }) {
+   return (
+     <section>
+-      <span>{paid ? "Paid" : "Unpaid"}</span>
++      <h2>Quarterly payment status</h2>
++      <span>{paid ? "Paid" : "Enable account linking"}</span>
+     </section>
+   );
+ }

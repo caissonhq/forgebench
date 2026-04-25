@@ -1,0 +1,10 @@
+{
+  "case_name": "generated_file_noise_review",
+  "run_checks": false,
+  "expected_posture": "REVIEW",
+  "required_finding_ids": ["generated_files_changed"],
+  "allowed_extra_finding_ids": [],
+  "forbidden_finding_ids": ["deleted_tests", "tests_failed"],
+  "allow_unlisted_findings": false,
+  "rationale": "Generated output in a diff should trigger review because it is often accidental noise."
+}

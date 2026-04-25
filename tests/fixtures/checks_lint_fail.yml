@@ -1,0 +1,9 @@
+project: ForgeBench Test
+
+checks:
+  build: null
+  test: null
+  lint: "python3 -c 'import sys; print(\"bad lint\"); sys.exit(1)'"
+  typecheck: null
+
+check_timeout_seconds: 5

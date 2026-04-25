@@ -1,0 +1,18 @@
+{
+  "case_name": "docs_only_low_concern",
+  "run_checks": false,
+  "expected_posture": "LOW_CONCERN",
+  "required_finding_ids": ["ui_copy_changed"],
+  "allowed_extra_finding_ids": [],
+  "forbidden_finding_ids": [
+    "implementation_without_tests",
+    "deleted_tests",
+    "dependency_surface_changed",
+    "persistence_schema_changed",
+    "tests_failed",
+    "build_failed",
+    "typecheck_failed"
+  ],
+  "allow_unlisted_findings": false,
+  "rationale": "Docs-only changes may produce an advisory copy finding, but should not block merge."
+}

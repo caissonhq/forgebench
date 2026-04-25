@@ -1,0 +1,18 @@
+diff --git a/src/calculator.py b/src/calculator.py
+index 2f4a1a1..3d5f2b2 100644
+--- a/src/calculator.py
++++ b/src/calculator.py
+@@ -1,4 +1,5 @@
+ def add(a, b):
+-    return a - b
++    result = a + b
++    return result
+ 
+ def subtract(a, b):
+diff --git a/README.md b/README.md
+index 7a1b111..8c2d222 100644
+--- a/README.md
++++ b/README.md
+@@ -1 +1,2 @@
+ Project notes
++Updated user-facing documentation.

@@ -1,0 +1,8 @@
+project: ForgeBench Golden Corpus
+
+protected_behavior:
+  - Keep the product focused on local pre-merge QA.
+  - Do not introduce account-linking product scope.
+
+forbidden_patterns:
+  - account linking

@@ -1,0 +1,7 @@
+diff --git a/dist/app.js b/dist/app.js
+index 1111111..2222222 100644
+--- a/dist/app.js
++++ b/dist/app.js
+@@ -1 +1,2 @@
+ console.log("old build");
++console.log("new build");

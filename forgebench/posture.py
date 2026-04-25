@@ -1,0 +1,180 @@
+from __future__ import annotations
+
+from forgebench.models import CheckStatus, Confidence, DeterministicChecks, Finding, MergePosture, Severity
+
+
+def determine_posture(
+    findings: list[Finding],
+    static_signals: dict[str, object],
+    guardrail_hits: list[str],
+    deterministic_checks: DeterministicChecks | None = None,
+) -> tuple[MergePosture, str]:
+    finding_ids = {finding.id for finding in findings}
+    tests_changed = bool(static_signals.get("tests_changed"))
+    dependency_files = static_signals.get("dependency_files_changed") or []
+    persistence_files = static_signals.get("persistence_or_schema_files_changed") or []
+
+    if any(finding.severity == Severity.BLOCKER for finding in findings):
+        return (
+            MergePosture.BLOCK,
+            _with_check_context(
+                "Do not merge. ForgeBench found a blocker-level issue that needs repair before review should continue.",
+                deterministic_checks,
+            ),
+        )
+
+    high_confidence_high_findings = [
+        finding
+        for finding in findings
+        if finding.severity == Severity.HIGH and finding.confidence == Confidence.HIGH
+    ]
+    block_ids = {"deleted_tests", "forbidden_pattern_added"}
+    if any(finding.id in block_ids for finding in high_confidence_high_findings):
+        return (
+            MergePosture.BLOCK,
+            _with_check_context(
+                "Do not merge yet. ForgeBench found a high-confidence merge risk, such as deleted tests or a forbidden pattern in added code.",
+                deterministic_checks,
+            ),
+        )
+
+    if persistence_files and not tests_changed:
+        return (
+            MergePosture.BLOCK,
+            _with_check_context(
+                "Do not merge yet. The patch changes likely persistence or schema behavior without corresponding test coverage.",
+                deterministic_checks,
+            ),
+        )
+
+    if dependency_files and not tests_changed:
+        return (
+            MergePosture.BLOCK,
+            _with_check_context(
+                "Do not merge yet. The patch changes dependency surface without corresponding test coverage or validation evidence.",
+                deterministic_checks,
+            ),
+        )
+
+    timed_out_ids = {"build_timed_out", "tests_timed_out", "lint_timed_out", "typecheck_timed_out", "custom_check_timed_out"}
+    if finding_ids & timed_out_ids:
+        return (
+            MergePosture.REVIEW,
+            _with_check_context(
+                "Review before merge. At least one configured deterministic check timed out, so local verification is incomplete.",
+                deterministic_checks,
+            ),
+        )
+
+    if "lint_failed" in finding_ids:
+        return (
+            MergePosture.REVIEW,
+            _with_check_context(
+                "Review before merge. The patch has no build, test, or typecheck blocker, but a configured quality check failed.",
+                deterministic_checks,
+            ),
+        )
+
+    if any(finding.severity == Severity.HIGH for finding in findings):
+        return (
+            MergePosture.REVIEW,
+            _with_check_context(
+                "Review before merge. The patch may be valid, but ForgeBench found high-severity risk that needs human review.",
+                deterministic_checks,
+            ),
+        )
+
+    medium_count = sum(1 for finding in findings if finding.severity == Severity.MEDIUM)
+    if medium_count >= 2:
+        return (
+            MergePosture.REVIEW,
+            _with_check_context(
+                "Review before merge. Multiple static signals indicate risk even though ForgeBench did not find a deterministic blocker.",
+                deterministic_checks,
+            ),
+        )
+
+    if "implementation_without_tests" in finding_ids:
+        return (
+            MergePosture.REVIEW,
+            _with_check_context(
+                "Review before merge. The patch may be valid, but it changes implementation behavior without test updates.",
+                deterministic_checks,
+            ),
+        )
+
+    if "broad_file_surface" in finding_ids:
+        return (
+            MergePosture.REVIEW,
+            _with_check_context(
+                "Review before merge. The patch touches a broad file surface and should be inspected for unrelated changes.",
+                deterministic_checks,
+            ),
+        )
+
+    review_ids = {"build_config_changed", "generated_files_changed"}
+    if finding_ids & review_ids:
+        return (
+            MergePosture.REVIEW,
+            _with_check_context(
+                "Review before merge. ForgeBench found static signals that can affect build behavior or add review noise.",
+                deterministic_checks,
+            ),
+        )
+
+    if guardrail_hits:
+        return (
+            MergePosture.REVIEW,
+            _with_check_context(
+                "Review before merge. Project guardrails were hit and should be checked against the original task.",
+                deterministic_checks,
+            ),
+        )
+
+    if dependency_files:
+        return (
+            MergePosture.REVIEW,
+            _with_check_context(
+                "Review before merge. The dependency surface changed, so build and install behavior should be checked.",
+                deterministic_checks,
+            ),
+        )
+
+    return (
+        MergePosture.LOW_CONCERN,
+        _low_concern_summary(deterministic_checks),
+    )
+
+
+def _with_check_context(summary: str, deterministic_checks: DeterministicChecks | None) -> str:
+    context = _check_context_sentence(deterministic_checks)
+    if not context:
+        return summary
+    return f"{summary} {context}"
+
+
+def _low_concern_summary(deterministic_checks: DeterministicChecks | None) -> str:
+    context = _check_context_sentence(deterministic_checks)
+    if context:
+        return f"Low concern. {context} ForgeBench found no high-confidence merge blockers, but this is not a substitute for human review."
+    return "Low concern. ForgeBench found no high-confidence merge blockers, but this is not a substitute for human review."
+
+
+def _check_context_sentence(deterministic_checks: DeterministicChecks | None) -> str:
+    if deterministic_checks is None or not deterministic_checks.run_requested:
+        return "Deterministic checks were not run."
+    if not deterministic_checks.results:
+        return "No deterministic checks were configured."
+    results = deterministic_checks.results
+    configured_results = [result for result in results if result.status != CheckStatus.NOT_CONFIGURED]
+    if configured_results and all(result.status == CheckStatus.PASSED for result in configured_results):
+        if any(result.status == CheckStatus.NOT_CONFIGURED for result in results):
+            return "Configured deterministic checks passed. Some deterministic checks were not configured."
+        return "Configured deterministic checks passed."
+    if any(result.status in {CheckStatus.FAILED, CheckStatus.ERROR} for result in results):
+        return "Configured deterministic checks found failures."
+    if any(result.status == CheckStatus.TIMED_OUT for result in results):
+        return "At least one deterministic check timed out."
+    if all(result.status == CheckStatus.NOT_CONFIGURED for result in results):
+        return "No deterministic checks were configured."
+    return "Some deterministic checks were not configured."

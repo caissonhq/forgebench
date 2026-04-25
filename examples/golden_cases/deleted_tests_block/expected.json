@@ -1,0 +1,10 @@
+{
+  "case_name": "deleted_tests_block",
+  "run_checks": false,
+  "expected_posture": "BLOCK",
+  "required_finding_ids": ["deleted_tests"],
+  "allowed_extra_finding_ids": [],
+  "forbidden_finding_ids": [],
+  "allow_unlisted_findings": false,
+  "rationale": "Deleting a test file is a high-confidence merge blocker until coverage is restored or justified."
+}

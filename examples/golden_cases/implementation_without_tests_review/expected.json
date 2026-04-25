@@ -1,0 +1,15 @@
+{
+  "case_name": "implementation_without_tests_review",
+  "run_checks": false,
+  "expected_posture": "REVIEW",
+  "required_finding_ids": ["implementation_without_tests"],
+  "allowed_extra_finding_ids": [],
+  "forbidden_finding_ids": [
+    "deleted_tests",
+    "dependency_surface_changed",
+    "persistence_schema_changed",
+    "tests_failed"
+  ],
+  "allow_unlisted_findings": false,
+  "rationale": "A source behavior change without test updates should require review before merge."
+}

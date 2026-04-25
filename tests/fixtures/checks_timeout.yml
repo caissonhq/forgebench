@@ -1,0 +1,9 @@
+project: ForgeBench Test
+
+checks:
+  build: null
+  test: "python3 -c 'import time; time.sleep(2)'"
+  lint: null
+  typecheck: null
+
+check_timeout_seconds: 1

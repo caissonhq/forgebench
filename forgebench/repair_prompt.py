@@ -1,0 +1,153 @@
+from __future__ import annotations
+
+from forgebench.models import CheckResult, CheckStatus, EvidenceType, ForgeBenchReport, Guardrails, MergePosture
+
+
+def build_repair_prompt(task_text: str, report: ForgeBenchReport, guardrails: Guardrails) -> str:
+    lines: list[str] = [
+        "You are repairing an AI-generated code change after ForgeBench review.",
+        "",
+        "Original task:",
+        task_text.strip() or "(No task text provided.)",
+        "",
+        "ForgeBench merge posture:",
+        report.posture.value,
+        "",
+        _posture_instruction(report),
+        "",
+    ]
+
+    lines.extend(["Deterministic check failures:"])
+    lines.extend(_format_check_failures(report))
+
+    lines.extend(["", "Static and guardrail findings:"])
+    static_findings = [finding for finding in report.findings if finding.evidence_type != EvidenceType.DETERMINISTIC]
+    if static_findings:
+        lines.extend(_format_findings(static_findings))
+    else:
+        lines.append("- No static or guardrail findings.")
+
+    lines.extend(
+        [
+            "",
+            "Instructions:",
+            "- Fix only the issues listed above.",
+            "- For each issue, either make the smallest necessary repair or clearly explain why the issue is acceptable.",
+            "- Do not broaden the scope.",
+            "- Do not add unrelated refactors.",
+            "- Do not introduce new dependencies unless explicitly necessary.",
+            "- Preserve the original product and architecture guardrails.",
+            "- Add or update tests where ForgeBench identified missing coverage.",
+            "- Before returning the repair, run the configured checks that failed if they are available locally. If you cannot run them, explain why.",
+            "- After making changes, summarize exactly what changed and why.",
+            "",
+            "Project guardrails:",
+        ]
+    )
+
+    if guardrails.protected_behavior:
+        lines.extend(f"- {item}" for item in guardrails.protected_behavior)
+    else:
+        lines.append("- No project-specific protected behavior was provided.")
+
+    lines.append("")
+    return "\n".join(lines)
+
+
+def _posture_instruction(report: ForgeBenchReport) -> str:
+    if report.posture == MergePosture.BLOCK and _has_failed_blocking_check(report):
+        return "Do not proceed to merge until the failing deterministic checks pass."
+    if report.posture == MergePosture.BLOCK:
+        return "Do not proceed to merge until these issues are addressed."
+    if report.posture == MergePosture.REVIEW:
+        return "Address the issues below or explain why each is acceptable."
+    return "No required repair was identified. Use this only to tighten tests or advisory concerns."
+
+
+def _format_evidence(evidence: list[str]) -> list[str]:
+    if not evidence:
+        return []
+    lines = ["  Evidence snippets:"]
+    lines.extend(f"  - {snippet}" for snippet in evidence)
+    return lines
+
+
+def _format_findings(findings) -> list[str]:
+    lines: list[str] = []
+    for finding in findings:
+        files = ", ".join(finding.files) if finding.files else "unknown"
+        lines.extend(
+            [
+                f"- {finding.severity.value}: {finding.title}",
+                f"  Confidence: {finding.confidence.value}",
+                f"  Evidence: {finding.evidence_type.value}",
+                f"  Files: {files}",
+                *_format_evidence(finding.evidence),
+                f"  Explanation: {finding.explanation}",
+                f"  Suggested fix: {finding.suggested_fix}",
+            ]
+        )
+    return lines
+
+
+def _format_check_failures(report: ForgeBenchReport) -> list[str]:
+    failing_results = [
+        result
+        for result in report.deterministic_checks.results
+        if result.status in {CheckStatus.FAILED, CheckStatus.ERROR, CheckStatus.TIMED_OUT}
+    ]
+    if failing_results:
+        lines: list[str] = []
+        for result in failing_results:
+            lines.extend(_format_check_result(result, report))
+        return lines
+    if not report.deterministic_checks.run_requested:
+        return ["- Deterministic checks were not run."]
+    if not report.deterministic_checks.results:
+        return ["- No deterministic checks were configured."]
+    return ["- No deterministic check failures were reported."]
+
+
+def _format_check_result(result: CheckResult, report: ForgeBenchReport) -> list[str]:
+    finding = _deterministic_finding_for_result(result, report)
+    prefix = f"- {finding.severity.value}: {finding.title}" if finding else f"- {result.name}: {result.status.value}"
+    lines = [
+        prefix,
+        f"  Check status: {result.name}: {result.status.value}",
+        f"  Command to rerun: {result.command or '(not configured)'}",
+        f"  Exit code: {result.exit_code if result.exit_code is not None else 'none'}",
+        f"  Duration: {result.duration_seconds:.2f}s",
+    ]
+    if finding:
+        lines.extend(
+            [
+                f"  Explanation: {finding.explanation}",
+                f"  Suggested fix: {finding.suggested_fix}",
+            ]
+        )
+    if result.error_message:
+        lines.append(f"  Error: {result.error_message}")
+    if result.stdout_excerpt:
+        lines.append(f"  stdout excerpt: {_single_line(result.stdout_excerpt)}")
+    if result.stderr_excerpt:
+        lines.append(f"  stderr excerpt: {_single_line(result.stderr_excerpt)}")
+    return lines
+
+
+def _deterministic_finding_for_result(result: CheckResult, report: ForgeBenchReport):
+    check_marker = f"Check: {result.name}"
+    for finding in report.findings:
+        if finding.evidence_type == EvidenceType.DETERMINISTIC and check_marker in finding.evidence:
+            return finding
+    return None
+
+
+def _has_failed_blocking_check(report: ForgeBenchReport) -> bool:
+    return any(finding.id in {"build_failed", "tests_failed", "typecheck_failed"} for finding in report.findings)
+
+
+def _single_line(value: str) -> str:
+    collapsed = " ".join(value.split())
+    if len(collapsed) <= 500:
+        return collapsed
+    return collapsed[:497].rstrip() + "..."

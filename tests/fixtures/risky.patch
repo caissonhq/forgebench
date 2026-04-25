@@ -1,0 +1,31 @@
+diff --git a/tests/test_calculator.py b/tests/test_calculator.py
+deleted file mode 100644
+index abcd111..0000000
+--- a/tests/test_calculator.py
++++ /dev/null
+@@ -1,4 +0,0 @@
+-from src.calculator import add
+-
+-def test_add():
+-    assert add(1, 2) == 3
+diff --git a/package.json b/package.json
+index 1111111..2222222 100644
+--- a/package.json
++++ b/package.json
+@@ -1,5 +1,8 @@
+ {
+-  "dependencies": {}
++  "dependencies": {
++    "left-pad": "1.3.0"
++  }
+ }
+diff --git a/app/TaxEngine/Calculator.swift b/app/TaxEngine/Calculator.swift
+index 3333333..4444444 100644
+--- a/app/TaxEngine/Calculator.swift
++++ b/app/TaxEngine/Calculator.swift
+@@ -10,6 +10,7 @@ struct Calculator {
+     func calculate() -> Decimal {
++        let productMode = "subscription"
+         return Decimal(0)
+     }
+ }
