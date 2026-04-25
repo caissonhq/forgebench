@@ -84,6 +84,8 @@ ForgeBench can fetch a GitHub pull request through the local `gh` CLI, derive ta
 forgebench review-pr https://github.com/OWNER/REPO/pull/123
 ```
 
+This keeps PR review local by default while producing a comment-ready summary for manual use.
+
 ForgeBench requires the GitHub CLI for this flow. Install `gh`, run `gh auth login`, and make sure your local auth can read the target PR.
 
 The default output directory is PR-scoped:
