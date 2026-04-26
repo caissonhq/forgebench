@@ -1,0 +1,14 @@
+{
+  "case_name": "assertion_removed_without_replacement_review",
+  "run_checks": false,
+  "expected_posture": "REVIEW",
+  "required_finding_ids": [
+    "tests_assertions_removed_without_replacement"
+  ],
+  "allowed_extra_finding_ids": [],
+  "forbidden_finding_ids": [
+    "deleted_tests"
+  ],
+  "allow_unlisted_findings": false,
+  "rationale": "Removing an assertion without replacement is a review risk, but not equivalent to deleting an entire test file."
+}

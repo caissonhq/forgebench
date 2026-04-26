@@ -152,7 +152,7 @@ index 1111111..2222222 100644
 
         self.assertIn("contract_keeper_contract_changed_without_tests", _finding_ids(result))
 
-    def test_contract_keeper_does_not_flag_read_model_as_schema_by_default(self) -> None:
+    def test_contract_keeper_flags_read_model_contract_without_schema_risk(self) -> None:
         result = _review(
             task="Update signal read model fields used by the operator display.",
             patch="""
@@ -170,6 +170,25 @@ index 1111111..2222222 100644
 
         self.assertNotIn("contract_keeper_contract_changed_without_tests", _finding_ids(result))
         self.assertNotIn("contract_keeper_public_interface_changed", _finding_ids(result))
+        self.assertNotIn("persistence_schema_changed", _finding_ids(result))
+        self.assertIn("contract_keeper_read_model_contract_changed", _finding_ids(result))
+
+    def test_contract_keeper_does_not_call_dto_persistence(self) -> None:
+        result = _review(
+            task="Adjust response DTO fields.",
+            patch="""
+diff --git a/app/payment_dto.py b/app/payment_dto.py
+index 1111111..2222222 100644
+--- a/app/payment_dto.py
++++ b/app/payment_dto.py
+@@ -1,2 +1,3 @@
+ class PaymentDTO:
+     id: str
++    state: str
+""",
+        )
+
+        self.assertNotIn("persistence_schema_changed", _finding_ids(result))
 
     def test_product_guardrail_reviewer_flags_forbidden_pattern(self) -> None:
         result = _review(
@@ -196,6 +215,8 @@ forbidden_patterns:
 
         self.assertIn("product_guardrail_forbidden_pattern", _finding_ids(result))
         self.assertEqual(result.report.posture, MergePosture.BLOCK)
+        reviewer_finding = _finding(result, "product_guardrail_forbidden_pattern")
+        self.assertNotEqual(reviewer_finding.title, "Forbidden product or architecture pattern introduced")
 
     def test_product_guardrail_reviewer_flags_protected_high_risk_area(self) -> None:
         result = _review(
@@ -320,6 +341,7 @@ check_timeout_seconds: 5
         self.assertIn("specialized_reviewers", payload)
         self.assertIn("Specialized reviewer findings:", repair)
         self.assertIn("Changed behavior lacks corresponding test coverage", repair)
+        self.assertNotIn("No additional scope concern found from task text and changed files.\n  Explanation", repair)
 
     def test_pr_comment_includes_concise_reviewer_summary(self) -> None:
         result = _review(task="Fix addition behavior.", patch=_source_patch())
@@ -327,6 +349,27 @@ check_timeout_seconds: 5
 
         self.assertIn("Specialized reviewers:", comment)
         self.assertIn("Test Skeptic:", comment)
+        self.assertLess(len(comment), 3000)
+
+    def test_test_only_refactor_does_not_become_block(self) -> None:
+        result = _review(
+            task="Refactor payment tests.",
+            patch="""
+diff --git a/tests/test_payments.py b/tests/test_payments.py
+index 1111111..2222222 100644
+--- a/tests/test_payments.py
++++ b/tests/test_payments.py
+@@ -1,4 +1,5 @@
+ def test_paid_status():
+     result = status({"paid": True})
+-    assert result == "paid"
++    expected = "paid"
++    assert result == expected
+""",
+        )
+
+        self.assertNotEqual(result.report.posture, MergePosture.BLOCK)
+        self.assertNotIn("tests_assertions_removed_without_replacement", _finding_ids(result))
 
 
 def _review(task: str, patch: str, guardrails: str | None = None, run_checks: bool = False):
@@ -352,6 +395,13 @@ def _write(path: Path, text: str) -> Path:
 
 def _finding_ids(result) -> set[str]:
     return {finding.id for finding in result.report.findings}
+
+
+def _finding(result, finding_id: str):
+    for finding in result.report.findings:
+        if finding.id == finding_id:
+            return finding
+    raise AssertionError(f"missing finding {finding_id}")
 
 
 def _docs_patch() -> str:

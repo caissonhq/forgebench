@@ -1,0 +1,18 @@
+project: Asset Noise Case
+policy:
+  path_categories:
+    assets:
+      patterns:
+        - "**/*.png"
+        - "**/Assets.xcassets/**"
+      default_severity: advisory
+  suppress_findings:
+    - finding_id: broad_file_surface
+      when_all_changed_files_match:
+        - "**/*.png"
+        - "**/Assets.xcassets/**"
+      reason: "Asset-only broad changes should not be treated as broad code risk."
+  posture_overrides:
+    asset_only_changes:
+      posture_ceiling: LOW_CONCERN
+      reason: "Asset-only changes should not escalate above LOW_CONCERN unless another blocker exists."

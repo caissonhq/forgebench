@@ -18,7 +18,7 @@ def review(context: ReviewerContext) -> SpecializedReviewerResult:
         findings.append(
             Finding(
                 id="product_guardrail_forbidden_pattern",
-                title="Patch introduces a forbidden product or architecture pattern",
+                title="Configured forbidden pattern needs product review",
                 severity=Severity.HIGH,
                 confidence=Confidence.HIGH,
                 evidence_type=EvidenceType.REVIEWER,
@@ -28,8 +28,8 @@ def review(context: ReviewerContext) -> SpecializedReviewerResult:
                     *forbidden.evidence[:6],
                 ],
                 explanation=(
-                    "Project guardrails explicitly forbid this product or architecture pattern. This is not a semantic guess; "
-                    "it is grounded in configured forbidden-pattern evidence from added lines."
+                    "Project guardrails explicitly forbid this product or architecture pattern. The reviewer finding adds "
+                    "product-review framing to the existing forbidden-pattern evidence; it is not a separate semantic guess."
                 ),
                 suggested_fix="Remove the forbidden pattern or update the guardrail intentionally before merging.",
                 reviewer=PRODUCT_GUARDRAIL_REVIEWER,

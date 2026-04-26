@@ -78,11 +78,17 @@ def review(context: ReviewerContext) -> SpecializedReviewerResult:
 
     if "deleted_tests" in existing_ids:
         referenced.append("deleted_tests")
+    if "tests_assertions_removed_without_replacement" in existing_ids:
+        referenced.append("tests_assertions_removed_without_replacement")
 
     if findings:
         summary = "Found test coverage concerns for the changed behavior."
     elif "deleted_tests" in referenced:
         summary = "Deleted tests are already captured as high-confidence static evidence."
+    elif "tests_assertions_removed_without_replacement" in referenced:
+        summary = "Removed test assertions are already captured as static evidence."
+    elif test_files and not source_files:
+        summary = "Test-only changes did not show a separate behavior coverage concern."
     else:
         summary = "No additional test coverage concern found."
     return SpecializedReviewerResult(

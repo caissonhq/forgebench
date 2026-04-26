@@ -205,12 +205,20 @@ def _format_specialized_reviewer_findings(report: ForgeBenchReport) -> list[str]
                     f"  - {finding.severity.value}: {finding.title}",
                     f"    Confidence: {finding.confidence.value}",
                     f"    Files: {files}",
-                    *_format_evidence(finding.evidence),
+                    *_format_nested_evidence(finding.evidence),
                     f"    Explanation: {finding.explanation}",
                     f"    Suggested fix: {finding.suggested_fix}",
                 ]
             )
     return lines or ["- No specialized reviewer findings."]
+
+
+def _format_nested_evidence(evidence: list[str]) -> list[str]:
+    if not evidence:
+        return []
+    lines = ["    Evidence snippets:"]
+    lines.extend(f"    - {snippet}" for snippet in evidence)
+    return lines
 
 
 def _format_llm_notes(report: ForgeBenchReport) -> list[str]:

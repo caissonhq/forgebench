@@ -1,0 +1,14 @@
+{
+  "case_name": "migration_without_tests_still_blocks",
+  "run_checks": false,
+  "expected_posture": "BLOCK",
+  "required_finding_ids": [
+    "persistence_schema_changed"
+  ],
+  "allowed_extra_finding_ids": [],
+  "forbidden_finding_ids": [
+    "deleted_tests"
+  ],
+  "allow_unlisted_findings": false,
+  "rationale": "True migration/schema changes without tests remain a blocking merge risk."
+}

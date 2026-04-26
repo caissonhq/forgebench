@@ -69,6 +69,35 @@ def review(context: ReviewerContext) -> SpecializedReviewerResult:
     if "persistence_schema_changed" in existing_ids:
         referenced.append("persistence_schema_changed")
 
+    read_model_files = _read_model_public_interface_files(context)
+    if read_model_files and not tests_changed:
+        supporting = ["implementation_without_tests"] if "implementation_without_tests" in existing_ids else []
+        findings.append(
+            Finding(
+                id="contract_keeper_read_model_contract_changed",
+                title="Read-model contract changed without clear coverage",
+                severity=Severity.MEDIUM,
+                confidence=Confidence.MEDIUM,
+                evidence_type=EvidenceType.REVIEWER,
+                files=read_model_files,
+                evidence=[
+                    "Changed lines in a read/view model include public shape or type-like tokens.",
+                    "No likely test file changed with the read-model contract change.",
+                ]
+                + [f"Read-model contract signal in: {path}" for path in read_model_files[:8]],
+                explanation=(
+                    "The patch changes a read-model or view-model surface that callers may depend on. "
+                    "ForgeBench is treating this as contract risk, not persistence/schema risk."
+                ),
+                suggested_fix=(
+                    "Add focused coverage for the changed read-model shape or confirm the affected callers tolerate the change."
+                ),
+                reviewer=CONTRACT_KEEPER,
+                supporting_finding_ids=supporting,
+            )
+        )
+        referenced.extend(supporting)
+
     public_files = _public_interface_files(context)
     if public_files and not tests_changed:
         supporting = ["implementation_without_tests"] if "implementation_without_tests" in existing_ids else []
@@ -97,6 +126,8 @@ def review(context: ReviewerContext) -> SpecializedReviewerResult:
         referenced.extend(supporting)
     else:
         contract_files = _contract_like_files(context)
+        static_persistence_files = set(_list_signal(context, "persistence_or_schema_files_changed"))
+        contract_files = [path for path in contract_files if path not in static_persistence_files]
         if contract_files and not tests_changed:
             supporting = _supporting_ids(existing_ids, ["persistence_schema_changed", "build_config_changed", "dependency_surface_changed"])
             findings.append(
@@ -152,6 +183,20 @@ def _public_interface_files(context: ReviewerContext) -> list[str]:
     return sorted(set(files))
 
 
+def _read_model_public_interface_files(context: ReviewerContext) -> list[str]:
+    files: list[str] = []
+    for changed_file in context.diff.files:
+        if not _is_read_or_view_model(changed_file.path):
+            continue
+        changed_lines = changed_file.added_lines + changed_file.deleted_lines
+        joined = "\n".join(changed_lines).lower()
+        if any(pattern in joined for pattern in PUBLIC_INTERFACE_PATTERNS) or any(
+            _looks_like_read_model_shape_line(line) for line in changed_lines
+        ):
+            files.append(changed_file.path)
+    return sorted(set(files))
+
+
 def _contract_like_files(context: ReviewerContext) -> list[str]:
     files = set(_list_signal(context, "persistence_or_schema_files_changed"))
     for changed_file in context.diff.files:
@@ -174,6 +219,15 @@ def _is_read_or_view_model(path: str) -> bool:
     lower = PurePosixPath(path.replace("\\", "/")).name.lower()
     full = path.replace("\\", "/").lower()
     return any(marker in lower or marker in full for marker in ("read_model", "view_model", "readmodel", "viewmodel"))
+
+
+def _looks_like_read_model_shape_line(line: str) -> bool:
+    stripped = line.strip()
+    if not stripped or stripped.startswith("#"):
+        return False
+    if re.match(r"[A-Za-z_][A-Za-z0-9_]*\s*:", stripped):
+        return True
+    return bool(re.match(r"[\"'][A-Za-z_][A-Za-z0-9_ -]*[\"']\s*:", stripped))
 
 
 def _is_docs_or_asset(path: str) -> bool:

@@ -4,7 +4,7 @@ from pathlib import PurePosixPath
 import re
 from typing import Any
 
-from forgebench.models import Confidence, DiffSummary, EvidenceType, Finding, Severity
+from forgebench.models import ChangedFile, Confidence, DiffSummary, EvidenceType, Finding, Severity
 
 
 SOURCE_EXTENSIONS = {
@@ -81,6 +81,29 @@ UI_COPY_MARKERS = (
     ".md",
 )
 
+ASSERTION_TOKENS = (
+    "assert",
+    "xctassert",
+    "expect(",
+    "should",
+    "toequal",
+    "tobe",
+    "pytest",
+    "unittest",
+    "assertequal",
+    "asserttrue",
+    "assertfalse",
+)
+
+PERSISTENCE_EXTENSIONS = SOURCE_EXTENSIONS | {
+    ".gql",
+    ".graphql",
+    ".prisma",
+    ".sql",
+    ".xcdatamodel",
+    ".xcdatamodeld",
+}
+
 
 def run_static_checks(diff: DiffSummary) -> tuple[list[Finding], dict[str, Any]]:
     findings: list[Finding] = []
@@ -95,10 +118,10 @@ def run_static_checks(diff: DiffSummary) -> tuple[list[Finding], dict[str, Any]]
         and not changed_file.is_binary
     ]
     deleted_test_files = [changed_file.path for changed_file in diff.files if changed_file.is_test and changed_file.is_deleted]
-    modified_test_files_with_deletions = [
+    weakened_test_files = [
         changed_file.path
         for changed_file in diff.files
-        if changed_file.is_test and changed_file.deleted_line_count > 0 and not changed_file.is_deleted
+        if changed_file.is_test and not changed_file.is_deleted and _test_change_removes_coverage_signal(changed_file)
     ]
     dependency_files = [path for path in changed_files if _is_dependency_file(path)]
     config_files = [path for path in changed_files if _is_config_file(path)]
@@ -126,25 +149,46 @@ def run_static_checks(diff: DiffSummary) -> tuple[list[Finding], dict[str, Any]]
             )
         )
 
-    test_risk_files = sorted(set(deleted_test_files + modified_test_files_with_deletions))
-    if test_risk_files:
-        file_deleted = bool(deleted_test_files)
+    if deleted_test_files:
         findings.append(
             Finding(
-                id="deleted_tests" if file_deleted else "tests_weakened",
-                title="Tests were deleted or substantially modified",
+                id="deleted_tests",
+                title="Test file was deleted",
                 severity=Severity.HIGH,
-                confidence=Confidence.HIGH if file_deleted else Confidence.MEDIUM,
+                confidence=Confidence.HIGH,
                 evidence_type=EvidenceType.STATIC,
-                files=test_risk_files,
-                evidence=[f"Test file deleted: {path}" for path in deleted_test_files]
-                + [f"Deleted lines in test file: {path}" for path in modified_test_files_with_deletions],
+                files=sorted(set(deleted_test_files)),
+                evidence=[f"Test file deleted: {path}" for path in deleted_test_files],
                 explanation=(
-                    "The patch deletes a test file or removes lines from tests. This can weaken regression "
-                    "coverage exactly where reviewer confidence is needed."
+                    "The patch deletes a test file. That removes regression coverage exactly where reviewer "
+                    "confidence is needed."
                 ),
                 suggested_fix=(
                     "Restore the deleted coverage or replace it with tests that prove the changed behavior still holds."
+                ),
+            )
+        )
+
+    if weakened_test_files:
+        findings.append(
+            Finding(
+                id="tests_assertions_removed_without_replacement",
+                title="Test assertions were removed without clear replacement",
+                severity=Severity.MEDIUM,
+                confidence=Confidence.MEDIUM,
+                evidence_type=EvidenceType.STATIC,
+                files=sorted(set(weakened_test_files)),
+                evidence=[
+                    f"Assertion or test-case signal removed without comparable replacement: {path}"
+                    for path in sorted(set(weakened_test_files))
+                ],
+                explanation=(
+                    "The patch removes assertion or test-case lines from a test file without adding comparable "
+                    "assertion coverage in the same file. This may be an intentional refactor, but it weakens the "
+                    "static signal that tests still cover the behavior."
+                ),
+                suggested_fix=(
+                    "Keep or replace the removed assertions, or explain why the remaining tests still cover the behavior."
                 ),
             )
         )
@@ -286,6 +330,7 @@ def run_static_checks(diff: DiffSummary) -> tuple[list[Finding], dict[str, Any]]
         "test_files_changed": sorted(set(test_files)),
         "tests_changed": bool(test_files),
         "deleted_test_files": sorted(set(deleted_test_files)),
+        "weakened_test_files": sorted(set(weakened_test_files)),
         "dependency_files_changed": sorted(set(dependency_files)),
         "build_or_config_files_changed": sorted(set(config_files)),
         "persistence_or_schema_files_changed": sorted(set(persistence_files)),
@@ -317,10 +362,23 @@ def _is_persistence_file(path: str) -> bool:
     parsed = PurePosixPath(lower)
     if parsed.suffix in {".md", ".markdown", ".txt", ".rst"}:
         return False
-    basename = parsed.name
-    if any(marker in lower for marker in ("read_model", "view_model", "readmodel", "viewmodel")):
+    if lower.startswith("examples/golden_cases/") or lower.startswith("tests/fixtures/"):
         return False
-    if any(marker in lower for marker in ("dto", "response_model", "presentation_model")):
+    basename = parsed.name
+    non_persistence_model_markers = (
+        "read_model",
+        "view_model",
+        "readmodel",
+        "viewmodel",
+        "presentation_model",
+        "response_model",
+        "dto",
+        "serializer",
+        "mapper",
+    )
+    if any(marker in lower for marker in non_persistence_model_markers):
+        return False
+    if parsed.suffix not in PERSISTENCE_EXTENSIONS and "schema" not in basename and "migration" not in basename:
         return False
 
     long_markers = {
@@ -343,6 +401,39 @@ def _is_persistence_file(path: str) -> bool:
     if "db" in tokens or "entity" in tokens or "entities" in tokens or "store" in tokens:
         return True
     return basename.endswith("entity" + parsed.suffix) or basename.endswith("store" + parsed.suffix)
+
+
+def _test_change_removes_coverage_signal(changed_file: ChangedFile) -> bool:
+    deleted_assertions = _count_assertion_lines(changed_file.deleted_lines)
+    added_assertions = _count_assertion_lines(changed_file.added_lines)
+    if deleted_assertions and added_assertions < deleted_assertions:
+        return True
+
+    deleted_cases = _count_test_case_lines(changed_file.deleted_lines)
+    added_cases = _count_test_case_lines(changed_file.added_lines)
+    return bool(deleted_cases and added_cases < deleted_cases)
+
+
+def _count_assertion_lines(lines: list[str]) -> int:
+    count = 0
+    for line in lines:
+        lower = line.strip().lower()
+        if any(token in lower for token in ASSERTION_TOKENS):
+            count += 1
+    return count
+
+
+def _count_test_case_lines(lines: list[str]) -> int:
+    count = 0
+    for line in lines:
+        lower = line.strip().lower()
+        if re.match(r"(async\s+def|def)\s+test_", lower):
+            count += 1
+        elif lower.startswith("func test"):
+            count += 1
+        elif lower.startswith(("it(", "test(")):
+            count += 1
+    return count
 
 
 def _is_generated_file(path: str) -> bool:

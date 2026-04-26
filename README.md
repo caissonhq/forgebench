@@ -339,6 +339,13 @@ forgebench review-pr https://github.com/OWNER/REPO/pull/123 --no-reviewers
 
 Reviewer output appears in Markdown under `Specialized Reviewers`, in JSON under `specialized_reviewers`, in the repair prompt as reviewer findings, and as a concise summary in `pr-comment.md`.
 
+Sprint 6.1 calibration tightened the Phase 1 reviewers around real dogfood noise:
+
+- Test Skeptic no longer treats every deleted test line as weakened coverage. Deleted test files remain serious; removed assertions without replacement produce review-level risk; assertion refactors with replacement coverage stay low concern.
+- Contract Keeper separates read/view-model contract changes from persistence/schema changes. Read models can still require review when their public shape changes, but they should not block as schema risk unless policy marks them high risk.
+- Scope Auditor focuses on task-scope drift, such as README-only tasks that also change code or CI/config.
+- Product / Guardrail Reviewer adds product-review framing to configured guardrail hits without claiming semantic violations unless forbidden patterns match.
+
 ## Optional LLM Review
 
 ForgeBench can run an advisory LLM reviewer when `--llm-review` is passed. LLM review is off by default.
@@ -460,10 +467,12 @@ Example `expected.json`:
 ForgeBench detects:
 
 - Implementation changes without corresponding test updates.
-- Deleted or weakened tests.
+- Deleted test files.
+- Test assertions or test cases removed without clear replacement.
 - Dependency and lockfile changes.
 - Build or configuration changes.
 - Persistence, schema, entity, store, database, ORM, or migration changes.
+- Read/view-model contract changes through Contract Keeper without treating them as persistence/schema by default.
 - Broad patches touching more than 10 files.
 - Generated output, cache, or local machine files in the diff.
 - User-facing copy, documentation, or UI surface changes.
@@ -532,6 +541,12 @@ Run calibration:
 ```bash
 PYTHONDONTWRITEBYTECODE=1 python -m forgebench calibrate --cases examples/golden_cases
 ```
+
+## V1 Readiness
+
+See `V1_READINESS.md` for the current V1 readiness assessment, evidence hierarchy, Phase 1 reviewer scope, known limitations, and what remains before CAI-5 should be considered done.
+
+See `SITE_SYNC_NOTES.md` for the Lovable update prompt that keeps the public alpha site aligned with current CLI capabilities without implying hosted SaaS or the full reviewer set.
 
 ## Known Limitations
 

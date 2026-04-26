@@ -1,0 +1,19 @@
+{
+  "case_name": "docs_task_with_package_change_scope_review",
+  "run_checks": false,
+  "expected_posture": "REVIEW",
+  "required_finding_ids": [
+    "build_config_changed",
+    "ui_copy_changed"
+  ],
+  "required_reviewer_finding_ids": [
+    "scope_auditor_task_scope_expansion"
+  ],
+  "allowed_extra_finding_ids": [],
+  "forbidden_finding_ids": [
+    "deleted_tests",
+    "persistence_schema_changed"
+  ],
+  "allow_unlisted_findings": false,
+  "rationale": "A docs task that changes CI/config should be reviewed for scope drift."
+}

@@ -1,18 +1,19 @@
 {
-  "case_name": "read_model_not_persistence_review_or_low_concern",
+  "case_name": "read_model_contract_not_persistence_review",
   "run_checks": false,
   "expected_posture": "REVIEW",
   "required_finding_ids": [
     "implementation_without_tests"
   ],
-  "allowed_extra_finding_ids": [],
   "required_reviewer_finding_ids": [
     "contract_keeper_read_model_contract_changed",
     "test_skeptic_missing_behavior_coverage"
   ],
+  "allowed_extra_finding_ids": [],
   "forbidden_finding_ids": [
-    "persistence_schema_changed"
+    "persistence_schema_changed",
+    "deleted_tests"
   ],
   "allow_unlisted_findings": false,
-  "rationale": "Read model implementation changes without tests should be REVIEW, not BLOCK from persistence/schema heuristics."
+  "rationale": "Read-model shape changes are contract risk and may need tests, but should not be treated as persistence/schema changes by default."
 }

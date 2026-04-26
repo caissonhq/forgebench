@@ -105,6 +105,15 @@ def _determine_posture(
             ),
         )
 
+    if any(finding.evidence_type == EvidenceType.REVIEWER and finding.severity == Severity.MEDIUM for finding in findings):
+        return (
+            MergePosture.REVIEW,
+            _with_check_context(
+                "Review before merge. A specialized reviewer found a medium-severity risk that should be checked by a human.",
+                deterministic_checks,
+            ),
+        )
+
     if "implementation_without_tests" in finding_ids:
         return (
             MergePosture.REVIEW,
@@ -129,6 +138,15 @@ def _determine_posture(
             MergePosture.REVIEW,
             _with_check_context(
                 "Review before merge. ForgeBench found static signals that can affect build behavior or add review noise.",
+                deterministic_checks,
+            ),
+        )
+
+    if "tests_assertions_removed_without_replacement" in finding_ids:
+        return (
+            MergePosture.REVIEW,
+            _with_check_context(
+                "Review before merge. The patch removes test assertions without a clear replacement.",
                 deterministic_checks,
             ),
         )

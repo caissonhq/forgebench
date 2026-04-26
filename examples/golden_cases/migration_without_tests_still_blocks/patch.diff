@@ -1,0 +1,7 @@
+diff --git a/db/migrations/002_add_paid_at.sql b/db/migrations/002_add_paid_at.sql
+new file mode 100644
+index 0000000..2222222
+--- /dev/null
++++ b/db/migrations/002_add_paid_at.sql
+@@ -0,0 +1 @@
++ALTER TABLE payments ADD COLUMN paid_at TEXT;

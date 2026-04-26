@@ -1,0 +1,19 @@
+{
+  "case_name": "test_refactor_not_weakened_low_concern_or_review",
+  "run_checks": false,
+  "expected_posture": "LOW_CONCERN",
+  "required_finding_ids": [],
+  "allowed_extra_finding_ids": [],
+  "forbidden_finding_ids": [
+    "deleted_tests",
+    "tests_assertions_removed_without_replacement",
+    "test_skeptic_weak_test_signal"
+  ],
+  "forbidden_reviewer_finding_ids": [
+    "test_skeptic_missing_behavior_coverage",
+    "contract_keeper_contract_changed_without_tests",
+    "scope_auditor_task_scope_expansion"
+  ],
+  "allow_unlisted_findings": false,
+  "rationale": "A test-only assertion refactor with replacement coverage should not become a high-risk or blocking test weakening signal."
+}

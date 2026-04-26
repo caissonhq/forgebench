@@ -1,0 +1,19 @@
+{
+  "case_name": "asset_only_no_reviewer_noise_low_concern",
+  "run_checks": false,
+  "expected_posture": "LOW_CONCERN",
+  "required_finding_ids": [],
+  "allowed_extra_finding_ids": [],
+  "forbidden_finding_ids": [
+    "broad_file_surface",
+    "implementation_without_tests",
+    "persistence_schema_changed"
+  ],
+  "forbidden_reviewer_finding_ids": [
+    "scope_auditor_task_scope_expansion",
+    "test_skeptic_missing_behavior_coverage",
+    "contract_keeper_contract_changed_without_tests"
+  ],
+  "allow_unlisted_findings": false,
+  "rationale": "Asset-only broad file changes should stay low concern and avoid reviewer noise."
+}
