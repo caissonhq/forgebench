@@ -259,6 +259,7 @@ def _format_specialized_reviewer_findings(
                     *_format_nested_evidence(finding.evidence),
                     f"    Explanation: {finding.explanation}",
                     f"    Suggested fix: {finding.suggested_fix}",
+                    *_format_llm_lens_note(finding),
                     *_format_hunk_context(finding, report, indent="    "),
                 ]
             )
@@ -271,6 +272,12 @@ def _format_nested_evidence(evidence: list[str]) -> list[str]:
     lines = ["    Evidence snippets:"]
     lines.extend(f"    - {snippet}" for snippet in evidence)
     return lines
+
+
+def _format_llm_lens_note(finding: Finding) -> list[str]:
+    if finding.evidence_type != EvidenceType.LLM:
+        return []
+    return ["    Note: Test Skeptic v2 flagged weak test semantics. Treat this as a review task, not proof."]
 
 
 def _format_llm_notes(

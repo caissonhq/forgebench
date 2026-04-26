@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import subprocess
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
@@ -24,6 +25,15 @@ from forgebench.models import (
 class LLMProvider:
     def review(self, bundle: str, existing_findings: list[Finding]) -> LLMReviewResult:
         raise NotImplementedError
+
+
+@dataclass(frozen=True)
+class LLMJSONResult:
+    enabled: bool
+    provider: str | None
+    status: LLMReviewStatus
+    payload: dict[str, Any] | None = None
+    error_message: str | None = None
 
 
 class MockLLMProvider(LLMProvider):
@@ -107,28 +117,118 @@ def llm_review_not_run() -> LLMReviewResult:
 
 
 def run_llm_review(config: LLMReviewerConfig, bundle: str, existing_findings: list[Finding]) -> LLMReviewResult:
+    raw_result = run_llm_json(config, bundle)
+    if raw_result.status != LLMReviewStatus.COMPLETED:
+        return LLMReviewResult(
+            enabled=raw_result.enabled,
+            provider=raw_result.provider,
+            reviewer_name=config.reviewer_name,
+            status=raw_result.status,
+            error_message=raw_result.error_message,
+        )
+    return _result_from_payload(raw_result.payload or {}, provider=raw_result.provider or "unknown", existing_findings=existing_findings)
+
+
+def run_llm_json(config: LLMReviewerConfig, bundle: str) -> LLMJSONResult:
     if not config.enabled:
-        return llm_review_not_run()
+        return LLMJSONResult(enabled=False, provider=None, status=LLMReviewStatus.SKIPPED)
     provider_name = config.provider or ("command" if config.command else None)
     if provider_name is None:
-        return LLMReviewResult(
+        return LLMJSONResult(
             enabled=True,
             provider=None,
-            reviewer_name=config.reviewer_name,
-            status=LLMReviewStatus.FAILED,
+            status=LLMReviewStatus.SKIPPED,
             error_message="LLM review was requested but no provider was configured. Use --llm-provider command with --llm-command.",
         )
     if provider_name == "mock":
-        return MockLLMProvider(response=config.mock_response, reviewer_name=config.reviewer_name).review(bundle, existing_findings)
+        payload = config.mock_response or {
+            "reviewer_name": config.reviewer_name,
+            "summary": "No additional LLM findings beyond existing deterministic/static evidence.",
+            "findings": [],
+        }
+        return LLMJSONResult(enabled=True, provider="mock", status=LLMReviewStatus.COMPLETED, payload=payload)
     if provider_name == "command":
-        return CommandLLMProvider(command=config.command, timeout_seconds=config.timeout_seconds).review(bundle, existing_findings)
-    return LLMReviewResult(
+        return _run_command_json(config.command, config.timeout_seconds, bundle)
+    return LLMJSONResult(
         enabled=True,
         provider=provider_name,
-        reviewer_name=config.reviewer_name,
         status=LLMReviewStatus.FAILED,
         error_message=f"Unsupported LLM provider: {provider_name}",
     )
+
+
+def llm_review_skipped(message: str, provider: str | None = None) -> LLMReviewResult:
+    return LLMReviewResult(
+        enabled=True,
+        provider=provider,
+        status=LLMReviewStatus.SKIPPED,
+        raw_summary=message,
+    )
+
+
+def _run_command_json(command: str | None, timeout_seconds: int, bundle: str) -> LLMJSONResult:
+    command_text = (command or "").strip()
+    if not command_text:
+        return LLMJSONResult(
+            enabled=True,
+            provider="command",
+            status=LLMReviewStatus.FAILED,
+            error_message="LLM command provider selected but no --llm-command was provided.",
+        )
+
+    try:
+        completed = subprocess.run(
+            command_text,
+            shell=True,
+            input=bundle,
+            text=True,
+            capture_output=True,
+            timeout=timeout_seconds,
+            check=False,
+        )
+    except subprocess.TimeoutExpired:
+        return LLMJSONResult(
+            enabled=True,
+            provider="command",
+            status=LLMReviewStatus.FAILED,
+            error_message=f"LLM command timed out after {timeout_seconds} seconds.",
+        )
+    except OSError as exc:
+        return LLMJSONResult(
+            enabled=True,
+            provider="command",
+            status=LLMReviewStatus.FAILED,
+            error_message=str(exc),
+        )
+
+    if completed.returncode != 0:
+        stderr = _single_line(completed.stderr)
+        stdout = _single_line(completed.stdout)
+        detail = stderr or stdout or f"exit code {completed.returncode}"
+        return LLMJSONResult(
+            enabled=True,
+            provider="command",
+            status=LLMReviewStatus.FAILED,
+            error_message=f"LLM command failed: {detail}",
+        )
+
+    try:
+        payload = json.loads(completed.stdout)
+    except json.JSONDecodeError as exc:
+        return LLMJSONResult(
+            enabled=True,
+            provider="command",
+            status=LLMReviewStatus.FAILED,
+            error_message=f"LLM command returned invalid JSON: {exc}",
+        )
+    if not isinstance(payload, dict):
+        return LLMJSONResult(
+            enabled=True,
+            provider="command",
+            status=LLMReviewStatus.FAILED,
+            error_message="LLM command returned JSON that was not an object.",
+        )
+    return LLMJSONResult(enabled=True, provider="command", status=LLMReviewStatus.COMPLETED, payload=payload)
 
 
 def build_review_bundle(

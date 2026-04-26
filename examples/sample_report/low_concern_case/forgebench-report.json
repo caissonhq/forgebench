@@ -123,9 +123,27 @@
         "findings": [],
         "referenced_finding_ids": [],
         "error_message": null
+      },
+      {
+        "reviewer_id": "test_skeptic_v2",
+        "reviewer_name": "Test Skeptic v2",
+        "status": "skipped",
+        "summary": "No test files with added lines were present.",
+        "findings": [],
+        "referenced_finding_ids": [],
+        "error_message": null
       }
     ],
-    "findings": []
+    "findings": [],
+    "metadata": {
+      "skipped_lenses": [
+        {
+          "lens_id": "test_skeptic_v2",
+          "reason": "No test files with added lines were present."
+        }
+      ],
+      "llm_call_used": false
+    }
   },
   "llm_review": {
     "enabled": false,
@@ -145,5 +163,5 @@
     "kept": false,
     "cleanup_error": null
   },
-  "generated_at": "2026-04-26T23:10:53+00:00"
+  "generated_at": "2026-04-26T23:29:16+00:00"
 }

@@ -83,6 +83,10 @@ The JSON field `specialized_reviewers` is historical and will be renamed in sche
 
 Phase 1 review lenses are deterministic heuristics. They route attention to risk. They do not perform semantic human-level code review.
 
+`specialized_reviewers.metadata.skipped_lenses` records trigger-gated LLM-assisted lenses that did not run and the reason they were skipped. This keeps opt-in LLM behavior auditable without changing the top-level schema.
+
+Test Skeptic v2 findings use `evidence_type: LLM`, are capped at `MEDIUM` severity and `MEDIUM` confidence, and cannot block merge by themselves.
+
 ## Stability
 
 Within schema `1.x`, consumers can rely on the documented top-level keys continuing to exist. New nested fields may be added when they do not change the meaning of existing fields.

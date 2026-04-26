@@ -1,0 +1,9 @@
+{
+  "verdict": "weak",
+  "rationale": "The test executes the paid path but does not assert the returned paid state.",
+  "evidence_lines": [
+    "result = status({\"paid\": True})"
+  ],
+  "severity": "blocker",
+  "confidence": "high"
+}

@@ -1,0 +1,7 @@
+{
+  "verdict": "adequate",
+  "rationale": "The added test asserts the returned paid state.",
+  "evidence_lines": [
+    "assert result == \"paid\""
+  ]
+}

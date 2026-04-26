@@ -1,0 +1,18 @@
+{
+  "case_name": "test_skeptic_v2_adequate_tests_low_concern",
+  "run_checks": false,
+  "llm_review": true,
+  "llm_provider": "mock",
+  "expected_posture": "LOW_CONCERN",
+  "allowed_extra_finding_ids": [],
+  "forbidden_finding_ids": [
+    "implementation_without_tests",
+    "test_skeptic_weak_test_signal",
+    "test_skeptic_v2_weak_assertion_semantics"
+  ],
+  "forbidden_reviewer_finding_ids": [
+    "test_skeptic_v2_weak_assertion_semantics"
+  ],
+  "allow_unlisted_findings": false,
+  "rationale": "Strong assertion tokens prevent the Test Skeptic v2 trigger from firing, so the source-plus-test patch should stay LOW_CONCERN."
+}

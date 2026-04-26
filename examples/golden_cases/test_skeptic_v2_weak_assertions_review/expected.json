@@ -1,0 +1,26 @@
+{
+  "case_name": "test_skeptic_v2_weak_assertions_review",
+  "run_checks": false,
+  "llm_review": true,
+  "llm_provider": "mock",
+  "expected_posture": "REVIEW",
+  "required_finding_ids": [
+    "test_skeptic_v2_weak_assertion_semantics"
+  ],
+  "allowed_extra_finding_ids": [
+    "test_skeptic_weak_test_signal"
+  ],
+  "required_reviewer_ids": [
+    "test_skeptic_v2"
+  ],
+  "required_reviewer_finding_ids": [
+    "test_skeptic_v2_weak_assertion_semantics"
+  ],
+  "forbidden_finding_ids": [
+    "implementation_without_tests",
+    "deleted_tests",
+    "persistence_schema_changed"
+  ],
+  "allow_unlisted_findings": false,
+  "rationale": "The deterministic trigger sees source and test changes with no assertion tokens. A mock LLM weak verdict should add the advisory Test Skeptic v2 finding and raise review posture to REVIEW."
+}

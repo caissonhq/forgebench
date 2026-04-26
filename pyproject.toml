@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "forgebench"
-version = "0.4.0"
+version = "0.5.0"
 description = "Adversarial pre-merge QA for coding-agent output."
 readme = "README.md"
 requires-python = ">=3.10"
@@ -38,3 +38,6 @@ forgebench = "forgebench.cli:main"
 
 [tool.setuptools.packages.find]
 include = ["forgebench*"]
+
+[tool.setuptools.package-data]
+"forgebench.adversaries.prompts" = ["*.md"]

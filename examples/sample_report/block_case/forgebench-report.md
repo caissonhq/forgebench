@@ -65,8 +65,20 @@ Phase 1 review lenses are deterministic heuristics. They route attention to risk
 - Findings:
   - MEDIUM: Patch touches protected product or architecture behavior
     - Confidence: HIGH
+    - Evidence: REVIEWER
     - Files: db/migrations/20260426_add_payment_receipts.sql
+    - Explanation: The patch touches files that this repo marks as tied to protected product or architecture behavior. This needs review against the guardrails; it is not automatically a violation.
     - Suggested fix: Review the changed files against the protected behavior list and add focused tests or reduce scope if needed.
+
+### Test Skeptic v2
+
+- Status: skipped
+- Summary: No test files with added lines were present.
+- Findings:
+  - None.
+
+Skipped LLM-assisted lenses:
+- test_skeptic_v2: No test files with added lines were present.
 
 
 ## LLM Review

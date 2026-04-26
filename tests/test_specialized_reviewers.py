@@ -35,7 +35,8 @@ index 1111111..2222222 100644
         )
 
         self.assertTrue(result.report.specialized_reviewers.enabled)
-        self.assertEqual(len(result.report.specialized_reviewers.results), 4)
+        reviewer_ids = {reviewer.reviewer_id for reviewer in result.report.specialized_reviewers.results}
+        self.assertTrue({"scope_auditor", "test_skeptic", "contract_keeper", "product_guardrail_reviewer"}.issubset(reviewer_ids))
 
     def test_no_reviewers_disables_reviewer_layer(self) -> None:
         with TemporaryDirectory() as tmp:

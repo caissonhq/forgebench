@@ -9,7 +9,7 @@ from forgebench.adversaries.models import ReviewerContext
 from forgebench.check_runner import checks_not_run, findings_from_check_results, run_configured_checks
 from forgebench.diff_parser import parse_diff_file
 from forgebench.guardrails import GuardrailsParseError, evaluate_guardrails, load_guardrails
-from forgebench.llm_review import apply_llm_posture, build_review_bundle, llm_review_not_run, run_llm_review
+from forgebench.llm_review import apply_llm_posture, build_review_bundle, llm_review_not_run, llm_review_skipped, run_llm_review
 from forgebench.models import Finding, ForgeBenchReport, Guardrails, LLMReviewerConfig, PRCheckoutInfo
 from forgebench.policy import apply_guardrails_policy
 from forgebench.posture import determine_posture
@@ -70,6 +70,14 @@ def run_review(
     findings = _dedupe_findings(deterministic_findings + static_findings + guardrail_findings)
     findings, static_signals, policy_decision = apply_guardrails_policy(diff_summary, findings, static_signals, guardrails)
 
+    llm_config = LLMReviewerConfig(
+        enabled=llm_review,
+        provider=llm_provider,
+        command=llm_command,
+        timeout_seconds=llm_timeout,
+        max_diff_chars=llm_max_diff_chars,
+        mock_response=llm_mock_response,
+    )
     if reviewers_enabled:
         specialized_reviewers = run_specialized_reviewers(
             ReviewerContext(
@@ -81,7 +89,8 @@ def run_review(
                 guardrail_hits=guardrail_hits,
                 policy=policy_decision,
                 deterministic_checks=deterministic_checks,
-            )
+            ),
+            llm_config=llm_config,
         )
     else:
         specialized_reviewers = specialized_reviewers_not_run()
@@ -89,15 +98,12 @@ def run_review(
 
     pre_llm_posture, pre_llm_summary = determine_posture(findings, static_signals, guardrail_hits, deterministic_checks, policy_decision)
 
-    llm_config = LLMReviewerConfig(
-        enabled=llm_review,
-        provider=llm_provider,
-        command=llm_command,
-        timeout_seconds=llm_timeout,
-        max_diff_chars=llm_max_diff_chars,
-        mock_response=llm_mock_response,
-    )
-    if llm_review:
+    if llm_review and specialized_reviewers.metadata.get("llm_call_used"):
+        llm_result = llm_review_skipped(
+            "LLM call was used by a trigger-gated review lens; general LLM review was skipped to keep one LLM call per review.",
+            provider=llm_provider or ("command" if llm_command else None),
+        )
+    elif llm_review:
         bundle = build_review_bundle(
             task_text=task_text,
             diff_text=diff_text,

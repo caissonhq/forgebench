@@ -114,6 +114,16 @@ def _determine_posture(
             ),
         )
 
+    if any(finding.evidence_type == EvidenceType.LLM and finding.reviewer and finding.severity == Severity.MEDIUM for finding in findings):
+        return (
+            MergePosture.REVIEW,
+            _with_check_context(
+                "Review before merge. An opt-in LLM-assisted review lens raised a medium-severity advisory concern. "
+                "This cannot block merge by itself and should be checked by a human.",
+                deterministic_checks,
+            ),
+        )
+
     if "implementation_without_tests" in finding_ids:
         return (
             MergePosture.REVIEW,

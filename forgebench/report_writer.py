@@ -292,12 +292,23 @@ def _format_specialized_reviewers(report: ForgeBenchReport) -> list[str]:
                     [
                         f"  - {finding.severity.value}: {finding.title}",
                         f"    - Confidence: {finding.confidence.value}",
+                        f"    - Evidence: {finding.evidence_type.value}",
                         f"    - Files: {files}",
+                        f"    - Explanation: {finding.explanation}",
                         f"    - Suggested fix: {finding.suggested_fix}",
                     ]
                 )
+                if finding.evidence_type.value == "LLM":
+                    lines.append("    - Note: LLM-assisted lens findings are advisory and cannot block merge by themselves.")
         else:
             lines.append("  - None.")
+        lines.append("")
+    skipped = reviewers.metadata.get("skipped_lenses") if isinstance(reviewers.metadata, dict) else None
+    if skipped:
+        lines.extend(["Skipped LLM-assisted lenses:"])
+        for item in skipped:
+            if isinstance(item, dict):
+                lines.append(f"- {item.get('lens_id', 'unknown')}: {item.get('reason', 'No reason provided.')}")
         lines.append("")
     return lines
 

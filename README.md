@@ -19,7 +19,7 @@ ForgeBench does not prove code is safe. It highlights merge risk before AI-gener
 - Optional local build/test/lint/typecheck command execution when explicitly requested.
 - Optional evidence-constrained LLM review when explicitly requested.
 - Optional GitHub PR URL intake through the local `gh` CLI.
-- Phase 1 lenses are deterministic heuristics. They do not perform semantic code review. A future Phase 2 may add LLM-assisted lenses; until then, treat lens findings as routing hints, not conclusions.
+- Phase 1 lenses are deterministic heuristics. Phase 1.5 adds one opt-in LLM-assisted lens. Treat lens findings as routing hints, not conclusions.
 - A sober report that classifies the patch as `BLOCK`, `REVIEW`, or `LOW_CONCERN`.
 - A focused repair prompt for tightening the original patch without expanding scope.
 
@@ -102,7 +102,7 @@ Arguments:
 - `--guardrails`: optional project guardrails file.
 - `--run-checks`: optional flag that executes configured local verification commands.
 - `--llm-review`: optional flag that runs an advisory LLM review layer.
-- `--llm-provider`: optional LLM provider. Sprint 4 supports `command` and test-only `mock`.
+- `--llm-provider`: optional LLM provider. Current local providers are `command` and test-only `mock`.
 - `--llm-command`: local command used by the command provider.
 - `--out`: optional output directory. Defaults to `./forgebench-output/`.
 
@@ -380,6 +380,22 @@ Sprint 6.1 calibration tightened the Phase 1 lenses around real dogfood noise:
 - Scope Auditor focuses on task-scope drift, such as README-only tasks that also change code or CI/config.
 - Product / Guardrail Reviewer adds product-review framing to configured guardrail hits without claiming semantic violations unless forbidden patterns match.
 
+## Phase 1.5: LLM-Assisted Lenses
+
+Sprint 9 adds Test Skeptic v2, the first LLM-assisted lens. It runs an LLM only when explicitly enabled with `--llm-review`, and only when deterministic triggers indicate a narrow weak-test scenario:
+
+- source files changed
+- test files changed
+- added test lines exist
+- added test lines lack common assertion tokens
+- a usable LLM provider is configured
+
+Test Skeptic v2 asks whether changed tests meaningfully assert the changed behavior. Its output is strictly parsed JSON. Only a `weak` verdict creates a finding; `adequate` and `uncertain` do not.
+
+Test Skeptic v2 findings are advisory and cannot block merge by themselves. ForgeBench hard-caps them at `MEDIUM` severity and `MEDIUM` confidence. Deterministic checks still outrank this lens.
+
+See [docs/llm-threat-model.md](docs/llm-threat-model.md) for the LLM threat model and mitigations.
+
 ## Optional LLM Review
 
 ForgeBench can run an advisory LLM reviewer when `--llm-review` is passed. LLM review is off by default.
@@ -394,7 +410,7 @@ The evidence hierarchy remains:
 
 LLM findings can raise concern, for example by moving a `LOW_CONCERN` patch to `REVIEW` when a medium advisory finding is returned. LLM findings cannot downgrade posture, approve a merge, erase static findings, override deterministic failures, create a blocker finding, or assign a numeric score.
 
-ForgeBench does not ship a hosted LLM integration in Sprint 4. The `command` provider is a local escape hatch: ForgeBench writes an evidence bundle to stdin and expects structured JSON on stdout.
+ForgeBench does not ship a hosted LLM integration. The `command` provider is a local escape hatch: ForgeBench writes an evidence bundle to stdin and expects structured JSON on stdout.
 
 Example:
 

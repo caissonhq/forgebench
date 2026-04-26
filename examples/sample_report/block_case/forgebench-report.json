@@ -173,6 +173,15 @@
           "high_risk_guardrail_file"
         ],
         "error_message": null
+      },
+      {
+        "reviewer_id": "test_skeptic_v2",
+        "reviewer_name": "Test Skeptic v2",
+        "status": "skipped",
+        "summary": "No test files with added lines were present.",
+        "findings": [],
+        "referenced_finding_ids": [],
+        "error_message": null
       }
     ],
     "findings": [
@@ -198,7 +207,16 @@
         "explanation": "The patch touches files that this repo marks as tied to protected product or architecture behavior. This needs review against the guardrails; it is not automatically a violation.",
         "suggested_fix": "Review the changed files against the protected behavior list and add focused tests or reduce scope if needed."
       }
-    ]
+    ],
+    "metadata": {
+      "skipped_lenses": [
+        {
+          "lens_id": "test_skeptic_v2",
+          "reason": "No test files with added lines were present."
+        }
+      ],
+      "llm_call_used": false
+    }
   },
   "llm_review": {
     "enabled": false,
@@ -218,5 +236,5 @@
     "kept": false,
     "cleanup_error": null
   },
-  "generated_at": "2026-04-26T23:10:53+00:00"
+  "generated_at": "2026-04-26T23:29:16+00:00"
 }

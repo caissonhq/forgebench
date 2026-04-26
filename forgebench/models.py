@@ -463,12 +463,14 @@ class SpecializedReviewReport:
     enabled: bool = False
     results: list[SpecializedReviewerResult] = field(default_factory=list)
     findings: list[Finding] = field(default_factory=list)
+    metadata: dict[str, Any] = field(default_factory=dict)
 
     def to_dict(self) -> dict[str, Any]:
         return {
             "enabled": self.enabled,
             "results": [result.to_dict() for result in self.results],
             "findings": [finding.to_dict() for finding in self.findings],
+            "metadata": self.metadata,
         }
 
 

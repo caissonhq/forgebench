@@ -17,6 +17,7 @@ ForgeBench does not prove code is safe. It highlights merge risk before AI-gener
   - Test Skeptic
   - Contract Keeper
   - Product / Guardrail Reviewer
+- Phase 1.5 Test Skeptic v2 LLM-assisted lens, gated by deterministic weak-test triggers and `--llm-review`.
 - Optional evidence-constrained LLM review through a local command provider.
 - Markdown report, JSON report, repair prompt, and PR-comment-ready summary.
 - Golden corpus calibration.
@@ -53,6 +54,8 @@ Contract Keeper checks API, type, route, public interface, schema, migration, an
 
 Product / Guardrail Reviewer checks configured protected behavior, forbidden patterns, and high/medium risk guardrail paths.
 
+Test Skeptic v2 is an opt-in LLM-assisted lens. It runs only when deterministic triggers show source changes plus tests with added lines but no common assertion tokens. Its findings are advisory, capped at medium severity/confidence, and cannot block merge by themselves.
+
 ## Deliberate Non-Goals
 
 - No hosted service.
@@ -72,6 +75,7 @@ Product / Guardrail Reviewer checks configured protected behavior, forbidden pat
 - Phase 1 review lenses are calibrated heuristics, not the full CAI-7 reviewer set.
 - `review-pr --run-checks` needs `--checkout-pr` to run checks against the PR worktree.
 - Optional LLM review is command-provider only and advisory.
+- LLM-assisted lenses are limited to Test Skeptic v2 and require `--llm-review`.
 - Real anonymized sample reports are still required before broader public beta. Sprint 8 includes synthetic sample reports for first-run UX only.
 
 ## Required Before CAI-5 Done
