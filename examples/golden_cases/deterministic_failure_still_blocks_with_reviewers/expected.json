@@ -1,0 +1,17 @@
+{
+  "case_name": "deterministic_failure_still_blocks_with_reviewers",
+  "run_checks": true,
+  "expected_posture": "BLOCK",
+  "required_finding_ids": [
+    "tests_failed",
+    "ui_copy_changed"
+  ],
+  "allowed_extra_finding_ids": [],
+  "forbidden_finding_ids": [
+    "implementation_without_tests",
+    "scope_auditor_task_scope_expansion",
+    "test_skeptic_missing_behavior_coverage"
+  ],
+  "allow_unlisted_findings": false,
+  "rationale": "Reviewer layer must not downgrade or obscure deterministic test failures."
+}

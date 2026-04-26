@@ -24,12 +24,15 @@ def build_repair_prompt(task_text: str, report: ForgeBenchReport, guardrails: Gu
     static_findings = [
         finding
         for finding in report.findings
-        if finding.evidence_type not in {EvidenceType.DETERMINISTIC, EvidenceType.LLM}
+        if finding.evidence_type not in {EvidenceType.DETERMINISTIC, EvidenceType.REVIEWER, EvidenceType.LLM}
     ]
     if static_findings:
         lines.extend(_format_findings(static_findings))
     else:
         lines.append("- No static or guardrail findings.")
+
+    lines.extend(["", "Specialized reviewer findings:"])
+    lines.extend(_format_specialized_reviewer_findings(report))
 
     lines.extend(["", "LLM reviewer notes:"])
     lines.extend(_format_llm_notes(report))
@@ -47,6 +50,7 @@ def build_repair_prompt(task_text: str, report: ForgeBenchReport, guardrails: Gu
             "- Do not add unrelated refactors.",
             "- Do not introduce new dependencies unless explicitly necessary.",
             "- Preserve the original product and architecture guardrails.",
+            "- Treat specialized reviewer findings as review tasks, not as automatic approval or rejection.",
             "- Add or update tests where ForgeBench identified missing coverage.",
             "- Before returning the repair, run the configured checks that failed if they are available locally. If you cannot run them, explain why.",
             "- After making changes, summarize exactly what changed and why.",
@@ -183,6 +187,30 @@ def _format_policy_notes(report: ForgeBenchReport) -> list[str]:
             f"{report.policy.posture_ceiling_reason or 'No reason provided.'}"
         )
     return notes or ["- None."]
+
+
+def _format_specialized_reviewer_findings(report: ForgeBenchReport) -> list[str]:
+    reviewers = report.specialized_reviewers
+    if not reviewers.enabled:
+        return ["- Specialized reviewers were not run."]
+    lines: list[str] = []
+    for result in reviewers.results:
+        if not result.findings:
+            continue
+        lines.append(f"- {result.reviewer_name}:")
+        for finding in result.findings:
+            files = ", ".join(finding.files) if finding.files else "unknown"
+            lines.extend(
+                [
+                    f"  - {finding.severity.value}: {finding.title}",
+                    f"    Confidence: {finding.confidence.value}",
+                    f"    Files: {files}",
+                    *_format_evidence(finding.evidence),
+                    f"    Explanation: {finding.explanation}",
+                    f"    Suggested fix: {finding.suggested_fix}",
+                ]
+            )
+    return lines or ["- No specialized reviewer findings."]
 
 
 def _format_llm_notes(report: ForgeBenchReport) -> list[str]:

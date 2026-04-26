@@ -1,0 +1,6 @@
+project: Deterministic Reviewer Case
+
+checks:
+  test: "python3 -c 'import sys; print(\"tests failed\"); sys.exit(1)'"
+
+check_timeout_seconds: 5

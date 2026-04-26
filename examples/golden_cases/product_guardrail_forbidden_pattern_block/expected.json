@@ -1,0 +1,26 @@
+{
+  "case_name": "product_guardrail_forbidden_pattern_block",
+  "run_checks": false,
+  "expected_posture": "BLOCK",
+  "required_finding_ids": [
+    "forbidden_pattern_added",
+    "ui_copy_changed"
+  ],
+  "allowed_extra_finding_ids": [
+    "implementation_without_tests",
+    "product_guardrail_copy_needs_review",
+    "test_skeptic_missing_behavior_coverage"
+  ],
+  "required_reviewer_ids": [
+    "product_guardrail_reviewer"
+  ],
+  "required_reviewer_finding_ids": [
+    "product_guardrail_forbidden_pattern"
+  ],
+  "forbidden_finding_ids": [
+    "deleted_tests",
+    "tests_failed"
+  ],
+  "allow_unlisted_findings": false,
+  "rationale": "A forbidden product pattern should remain BLOCK and receive Product / Guardrail Reviewer attribution."
+}

@@ -8,6 +8,8 @@ SWE-Bench asks whether an agent solved a task. ForgeBench asks whether a serious
 
 ForgeBench turns an AI-generated diff, the original task prompt, optional repo guardrails, optional local check results, and optional advisory LLM review into a sober merge-risk report, machine-readable JSON, and a repair prompt that can be pasted back into Codex, Claude Code, or Cursor.
 
+Site: https://merge-posture-guard.lovable.app
+
 ForgeBench does not prove code is safe. It highlights merge risk before AI-generated code reaches main.
 
 ## What ForgeBench Is
@@ -310,6 +312,33 @@ Run with checks:
 forgebench review --repo . --diff ./patch.diff --task ./task.md --guardrails ./forgebench.yml --run-checks
 ```
 
+## Specialized Reviewers
+
+ForgeBench runs four deterministic specialized reviewers by default. They are evidence-constrained checks over the task text, parsed diff, static findings, deterministic check results, and guardrails. They do not call an LLM, approve merges, assign scores, or override deterministic failures.
+
+Phase 1 reviewers:
+
+- Scope Auditor: checks whether the patch appears to change more than the task required.
+- Test Skeptic: checks whether changed behavior has meaningful regression coverage.
+- Contract Keeper: checks whether API, schema, type, route, persistence, or public interface surfaces changed without clear coverage.
+- Product / Guardrail Reviewer: checks whether configured product or architecture guardrails were touched or violated.
+
+Reviewer findings are lower in the evidence hierarchy than deterministic checks, static risk signals, and Guardrails v2 policy. A reviewer finding can raise concern, for example moving a low-concern patch to `REVIEW`, but it cannot downgrade `BLOCK`, claim code is safe, or approve a merge.
+
+Disable the layer when you need a static-only baseline:
+
+```bash
+forgebench review --repo . --diff ./patch.diff --task ./task.md --no-reviewers
+```
+
+The same flag is available for PR intake:
+
+```bash
+forgebench review-pr https://github.com/OWNER/REPO/pull/123 --no-reviewers
+```
+
+Reviewer output appears in Markdown under `Specialized Reviewers`, in JSON under `specialized_reviewers`, in the repair prompt as reviewer findings, and as a concise summary in `pr-comment.md`.
+
 ## Optional LLM Review
 
 ForgeBench can run an advisory LLM reviewer when `--llm-review` is passed. LLM review is off by default.
@@ -319,7 +348,8 @@ The evidence hierarchy remains:
 1. Deterministic checks
 2. Static risk signals
 3. Guardrails policy
-4. LLM review
+4. Specialized reviewers
+5. LLM review
 
 LLM findings can raise concern, for example by moving a `LOW_CONCERN` patch to `REVIEW` when a medium advisory finding is returned. LLM findings cannot downgrade posture, approve a merge, erase static findings, override deterministic failures, create a blocker finding, or assign a numeric score.
 
@@ -508,6 +538,7 @@ PYTHONDONTWRITEBYTECODE=1 python -m forgebench calibrate --cases examples/golden
 - The diff parser targets common local `git diff` output, not every possible patch format.
 - The guardrails parser supports the documented ForgeBench YAML shapes, not arbitrary YAML.
 - Guardrails v2 policy is path-pattern based. It does not interpret copy intent or program semantics.
+- Specialized reviewers are Phase 1 deterministic heuristics only; they are not the full CAI-7 reviewer set.
 - Command execution is opt-in and limited to commands you configure locally.
 - LLM review is opt-in and advisory. The command provider can run any command you configure, so only use it with trusted local commands.
 - GitHub PR intake depends on the local `gh` CLI and network/auth state. It is not a GitHub App.

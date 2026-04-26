@@ -1,0 +1,10 @@
+diff --git a/src/payments.py b/src/payments.py
+index 1111111..2222222 100644
+--- a/src/payments.py
++++ b/src/payments.py
+@@ -1,2 +1,4 @@
+ def status(payment):
+-    return "unpaid"
++    if payment.get("paid"):
++        return "paid"
++    return "unpaid"

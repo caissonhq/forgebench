@@ -1,17 +1,20 @@
 {
-  "case_name": "read_model_not_persistence_review_or_low_concern",
+  "case_name": "test_skeptic_source_change_no_tests_review",
   "run_checks": false,
   "expected_posture": "REVIEW",
   "required_finding_ids": [
     "implementation_without_tests"
   ],
-  "allowed_extra_finding_ids": [],
+  "required_reviewer_ids": [
+    "test_skeptic"
+  ],
   "required_reviewer_finding_ids": [
     "test_skeptic_missing_behavior_coverage"
   ],
   "forbidden_finding_ids": [
-    "persistence_schema_changed"
+    "deleted_tests",
+    "tests_failed"
   ],
   "allow_unlisted_findings": false,
-  "rationale": "Read model implementation changes without tests should be REVIEW, not BLOCK from persistence/schema heuristics."
+  "rationale": "Source behavior changed without tests should get Test Skeptic framing."
 }

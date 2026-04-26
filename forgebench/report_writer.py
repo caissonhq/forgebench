@@ -74,6 +74,10 @@ def build_markdown_report(report: ForgeBenchReport, guardrails: Guardrails, inpu
         "",
         *_format_deterministic_checks(report),
         "",
+        "## Specialized Reviewers",
+        "",
+        *_format_specialized_reviewers(report),
+        "",
         "## LLM Review",
         "",
         *_format_llm_review(report),
@@ -249,6 +253,45 @@ def _format_deterministic_checks(report: ForgeBenchReport) -> list[str]:
         excerpt = _combined_output_excerpt(result)
         if excerpt and result.status in {CheckStatus.FAILED, CheckStatus.ERROR, CheckStatus.TIMED_OUT}:
             lines.extend(["", "Output excerpt:", "", "```text", excerpt, "```"])
+    return lines
+
+
+def _format_specialized_reviewers(report: ForgeBenchReport) -> list[str]:
+    reviewers = report.specialized_reviewers
+    if not reviewers.enabled:
+        return ["Specialized reviewers were not run."]
+    if not reviewers.results:
+        return ["No specialized reviewer results were produced."]
+
+    lines: list[str] = []
+    for result in reviewers.results:
+        lines.extend(
+            [
+                f"### {result.reviewer_name}",
+                "",
+                f"- Status: {result.status.value}",
+                f"- Summary: {result.summary}",
+            ]
+        )
+        if result.referenced_finding_ids:
+            lines.append("- Referenced evidence: " + ", ".join(result.referenced_finding_ids))
+        if result.error_message:
+            lines.append(f"- Error: {result.error_message}")
+        lines.append("- Findings:")
+        if result.findings:
+            for finding in result.findings:
+                files = ", ".join(finding.files) if finding.files else "unknown"
+                lines.extend(
+                    [
+                        f"  - {finding.severity.value}: {finding.title}",
+                        f"    - Confidence: {finding.confidence.value}",
+                        f"    - Files: {files}",
+                        f"    - Suggested fix: {finding.suggested_fix}",
+                    ]
+                )
+        else:
+            lines.append("  - None.")
+        lines.append("")
     return lines
 
 

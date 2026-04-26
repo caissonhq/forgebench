@@ -20,6 +20,9 @@ class ExpectedCase:
     required_finding_ids: set[str] = field(default_factory=set)
     allowed_extra_finding_ids: set[str] = field(default_factory=set)
     forbidden_finding_ids: set[str] = field(default_factory=set)
+    required_reviewer_ids: set[str] = field(default_factory=set)
+    required_reviewer_finding_ids: set[str] = field(default_factory=set)
+    forbidden_reviewer_finding_ids: set[str] = field(default_factory=set)
     allow_unlisted_findings: bool = False
     rationale: str = ""
 
@@ -46,6 +49,9 @@ class CaseResult:
     missing_required_findings: list[str] = field(default_factory=list)
     forbidden_findings_present: list[str] = field(default_factory=list)
     unexpected_findings: list[str] = field(default_factory=list)
+    missing_required_reviewers: list[str] = field(default_factory=list)
+    missing_required_reviewer_findings: list[str] = field(default_factory=list)
+    forbidden_reviewer_findings_present: list[str] = field(default_factory=list)
     artifact_errors: list[str] = field(default_factory=list)
     error_message: str | None = None
     report_path: Path | None = None
@@ -115,7 +121,12 @@ def compare_expected(report: ForgeBenchReport, expected: ExpectedCase) -> CaseRe
     actual_ids = {finding.id for finding in report.findings}
     missing = sorted(expected.required_finding_ids - actual_ids)
     forbidden_present = sorted(expected.forbidden_finding_ids & actual_ids)
-    expected_ids = expected.required_finding_ids | expected.allowed_extra_finding_ids
+    reviewer_ids = {result.reviewer_id for result in report.specialized_reviewers.results}
+    reviewer_finding_ids = {finding.id for finding in report.specialized_reviewers.findings}
+    missing_reviewers = sorted(expected.required_reviewer_ids - reviewer_ids)
+    missing_reviewer_findings = sorted(expected.required_reviewer_finding_ids - reviewer_finding_ids)
+    forbidden_reviewer_findings = sorted(expected.forbidden_reviewer_finding_ids & reviewer_finding_ids)
+    expected_ids = expected.required_finding_ids | expected.allowed_extra_finding_ids | expected.required_reviewer_finding_ids
     unexpected = [] if expected.allow_unlisted_findings else sorted(actual_ids - expected_ids)
     posture_matches = report.posture.value == expected.expected_posture
     actual_pre_llm = (report.pre_llm_posture or report.posture).value
@@ -123,7 +134,16 @@ def compare_expected(report: ForgeBenchReport, expected: ExpectedCase) -> CaseRe
 
     return CaseResult(
         case_name=expected.case_name,
-        passed=posture_matches and pre_llm_matches and not missing and not forbidden_present and not unexpected,
+        passed=(
+            posture_matches
+            and pre_llm_matches
+            and not missing
+            and not forbidden_present
+            and not unexpected
+            and not missing_reviewers
+            and not missing_reviewer_findings
+            and not forbidden_reviewer_findings
+        ),
         expected_posture=expected.expected_posture,
         actual_posture=report.posture.value,
         expected_pre_llm_posture=expected.expected_pre_llm_posture,
@@ -131,6 +151,9 @@ def compare_expected(report: ForgeBenchReport, expected: ExpectedCase) -> CaseRe
         missing_required_findings=missing,
         forbidden_findings_present=forbidden_present,
         unexpected_findings=unexpected,
+        missing_required_reviewers=missing_reviewers,
+        missing_required_reviewer_findings=missing_reviewer_findings,
+        forbidden_reviewer_findings_present=forbidden_reviewer_findings,
     )
 
 
@@ -144,6 +167,7 @@ def validate_markdown_report(path: str | Path) -> list[str]:
         "# ForgeBench Merge Risk Report",
         "## Merge Posture",
         "## Deterministic Checks",
+        "## Specialized Reviewers",
         "## LLM Review",
         "## Suggested Next Action",
         "## Guardrails Policy",
@@ -164,7 +188,16 @@ def validate_json_report(path: str | Path) -> list[str]:
     except json.JSONDecodeError as exc:
         return [f"JSON report is invalid: {exc}"]
     errors: list[str] = []
-    for key in ["posture", "pre_llm_posture", "final_posture", "findings", "deterministic_checks", "policy", "llm_review"]:
+    for key in [
+        "posture",
+        "pre_llm_posture",
+        "final_posture",
+        "findings",
+        "deterministic_checks",
+        "policy",
+        "specialized_reviewers",
+        "llm_review",
+    ]:
         if key not in payload:
             errors.append(f"JSON report missing key: {key}")
     return errors
@@ -259,6 +292,9 @@ def _load_expected(path: Path) -> ExpectedCase:
         required_finding_ids=set(payload.get("required_finding_ids", [])),
         allowed_extra_finding_ids=set(payload.get("allowed_extra_finding_ids", [])),
         forbidden_finding_ids=set(payload.get("forbidden_finding_ids", [])),
+        required_reviewer_ids=set(payload.get("required_reviewer_ids", [])),
+        required_reviewer_finding_ids=set(payload.get("required_reviewer_finding_ids", [])),
+        forbidden_reviewer_finding_ids=set(payload.get("forbidden_reviewer_finding_ids", [])),
         allow_unlisted_findings=bool(payload.get("allow_unlisted_findings", False)),
         rationale=str(payload.get("rationale", "")),
     )
@@ -285,6 +321,15 @@ def _format_case_failure(case: CaseResult) -> list[str]:
     if case.unexpected_findings:
         lines.extend(["", "Unexpected findings:"])
         lines.extend(f"- {finding_id}" for finding_id in case.unexpected_findings)
+    if case.missing_required_reviewers:
+        lines.extend(["", "Missing required reviewers:"])
+        lines.extend(f"- {reviewer_id}" for reviewer_id in case.missing_required_reviewers)
+    if case.missing_required_reviewer_findings:
+        lines.extend(["", "Missing required reviewer findings:"])
+        lines.extend(f"- {finding_id}" for finding_id in case.missing_required_reviewer_findings)
+    if case.forbidden_reviewer_findings_present:
+        lines.extend(["", "Forbidden reviewer findings present:"])
+        lines.extend(f"- {finding_id}" for finding_id in case.forbidden_reviewer_findings_present)
     if case.artifact_errors:
         lines.extend(["", "Artifact errors:"])
         lines.extend(f"- {error}" for error in case.artifact_errors)

@@ -41,6 +41,7 @@ def _run_review(args: argparse.Namespace) -> int:
             llm_command=args.llm_command,
             llm_timeout=args.llm_timeout,
             llm_max_diff_chars=args.llm_max_diff_chars,
+            reviewers_enabled=not args.no_reviewers,
         )
     except ReviewInputError as exc:
         _fail(str(exc))
@@ -73,6 +74,7 @@ def _run_review_pr(args: argparse.Namespace) -> int:
             checkout_pr=args.checkout_pr,
             keep_worktree=args.keep_worktree,
             worktree_dir=args.worktree_dir,
+            reviewers_enabled=not args.no_reviewers,
         )
     except (ReviewInputError, GitHubPRError) as exc:
         _fail(str(exc))
@@ -104,6 +106,7 @@ def _build_parser() -> argparse.ArgumentParser:
     review.add_argument("--guardrails", required=False, help="Optional path to forgebench.yml.")
     review.add_argument("--out", required=False, help="Output directory. Defaults to ./forgebench-output/.")
     review.add_argument("--run-checks", action="store_true", help="Execute configured local deterministic checks from forgebench.yml.")
+    review.add_argument("--no-reviewers", action="store_true", help="Skip deterministic specialized reviewer checks.")
     review.add_argument("--llm-review", action="store_true", help="Run an optional advisory LLM reviewer after deterministic/static review.")
     review.add_argument("--llm-provider", choices=["mock", "command"], required=False, help="LLM provider to use when --llm-review is passed.")
     review.add_argument("--llm-command", required=False, help="Command provider shell command. Receives the review bundle on stdin and returns JSON on stdout.")
@@ -117,6 +120,7 @@ def _build_parser() -> argparse.ArgumentParser:
     review_pr.add_argument("--guardrails", required=False, help="Optional path to forgebench.yml.")
     review_pr.add_argument("--out", required=False, help="Output directory. Defaults to ./forgebench-output/pr-OWNER-REPO-NUMBER/.")
     review_pr.add_argument("--run-checks", action="store_true", help="Execute configured local deterministic checks from forgebench.yml.")
+    review_pr.add_argument("--no-reviewers", action="store_true", help="Skip deterministic specialized reviewer checks.")
     review_pr.add_argument("--checkout-pr", action="store_true", help="Checkout the PR code into a temporary git worktree before running checks.")
     review_pr.add_argument("--keep-worktree", action="store_true", help="Do not delete the temporary PR worktree after review. Prints the path in the report.")
     review_pr.add_argument("--worktree-dir", required=False, help="Optional parent directory for temporary PR worktrees.")
@@ -157,6 +161,7 @@ def _print_summary(report: ForgeBenchReport, written: dict[str, Path]) -> None:
         print("- No findings.")
     print()
     print(f"Deterministic checks: {_checks_summary(report)}")
+    print(f"Specialized reviewers: {_reviewers_summary(report)}")
     print(f"LLM review: {_llm_summary(report)}")
     print()
     print("Reports written:")
@@ -219,6 +224,16 @@ def _llm_summary(report: ForgeBenchReport) -> str:
     if review.status.value == "failed":
         return f"failed ({review.error_message or 'unknown error'})"
     return review.status.value
+
+
+def _reviewers_summary(report: ForgeBenchReport) -> str:
+    reviewers = report.specialized_reviewers
+    if not reviewers.enabled:
+        return "not run"
+    finding_count = len(reviewers.findings)
+    if finding_count:
+        return f"completed, findings={finding_count}"
+    return "completed, no additional findings"
 
 
 if __name__ == "__main__":

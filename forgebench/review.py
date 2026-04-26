@@ -4,6 +4,8 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 
+from forgebench.adversaries import run_specialized_reviewers, specialized_reviewers_not_run
+from forgebench.adversaries.models import ReviewerContext
 from forgebench.check_runner import checks_not_run, findings_from_check_results, run_configured_checks
 from forgebench.diff_parser import parse_diff_file
 from forgebench.guardrails import evaluate_guardrails, load_guardrails
@@ -43,6 +45,7 @@ def run_review(
     llm_mock_response: dict | None = None,
     input_notes: list[str] | None = None,
     pr_checkout: PRCheckoutInfo | None = None,
+    reviewers_enabled: bool = True,
 ) -> ReviewResult:
     repo = Path(repo_path)
     diff = _resolve_input_path(Path(diff_path), repo)
@@ -63,6 +66,24 @@ def run_review(
     guardrail_findings, guardrail_hits = evaluate_guardrails(diff_summary, guardrails)
     findings = _dedupe_findings(deterministic_findings + static_findings + guardrail_findings)
     findings, static_signals, policy_decision = apply_guardrails_policy(diff_summary, findings, static_signals, guardrails)
+
+    if reviewers_enabled:
+        specialized_reviewers = run_specialized_reviewers(
+            ReviewerContext(
+                task_text=task_text,
+                diff=diff_summary,
+                static_signals=static_signals,
+                findings=findings,
+                guardrails=guardrails,
+                guardrail_hits=guardrail_hits,
+                policy=policy_decision,
+                deterministic_checks=deterministic_checks,
+            )
+        )
+    else:
+        specialized_reviewers = specialized_reviewers_not_run()
+    findings = _dedupe_findings(findings + specialized_reviewers.findings)
+
     pre_llm_posture, pre_llm_summary = determine_posture(findings, static_signals, guardrail_hits, deterministic_checks, policy_decision)
 
     llm_config = LLMReviewerConfig(
@@ -104,6 +125,7 @@ def run_review(
         deterministic_checks=deterministic_checks,
         policy=policy_decision,
         llm_review=llm_result,
+        specialized_reviewers=specialized_reviewers,
         pre_llm_posture=pre_llm_posture,
         pr_checkout=pr_checkout or PRCheckoutInfo(),
         generated_at=datetime.now(timezone.utc).isoformat(timespec="seconds"),

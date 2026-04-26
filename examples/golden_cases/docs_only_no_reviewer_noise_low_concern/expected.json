@@ -1,0 +1,20 @@
+{
+  "case_name": "docs_only_no_reviewer_noise_low_concern",
+  "run_checks": false,
+  "expected_posture": "LOW_CONCERN",
+  "required_finding_ids": [],
+  "allowed_extra_finding_ids": [],
+  "forbidden_finding_ids": [
+    "implementation_without_tests",
+    "ui_copy_changed",
+    "deleted_tests",
+    "tests_failed"
+  ],
+  "forbidden_reviewer_finding_ids": [
+    "scope_auditor_task_scope_expansion",
+    "test_skeptic_missing_behavior_coverage",
+    "contract_keeper_contract_changed_without_tests"
+  ],
+  "allow_unlisted_findings": false,
+  "rationale": "Docs-only changes should stay LOW_CONCERN and should not get reviewer noise."
+}

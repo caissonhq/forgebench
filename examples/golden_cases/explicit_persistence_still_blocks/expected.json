@@ -6,6 +6,9 @@
     "persistence_schema_changed"
   ],
   "allowed_extra_finding_ids": [],
+  "required_reviewer_finding_ids": [
+    "contract_keeper_contract_changed_without_tests"
+  ],
   "forbidden_finding_ids": [],
   "allow_unlisted_findings": false,
   "rationale": "Migration changes without test updates should remain a BLOCK-level review posture."

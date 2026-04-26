@@ -1,0 +1,24 @@
+{
+  "case_name": "scope_auditor_docs_task_code_change_review",
+  "run_checks": false,
+  "expected_posture": "REVIEW",
+  "required_finding_ids": [
+    "implementation_without_tests"
+  ],
+  "allowed_extra_finding_ids": [
+    "ui_copy_changed"
+  ],
+  "required_reviewer_ids": [
+    "scope_auditor"
+  ],
+  "required_reviewer_finding_ids": [
+    "scope_auditor_task_scope_expansion",
+    "test_skeptic_missing_behavior_coverage"
+  ],
+  "forbidden_finding_ids": [
+    "deleted_tests",
+    "tests_failed"
+  ],
+  "allow_unlisted_findings": false,
+  "rationale": "A README task that also changes runtime code should be REVIEW with a scope-auditor finding."
+}

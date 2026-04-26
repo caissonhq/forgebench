@@ -6,6 +6,9 @@
     "forbidden_pattern_added"
   ],
   "allowed_extra_finding_ids": [],
+  "required_reviewer_finding_ids": [
+    "product_guardrail_forbidden_pattern"
+  ],
   "forbidden_finding_ids": [
     "implementation_without_tests",
     "broad_file_surface",

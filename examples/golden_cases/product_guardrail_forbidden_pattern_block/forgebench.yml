@@ -1,0 +1,8 @@
+project: Product Guardrail Case
+
+protected_behavior:
+  - Keep payment tracking local.
+  - Do not introduce payment processor integrations.
+
+forbidden_patterns:
+  - Stripe

@@ -8,6 +8,7 @@ from typing import Any
 class EvidenceType(str, Enum):
     DETERMINISTIC = "DETERMINISTIC"
     STATIC = "STATIC"
+    REVIEWER = "REVIEWER"
     LLM = "LLM"
     INFERRED = "INFERRED"
     SPECULATIVE = "SPECULATIVE"
@@ -48,6 +49,12 @@ class LLMReviewStatus(str, Enum):
     FAILED = "failed"
 
 
+class SpecializedReviewerStatus(str, Enum):
+    COMPLETED = "completed"
+    SKIPPED = "skipped"
+    FAILED = "failed"
+
+
 @dataclass(frozen=True)
 class PRCheckoutInfo:
     requested: bool = False
@@ -81,6 +88,8 @@ class Finding:
     explanation: str
     suggested_fix: str
     evidence: list[str] = field(default_factory=list)
+    reviewer: str | None = None
+    supporting_finding_ids: list[str] = field(default_factory=list)
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -91,6 +100,8 @@ class Finding:
             "evidence_type": self.evidence_type.value,
             "files": list(self.files),
             "evidence": list(self.evidence),
+            "reviewer": self.reviewer,
+            "supporting_finding_ids": list(self.supporting_finding_ids),
             "explanation": self.explanation,
             "suggested_fix": self.suggested_fix,
         }
@@ -419,6 +430,42 @@ class LLMReviewResult:
         }
 
 
+@dataclass(frozen=True)
+class SpecializedReviewerResult:
+    reviewer_id: str
+    reviewer_name: str
+    status: SpecializedReviewerStatus
+    summary: str
+    findings: list[Finding] = field(default_factory=list)
+    referenced_finding_ids: list[str] = field(default_factory=list)
+    error_message: str | None = None
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "reviewer_id": self.reviewer_id,
+            "reviewer_name": self.reviewer_name,
+            "status": self.status.value,
+            "summary": self.summary,
+            "findings": [finding.to_dict() for finding in self.findings],
+            "referenced_finding_ids": list(self.referenced_finding_ids),
+            "error_message": self.error_message,
+        }
+
+
+@dataclass(frozen=True)
+class SpecializedReviewReport:
+    enabled: bool = False
+    results: list[SpecializedReviewerResult] = field(default_factory=list)
+    findings: list[Finding] = field(default_factory=list)
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "enabled": self.enabled,
+            "results": [result.to_dict() for result in self.results],
+            "findings": [finding.to_dict() for finding in self.findings],
+        }
+
+
 @dataclass
 class ForgeBenchReport:
     posture: MergePosture
@@ -432,6 +479,7 @@ class ForgeBenchReport:
     deterministic_checks: DeterministicChecks = field(default_factory=DeterministicChecks)
     policy: PolicyDecision = field(default_factory=PolicyDecision)
     llm_review: LLMReviewResult = field(default_factory=LLMReviewResult)
+    specialized_reviewers: SpecializedReviewReport = field(default_factory=SpecializedReviewReport)
     pre_llm_posture: MergePosture | None = None
     pr_checkout: PRCheckoutInfo = field(default_factory=PRCheckoutInfo)
 
@@ -449,6 +497,7 @@ class ForgeBenchReport:
             "guardrail_hits": list(self.guardrail_hits),
             "deterministic_checks": self.deterministic_checks.to_dict(),
             "policy": self.policy.to_dict(),
+            "specialized_reviewers": self.specialized_reviewers.to_dict(),
             "llm_review": self.llm_review.to_dict(),
             "pr_checkout": self.pr_checkout.to_dict(),
             "generated_at": self.generated_at,

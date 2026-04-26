@@ -1,0 +1,22 @@
+{
+  "case_name": "contract_keeper_public_interface_change_review",
+  "run_checks": false,
+  "expected_posture": "REVIEW",
+  "required_finding_ids": [
+    "implementation_without_tests"
+  ],
+  "required_reviewer_ids": [
+    "contract_keeper"
+  ],
+  "required_reviewer_finding_ids": [
+    "contract_keeper_contract_changed_without_tests",
+    "test_skeptic_missing_behavior_coverage"
+  ],
+  "forbidden_finding_ids": [
+    "persistence_schema_changed",
+    "deleted_tests",
+    "tests_failed"
+  ],
+  "allow_unlisted_findings": false,
+  "rationale": "A public interface change without tests should require review from Contract Keeper."
+}

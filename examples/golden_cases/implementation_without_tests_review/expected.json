@@ -4,6 +4,9 @@
   "expected_posture": "REVIEW",
   "required_finding_ids": ["implementation_without_tests"],
   "allowed_extra_finding_ids": [],
+  "required_reviewer_finding_ids": [
+    "test_skeptic_missing_behavior_coverage"
+  ],
   "forbidden_finding_ids": [
     "deleted_tests",
     "dependency_surface_changed",

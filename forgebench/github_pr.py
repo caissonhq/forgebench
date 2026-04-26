@@ -307,6 +307,8 @@ def generate_pr_comment(
     lines.extend(_deterministic_comment_lines(report, checkout))
     lines.extend(["", "Guardrails:"])
     lines.extend(_guardrail_comment_lines(report))
+    lines.extend(["", "Specialized reviewers:"])
+    lines.extend(_specialized_reviewer_comment_lines(report))
     lines.extend(["", "LLM review:"])
     lines.append(f"- {_llm_comment_summary(report)}")
     lines.extend(["", "Suggested next action:", _suggested_next_action(report)])
@@ -430,6 +432,7 @@ def run_github_pr_review(
     checkout_pr: bool = False,
     keep_worktree: bool = False,
     worktree_dir: str | Path | None = None,
+    reviewers_enabled: bool = True,
     client: GitHubPRClient | None = None,
 ) -> GitHubPRReviewResult:
     repo = Path(repo_path)
@@ -494,6 +497,7 @@ def run_github_pr_review(
         llm_max_diff_chars=llm_max_diff_chars,
         input_notes=input_notes,
         pr_checkout=checkout_info,
+        reviewers_enabled=reviewers_enabled,
     )
 
     if prepared_worktree is not None:
@@ -682,6 +686,24 @@ def _guardrail_comment_lines(report: ForgeBenchReport) -> list[str]:
         lines.append(f"- {len(report.policy.suppressed_findings)} finding(s) suppressed by policy.")
     if report.policy.posture_ceiling:
         lines.append(f"- Posture ceiling applied: {report.policy.posture_ceiling.value}.")
+    return lines
+
+
+def _specialized_reviewer_comment_lines(report: ForgeBenchReport) -> list[str]:
+    reviewers = report.specialized_reviewers
+    if not reviewers.enabled:
+        return ["- Not run."]
+    if not reviewers.results:
+        return ["- No reviewer results."]
+    lines: list[str] = []
+    for result in reviewers.results:
+        if result.findings:
+            titles = ", ".join(finding.title for finding in result.findings[:2])
+            if len(result.findings) > 2:
+                titles += f", and {len(result.findings) - 2} more"
+            lines.append(f"- {result.reviewer_name}: {titles}")
+        else:
+            lines.append(f"- {result.reviewer_name}: no additional concern")
     return lines
 
 
