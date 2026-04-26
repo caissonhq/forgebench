@@ -8,7 +8,7 @@ SWE-Bench asks whether an agent solved a task. ForgeBench asks whether a serious
 
 ForgeBench turns an AI-generated diff, the original task prompt, optional repo guardrails, optional local check results, and optional advisory LLM review into a sober merge-risk report, machine-readable JSON, and a repair prompt that can be pasted back into Codex, Claude Code, or Cursor.
 
-Site: https://merge-posture-guard.lovable.app
+Website: https://forgebench.dev
 
 ForgeBench does not prove code is safe. It highlights merge risk before AI-generated code reaches main.
 
