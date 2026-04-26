@@ -109,7 +109,7 @@ def _determine_posture(
         return (
             MergePosture.REVIEW,
             _with_check_context(
-                "Review before merge. A specialized reviewer found a medium-severity risk that should be checked by a human.",
+                "Review before merge. A heuristic review lens found a medium-severity risk that should be checked by a human.",
                 deterministic_checks,
             ),
         )

@@ -31,7 +31,7 @@ def build_repair_prompt(task_text: str, report: ForgeBenchReport, guardrails: Gu
     else:
         lines.append("- No static or guardrail findings.")
 
-    lines.extend(["", "Specialized reviewer findings:"])
+    lines.extend(["", "Heuristic review lens findings:"])
     lines.extend(_format_specialized_reviewer_findings(report))
 
     lines.extend(["", "LLM reviewer notes:"])
@@ -50,7 +50,7 @@ def build_repair_prompt(task_text: str, report: ForgeBenchReport, guardrails: Gu
             "- Do not add unrelated refactors.",
             "- Do not introduce new dependencies unless explicitly necessary.",
             "- Preserve the original product and architecture guardrails.",
-            "- Treat specialized reviewer findings as review tasks, not as automatic approval or rejection.",
+            "- Treat heuristic review lens findings as review tasks, not as automatic approval or rejection.",
             "- Add or update tests where ForgeBench identified missing coverage.",
             "- Before returning the repair, run the configured checks that failed if they are available locally. If you cannot run them, explain why.",
             "- After making changes, summarize exactly what changed and why.",
@@ -192,7 +192,7 @@ def _format_policy_notes(report: ForgeBenchReport) -> list[str]:
 def _format_specialized_reviewer_findings(report: ForgeBenchReport) -> list[str]:
     reviewers = report.specialized_reviewers
     if not reviewers.enabled:
-        return ["- Specialized reviewers were not run."]
+        return ["- Heuristic review lenses were not run."]
     lines: list[str] = []
     for result in reviewers.results:
         if not result.findings:
@@ -210,7 +210,7 @@ def _format_specialized_reviewer_findings(report: ForgeBenchReport) -> list[str]
                     f"    Suggested fix: {finding.suggested_fix}",
                 ]
             )
-    return lines or ["- No specialized reviewer findings."]
+    return lines or ["- No heuristic review lens findings."]
 
 
 def _format_nested_evidence(evidence: list[str]) -> list[str]:

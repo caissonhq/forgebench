@@ -167,7 +167,7 @@ def validate_markdown_report(path: str | Path) -> list[str]:
         "# ForgeBench Merge Risk Report",
         "## Merge Posture",
         "## Deterministic Checks",
-        "## Specialized Reviewers",
+        "## Heuristic Review Lenses",
         "## LLM Review",
         "## Suggested Next Action",
         "## Guardrails Policy",
@@ -189,6 +189,7 @@ def validate_json_report(path: str | Path) -> list[str]:
         return [f"JSON report is invalid: {exc}"]
     errors: list[str] = []
     for key in [
+        "schema_version",
         "posture",
         "pre_llm_posture",
         "final_posture",

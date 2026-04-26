@@ -3,6 +3,9 @@ from __future__ import annotations
 import fnmatch
 from pathlib import Path
 
+import yaml
+from yaml.error import MarkedYAMLError, YAMLError
+
 from forgebench.models import (
     Confidence,
     DiffSummary,
@@ -19,6 +22,21 @@ from forgebench.models import (
 )
 
 
+KNOWN_TOP_LEVEL_KEYS = {
+    "project",
+    "protected_behavior",
+    "risk_files",
+    "forbidden_patterns",
+    "checks",
+    "check_timeout_seconds",
+    "policy",
+}
+
+
+class GuardrailsParseError(ValueError):
+    pass
+
+
 def load_guardrails(path: str | Path | None) -> Guardrails:
     if path is None:
         return Guardrails()
@@ -26,7 +44,9 @@ def load_guardrails(path: str | Path | None) -> Guardrails:
 
 
 def parse_guardrails(text: str) -> Guardrails:
-    payload = _parse_yaml_like(text)
+    payload = _parse_yaml(text)
+    warnings = _unknown_key_warnings(payload)
+    _validate_guardrails_payload(payload)
     risk_files = _as_dict(payload.get("risk_files"))
     checks_payload = _as_dict(payload.get("checks"))
 
@@ -41,6 +61,7 @@ def parse_guardrails(text: str) -> Guardrails:
         checks_present="checks" in payload,
         check_timeout_seconds=_parse_timeout(payload.get("check_timeout_seconds", 120)),
         policy=_parse_policy(_as_dict(payload.get("policy"))),
+        warnings=warnings,
     )
 
 
@@ -241,83 +262,42 @@ def _parse_policy(payload: dict[str, object]) -> GuardrailsPolicy:
     )
 
 
-def _parse_yaml_like(text: str) -> dict[str, object]:
-    lines = [
-        (len(raw_line) - len(raw_line.lstrip(" ")), raw_line.strip())
-        for raw_line in text.splitlines()
-        if raw_line.strip() and not raw_line.lstrip().startswith("#")
-    ]
-    if not lines:
+def _parse_yaml(text: str) -> dict[str, object]:
+    try:
+        loaded = yaml.safe_load(text)
+    except MarkedYAMLError as exc:
+        mark = getattr(exc, "problem_mark", None)
+        location = f" at line {mark.line + 1}, column {mark.column + 1}" if mark else ""
+        problem = getattr(exc, "problem", None) or str(exc)
+        raise GuardrailsParseError(f"Malformed forgebench.yml{location}: {problem}") from exc
+    except YAMLError as exc:
+        raise GuardrailsParseError(f"Malformed forgebench.yml: {exc}") from exc
+
+    if loaded is None:
         return {}
-    parsed, _ = _parse_block(lines, 0, lines[0][0])
-    return _as_dict(parsed)
+    if not isinstance(loaded, dict):
+        raise GuardrailsParseError("forgebench.yml must be a mapping at the top level.")
+    return {str(key): value for key, value in loaded.items()}
 
 
-def _parse_block(lines: list[tuple[int, str]], index: int, indent: int) -> tuple[object, int]:
-    if index >= len(lines):
-        return {}, index
-    if lines[index][1].startswith("- "):
-        return _parse_list_block(lines, index, indent)
-    return _parse_dict_block(lines, index, indent)
+def _unknown_key_warnings(payload: dict[str, object]) -> list[str]:
+    unknown = sorted(set(payload) - KNOWN_TOP_LEVEL_KEYS)
+    if not unknown:
+        return []
+    joined = ", ".join(unknown)
+    return [f"Unexpected top-level key(s) in forgebench.yml ignored: {joined}"]
 
 
-def _parse_dict_block(lines: list[tuple[int, str]], index: int, indent: int) -> tuple[dict[str, object], int]:
-    payload: dict[str, object] = {}
-    while index < len(lines):
-        line_indent, line = lines[index]
-        if line_indent < indent:
-            break
-        if line_indent > indent:
-            index += 1
-            continue
-        if line.startswith("- ") or ":" not in line:
-            break
-
-        key, value = line.split(":", 1)
-        key = key.strip()
-        value = value.strip()
-        if value:
-            payload[key] = _clean_scalar(value)
-            index += 1
-            continue
-
-        index += 1
-        if index < len(lines) and lines[index][0] > line_indent:
-            payload[key], index = _parse_block(lines, index, lines[index][0])
-        else:
-            payload[key] = None
-    return payload, index
+def _validate_guardrails_payload(payload: dict[str, object]) -> None:
+    _require_mapping_or_none(payload, "risk_files")
+    _require_mapping_or_none(payload, "checks")
+    _require_mapping_or_none(payload, "policy")
 
 
-def _parse_list_block(lines: list[tuple[int, str]], index: int, indent: int) -> tuple[list[object], int]:
-    items: list[object] = []
-    while index < len(lines):
-        line_indent, line = lines[index]
-        if line_indent < indent:
-            break
-        if line_indent > indent:
-            index += 1
-            continue
-        if not line.startswith("- "):
-            break
-
-        item = line[2:].strip()
-        if ":" in item:
-            key, value = item.split(":", 1)
-            item_payload: dict[str, object] = {}
-            item_payload[key.strip()] = _clean_scalar(value.strip()) if value.strip() else None
-            index += 1
-            if index < len(lines) and lines[index][0] > line_indent:
-                nested, index = _parse_block(lines, index, lines[index][0])
-                if isinstance(nested, dict):
-                    item_payload.update(nested)
-                elif value.strip() == "":
-                    item_payload[key.strip()] = nested
-            items.append(item_payload)
-        else:
-            items.append(_clean_scalar(item))
-            index += 1
-    return items, index
+def _require_mapping_or_none(payload: dict[str, object], key: str) -> None:
+    value = payload.get(key)
+    if value is not None and not isinstance(value, dict):
+        raise GuardrailsParseError(f"forgebench.yml key '{key}' must be a mapping.")
 
 
 def _as_dict(value: object) -> dict[str, object]:
@@ -374,15 +354,6 @@ def _parse_posture(value: object) -> MergePosture | None:
         return None
     normalized = str(value).strip().upper()
     return MergePosture.__members__.get(normalized)
-
-
-def _clean_scalar(value: str) -> str | None:
-    stripped = value.strip()
-    if not stripped or stripped.lower() in {"null", "none", "~"}:
-        return None
-    if len(stripped) >= 2 and stripped[0] == stripped[-1] and stripped[0] in {"'", '"'}:
-        return stripped[1:-1].replace('\\"', '"').replace("\\'", "'")
-    return stripped
 
 
 def _parse_timeout(value: object) -> int:

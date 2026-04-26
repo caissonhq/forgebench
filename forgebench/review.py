@@ -8,7 +8,7 @@ from forgebench.adversaries import run_specialized_reviewers, specialized_review
 from forgebench.adversaries.models import ReviewerContext
 from forgebench.check_runner import checks_not_run, findings_from_check_results, run_configured_checks
 from forgebench.diff_parser import parse_diff_file
-from forgebench.guardrails import evaluate_guardrails, load_guardrails
+from forgebench.guardrails import GuardrailsParseError, evaluate_guardrails, load_guardrails
 from forgebench.llm_review import apply_llm_posture, build_review_bundle, llm_review_not_run, run_llm_review
 from forgebench.models import Finding, ForgeBenchReport, Guardrails, LLMReviewerConfig, PRCheckoutInfo
 from forgebench.policy import apply_guardrails_policy
@@ -58,7 +58,10 @@ def run_review(
     task_text = task.read_text(encoding="utf-8", errors="replace")
     diff_text = diff.read_text(encoding="utf-8", errors="replace")
     diff_summary = parse_diff_file(diff)
-    guardrails = load_guardrails(guardrails_file)
+    try:
+        guardrails = load_guardrails(guardrails_file)
+    except GuardrailsParseError as exc:
+        raise ReviewInputError(str(exc)) from exc
     deterministic_checks = run_configured_checks(repo, guardrails) if run_checks else checks_not_run()
 
     deterministic_findings = findings_from_check_results(deterministic_checks.results)
@@ -141,7 +144,7 @@ def run_review(
             "diff": str(diff),
             "task": str(task),
             "guardrails": str(guardrails_file) if guardrails_file else "none",
-            "notes": list(input_notes or []),
+            "notes": list(input_notes or []) + list(guardrails.warnings),
         },
     )
     return ReviewResult(

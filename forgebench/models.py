@@ -5,6 +5,9 @@ from enum import Enum
 from typing import Any
 
 
+REPORT_SCHEMA_VERSION = "1.0.0"
+
+
 class EvidenceType(str, Enum):
     DETERMINISTIC = "DETERMINISTIC"
     STATIC = "STATIC"
@@ -194,6 +197,7 @@ class Guardrails:
     checks_present: bool = False
     check_timeout_seconds: int = 120
     policy: "GuardrailsPolicy" = field(default_factory=lambda: GuardrailsPolicy())
+    warnings: list[str] = field(default_factory=list)
 
 
 @dataclass(frozen=True)
@@ -486,6 +490,7 @@ class ForgeBenchReport:
     def to_dict(self) -> dict[str, Any]:
         pre_llm_posture = self.pre_llm_posture or self.posture
         return {
+            "schema_version": REPORT_SCHEMA_VERSION,
             "posture": self.posture.value,
             "pre_llm_posture": pre_llm_posture.value,
             "final_posture": self.posture.value,

@@ -11,13 +11,13 @@ Positioning:
 - SWE-Bench asks whether an agent solved the task. ForgeBench asks whether a serious engineer would merge the diff.
 - Keep the product framed as local-first, CLI-first, evidence-backed pre-merge QA.
 
-Add Specialized Reviewers to the homepage and report viewer:
+Add Heuristic Review Lenses to the homepage and report viewer:
 - Scope Auditor
 - Test Skeptic
 - Contract Keeper
 - Product / Guardrail Reviewer
 
-Explain that these are Phase 1 specialized reviewers only. Do not imply the full 8-reviewer set exists yet.
+Explain that these are Phase 1 deterministic heuristic lenses only. Do not imply the full 8-reviewer set exists yet.
 
 Make the reviewers evidence-constrained:
 - They use the task, diff, deterministic checks, static signals, and guardrails.

@@ -62,7 +62,7 @@ index 1111111..2222222 100644
 
         self.assertEqual(code, 0)
         self.assertFalse(payload["specialized_reviewers"]["enabled"])
-        self.assertIn("Specialized reviewers: not run", stdout.getvalue())
+        self.assertIn("Heuristic review lenses: not run", stdout.getvalue())
 
     def test_scope_auditor_flags_docs_task_with_code_change(self) -> None:
         result = _review(
@@ -337,9 +337,11 @@ check_timeout_seconds: 5
         payload = json.loads(result.written_paths["json"].read_text(encoding="utf-8"))
         repair = result.written_paths["repair_prompt"].read_text(encoding="utf-8")
 
-        self.assertIn("## Specialized Reviewers", markdown)
+        self.assertIn("## Heuristic Review Lenses", markdown)
+        self.assertNotIn("Specialized Reviewer", markdown)
+        self.assertNotIn("Specialized Reviewers", markdown)
         self.assertIn("specialized_reviewers", payload)
-        self.assertIn("Specialized reviewer findings:", repair)
+        self.assertIn("Heuristic review lens findings:", repair)
         self.assertIn("Changed behavior lacks corresponding test coverage", repair)
         self.assertNotIn("No additional scope concern found from task text and changed files.\n  Explanation", repair)
 
@@ -347,8 +349,10 @@ check_timeout_seconds: 5
         result = _review(task="Fix addition behavior.", patch=_source_patch())
         comment = generate_pr_comment(result.report, _metadata())
 
-        self.assertIn("Specialized reviewers:", comment)
+        self.assertIn("Heuristic review lenses:", comment)
         self.assertIn("Test Skeptic:", comment)
+        self.assertNotIn("Specialized Reviewer", comment)
+        self.assertNotIn("Specialized Reviewers", comment)
         self.assertLess(len(comment), 3000)
 
     def test_test_only_refactor_does_not_become_block(self) -> None:

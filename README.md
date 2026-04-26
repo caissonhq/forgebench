@@ -19,6 +19,7 @@ ForgeBench does not prove code is safe. It highlights merge risk before AI-gener
 - Optional local build/test/lint/typecheck command execution when explicitly requested.
 - Optional evidence-constrained LLM review when explicitly requested.
 - Optional GitHub PR URL intake through the local `gh` CLI.
+- Phase 1 lenses are deterministic heuristics. They do not perform semantic code review. A future Phase 2 may add LLM-assisted lenses; until then, treat lens findings as routing hints, not conclusions.
 - A sober report that classifies the patch as `BLOCK`, `REVIEW`, or `LOW_CONCERN`.
 - A focused repair prompt for tightening the original patch without expanding scope.
 
@@ -51,6 +52,8 @@ ForgeBench writes:
 - `forgebench-output/forgebench-report.md`
 - `forgebench-output/forgebench-report.json`
 - `forgebench-output/repair-prompt.md`
+
+The JSON report is schema-versioned. See [docs/report-schema.md](docs/report-schema.md).
 
 ## CLI Usage
 
@@ -186,7 +189,9 @@ checks:
 check_timeout_seconds: 120
 ```
 
-Guardrails are applied by matching changed file paths, searching added lines for forbidden patterns, and applying repo-specific policy calibration.
+Guardrails are parsed with PyYAML, validated against ForgeBench's documented schema, and applied by matching changed file paths, searching added lines for forbidden patterns, and applying repo-specific policy calibration.
+
+See [docs/forgebench-yml-schema.md](docs/forgebench-yml-schema.md) for the supported schema.
 
 ## Guardrails v2 Policy
 
@@ -312,18 +317,20 @@ Run with checks:
 forgebench review --repo . --diff ./patch.diff --task ./task.md --guardrails ./forgebench.yml --run-checks
 ```
 
-## Specialized Reviewers
+## Heuristic Review Lenses
 
-ForgeBench runs four deterministic specialized reviewers by default. They are evidence-constrained checks over the task text, parsed diff, static findings, deterministic check results, and guardrails. They do not call an LLM, approve merges, assign scores, or override deterministic failures.
+ForgeBench runs four deterministic Phase 1 review lenses by default. They are evidence-constrained heuristics over the task text, parsed diff, static findings, deterministic check results, and guardrails. They do not call an LLM, approve merges, assign scores, or override deterministic failures.
 
-Phase 1 reviewers:
+Phase 1 review lenses are deterministic heuristics. They route attention to risk. They do not perform semantic human-level code review.
+
+Phase 1 lenses:
 
 - Scope Auditor: checks whether the patch appears to change more than the task required.
 - Test Skeptic: checks whether changed behavior has meaningful regression coverage.
 - Contract Keeper: checks whether API, schema, type, route, persistence, or public interface surfaces changed without clear coverage.
 - Product / Guardrail Reviewer: checks whether configured product or architecture guardrails were touched or violated.
 
-Reviewer findings are lower in the evidence hierarchy than deterministic checks, static risk signals, and Guardrails v2 policy. A reviewer finding can raise concern, for example moving a low-concern patch to `REVIEW`, but it cannot downgrade `BLOCK`, claim code is safe, or approve a merge.
+Lens findings are lower in the evidence hierarchy than deterministic checks, static risk signals, and Guardrails v2 policy. A lens finding can raise concern, for example moving a low-concern patch to `REVIEW`, but it cannot downgrade `BLOCK`, claim code is safe, or approve a merge.
 
 Disable the layer when you need a static-only baseline:
 
@@ -337,9 +344,9 @@ The same flag is available for PR intake:
 forgebench review-pr https://github.com/OWNER/REPO/pull/123 --no-reviewers
 ```
 
-Reviewer output appears in Markdown under `Specialized Reviewers`, in JSON under `specialized_reviewers`, in the repair prompt as reviewer findings, and as a concise summary in `pr-comment.md`.
+Lens output appears in Markdown under `Heuristic Review Lenses`, in JSON under the historical `specialized_reviewers` field, in the repair prompt as lens findings, and as a concise summary in `pr-comment.md`.
 
-Sprint 6.1 calibration tightened the Phase 1 reviewers around real dogfood noise:
+Sprint 6.1 calibration tightened the Phase 1 lenses around real dogfood noise:
 
 - Test Skeptic no longer treats every deleted test line as weakened coverage. Deleted test files remain serious; removed assertions without replacement produce review-level risk; assertion refactors with replacement coverage stay low concern.
 - Contract Keeper separates read/view-model contract changes from persistence/schema changes. Read models can still require review when their public shape changes, but they should not block as schema risk unless policy marks them high risk.
@@ -355,7 +362,7 @@ The evidence hierarchy remains:
 1. Deterministic checks
 2. Static risk signals
 3. Guardrails policy
-4. Specialized reviewers
+4. Heuristic review lenses
 5. LLM review
 
 LLM findings can raise concern, for example by moving a `LOW_CONCERN` patch to `REVIEW` when a medium advisory finding is returned. LLM findings cannot downgrade posture, approve a merge, erase static findings, override deterministic failures, create a blocker finding, or assign a numeric score.
@@ -542,6 +549,23 @@ Run calibration:
 PYTHONDONTWRITEBYTECODE=1 python -m forgebench calibrate --cases examples/golden_cases
 ```
 
+Guardrails schema documentation:
+
+```bash
+open docs/forgebench-yml-schema.md
+```
+
+Release workflow:
+
+- Tag pushes matching `v*` build source and wheel distributions.
+- The release workflow runs tests and calibration before building.
+- PyPI publishing uses Trusted Publishing and requires the PyPI project to be configured externally.
+- Do not add PyPI API tokens to this repo.
+
+## License
+
+ForgeBench is distributed under the [Apache License 2.0](LICENSE).
+
 ## V1 Readiness
 
 See `V1_READINESS.md` for the current V1 readiness assessment, evidence hierarchy, Phase 1 reviewer scope, known limitations, and what remains before CAI-5 should be considered done.
@@ -551,9 +575,9 @@ See `SITE_SYNC_NOTES.md` for the Lovable update prompt that keeps the public alp
 ## Known Limitations
 
 - The diff parser targets common local `git diff` output, not every possible patch format.
-- The guardrails parser supports the documented ForgeBench YAML shapes, not arbitrary YAML.
+- The guardrails parser uses PyYAML and validates the documented ForgeBench YAML shapes.
 - Guardrails v2 policy is path-pattern based. It does not interpret copy intent or program semantics.
-- Specialized reviewers are Phase 1 deterministic heuristics only; they are not the full CAI-7 reviewer set.
+- Heuristic review lenses are Phase 1 deterministic heuristics only; they are not the full CAI-7 reviewer set.
 - Command execution is opt-in and limited to commands you configure locally.
 - LLM review is opt-in and advisory. The command provider can run any command you configure, so only use it with trusted local commands.
 - GitHub PR intake depends on the local `gh` CLI and network/auth state. It is not a GitHub App.

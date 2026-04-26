@@ -12,7 +12,7 @@ ForgeBench does not prove code is safe. It highlights merge risk before AI-gener
 - Optional deterministic local build/test/lint/typecheck/custom checks.
 - Static risk findings for tests, dependencies, config, persistence/schema, generated files, UI/copy, and broad file surface.
 - Guardrails v2 policy calibration with path categories, suppressions, severity/confidence overrides, and posture ceilings.
-- Phase 1 specialized reviewers:
+- Phase 1 heuristic review lenses:
   - Scope Auditor
   - Test Skeptic
   - Contract Keeper
@@ -26,10 +26,10 @@ ForgeBench does not prove code is safe. It highlights merge risk before AI-gener
 1. Deterministic checks
 2. Static risk signals
 3. Guardrails policy
-4. Specialized reviewers
+4. Heuristic review lenses
 5. Optional LLM review
 
-Deterministic failures are never downgraded by reviewer or policy calibration. Reviewers add framing and extra review tasks; they do not approve merges.
+Deterministic failures are never downgraded by lens or policy calibration. Heuristic review lenses add framing and extra review tasks; they do not approve merges.
 
 ## Supported Inputs
 
@@ -40,7 +40,9 @@ Deterministic failures are never downgraded by reviewer or policy calibration. R
 - Optional GitHub PR URL through `gh`.
 - Optional local command-provider LLM review.
 
-## Phase 1 Reviewers
+## Phase 1 Review Lenses
+
+Phase 1 review lenses are deterministic heuristics. They route attention to risk. They do not perform semantic human-level code review.
 
 Scope Auditor checks whether the patch appears to change more than the task required.
 
@@ -66,7 +68,7 @@ Product / Guardrail Reviewer checks configured protected behavior, forbidden pat
 - The diff parser is pragmatic and targets common local git diffs.
 - Static analysis is path and line-pattern based.
 - Guardrails v2 is deterministic policy, not semantic product reasoning.
-- Phase 1 reviewers are calibrated heuristics, not the full CAI-7 reviewer set.
+- Phase 1 review lenses are calibrated heuristics, not the full CAI-7 reviewer set.
 - `review-pr --run-checks` needs `--checkout-pr` to run checks against the PR worktree.
 - Optional LLM review is command-provider only and advisory.
 

@@ -4,6 +4,7 @@ import argparse
 import sys
 from pathlib import Path
 
+from forgebench import __version__
 from forgebench.calibration import format_calibration_result, run_calibration
 from forgebench.github_pr import GitHubPRError, GitHubPRReviewResult, run_github_pr_review
 from forgebench.models import ForgeBenchReport
@@ -97,6 +98,7 @@ def _run_calibrate(args: argparse.Namespace) -> int:
 
 def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="forgebench", description="Adversarial pre-merge QA for coding-agent output.")
+    parser.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
     subparsers = parser.add_subparsers(dest="command")
 
     review = subparsers.add_parser("review", help="Review an AI-generated diff before merge.")
@@ -106,7 +108,7 @@ def _build_parser() -> argparse.ArgumentParser:
     review.add_argument("--guardrails", required=False, help="Optional path to forgebench.yml.")
     review.add_argument("--out", required=False, help="Output directory. Defaults to ./forgebench-output/.")
     review.add_argument("--run-checks", action="store_true", help="Execute configured local deterministic checks from forgebench.yml.")
-    review.add_argument("--no-reviewers", action="store_true", help="Skip deterministic specialized reviewer checks.")
+    review.add_argument("--no-reviewers", action="store_true", help="Skip Phase 1 heuristic review lenses.")
     review.add_argument("--llm-review", action="store_true", help="Run an optional advisory LLM reviewer after deterministic/static review.")
     review.add_argument("--llm-provider", choices=["mock", "command"], required=False, help="LLM provider to use when --llm-review is passed.")
     review.add_argument("--llm-command", required=False, help="Command provider shell command. Receives the review bundle on stdin and returns JSON on stdout.")
@@ -120,7 +122,7 @@ def _build_parser() -> argparse.ArgumentParser:
     review_pr.add_argument("--guardrails", required=False, help="Optional path to forgebench.yml.")
     review_pr.add_argument("--out", required=False, help="Output directory. Defaults to ./forgebench-output/pr-OWNER-REPO-NUMBER/.")
     review_pr.add_argument("--run-checks", action="store_true", help="Execute configured local deterministic checks from forgebench.yml.")
-    review_pr.add_argument("--no-reviewers", action="store_true", help="Skip deterministic specialized reviewer checks.")
+    review_pr.add_argument("--no-reviewers", action="store_true", help="Skip Phase 1 heuristic review lenses.")
     review_pr.add_argument("--checkout-pr", action="store_true", help="Checkout the PR code into a temporary git worktree before running checks.")
     review_pr.add_argument("--keep-worktree", action="store_true", help="Do not delete the temporary PR worktree after review. Prints the path in the report.")
     review_pr.add_argument("--worktree-dir", required=False, help="Optional parent directory for temporary PR worktrees.")
@@ -161,7 +163,7 @@ def _print_summary(report: ForgeBenchReport, written: dict[str, Path]) -> None:
         print("- No findings.")
     print()
     print(f"Deterministic checks: {_checks_summary(report)}")
-    print(f"Specialized reviewers: {_reviewers_summary(report)}")
+    print(f"Heuristic review lenses: {_reviewers_summary(report)}")
     print(f"LLM review: {_llm_summary(report)}")
     print()
     print("Reports written:")

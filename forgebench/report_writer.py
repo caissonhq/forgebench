@@ -27,7 +27,7 @@ def write_reports(
     repair_prompt_path = output_dir / REPAIR_PROMPT
 
     markdown_path.write_text(build_markdown_report(report, guardrails, inputs), encoding="utf-8")
-    json_path.write_text(json.dumps(report.to_dict(), indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    json_path.write_text(json.dumps(report.to_dict(), indent=2) + "\n", encoding="utf-8")
     repair_prompt_path.write_text(build_repair_prompt(task_text, report, guardrails), encoding="utf-8")
 
     return {
@@ -74,7 +74,7 @@ def build_markdown_report(report: ForgeBenchReport, guardrails: Guardrails, inpu
         "",
         *_format_deterministic_checks(report),
         "",
-        "## Specialized Reviewers",
+        "## Heuristic Review Lenses",
         "",
         *_format_specialized_reviewers(report),
         "",
@@ -259,11 +259,18 @@ def _format_deterministic_checks(report: ForgeBenchReport) -> list[str]:
 def _format_specialized_reviewers(report: ForgeBenchReport) -> list[str]:
     reviewers = report.specialized_reviewers
     if not reviewers.enabled:
-        return ["Specialized reviewers were not run."]
+        return [
+            "Heuristic review lenses were not run.",
+            "",
+            "Phase 1 review lenses are deterministic heuristics. They route attention to risk. They do not perform semantic human-level code review.",
+        ]
     if not reviewers.results:
-        return ["No specialized reviewer results were produced."]
+        return ["No heuristic review lens results were produced."]
 
-    lines: list[str] = []
+    lines: list[str] = [
+        "Phase 1 review lenses are deterministic heuristics. They route attention to risk. They do not perform semantic human-level code review.",
+        "",
+    ]
     for result in reviewers.results:
         lines.extend(
             [

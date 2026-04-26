@@ -307,7 +307,7 @@ def generate_pr_comment(
     lines.extend(_deterministic_comment_lines(report, checkout))
     lines.extend(["", "Guardrails:"])
     lines.extend(_guardrail_comment_lines(report))
-    lines.extend(["", "Specialized reviewers:"])
+    lines.extend(["", "Heuristic review lenses:"])
     lines.extend(_specialized_reviewer_comment_lines(report))
     lines.extend(["", "LLM review:"])
     lines.append(f"- {_llm_comment_summary(report)}")
