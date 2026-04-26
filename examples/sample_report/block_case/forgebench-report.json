@@ -1,0 +1,222 @@
+{
+  "schema_version": "1.0.0",
+  "posture": "BLOCK",
+  "pre_llm_posture": "BLOCK",
+  "final_posture": "BLOCK",
+  "summary": "Do not merge yet. The patch changes likely persistence or schema behavior without corresponding test coverage. Deterministic checks were not run.",
+  "task_summary": "Synthetic sample task: Add receipt tracking for quarterly estimated tax payments. This is a synthetic ForgeBench sample case designed to demonstrate output shape.",
+  "changed_files": [
+    "db/migrations/20260426_add_payment_receipts.sql"
+  ],
+  "findings": [
+    {
+      "id": "persistence_schema_changed",
+      "title": "Persistence or schema behavior may have changed",
+      "severity": "HIGH",
+      "confidence": "HIGH",
+      "evidence_type": "STATIC",
+      "files": [
+        "db/migrations/20260426_add_payment_receipts.sql"
+      ],
+      "evidence": [
+        "Persistence, schema, model, or migration file changed: db/migrations/20260426_add_payment_receipts.sql",
+        "No likely test file changed in this patch."
+      ],
+      "reviewer": null,
+      "supporting_finding_ids": [],
+      "explanation": "The patch changes a likely persistence, schema, model, or migration file. If no corresponding test file changed, data behavior may have changed without regression coverage.",
+      "suggested_fix": "Review the data model impact, verify migration behavior, and add tests around persistence compatibility."
+    },
+    {
+      "id": "high_risk_guardrail_file",
+      "title": "High-risk project area changed",
+      "severity": "HIGH",
+      "confidence": "HIGH",
+      "evidence_type": "STATIC",
+      "files": [
+        "db/migrations/20260426_add_payment_receipts.sql"
+      ],
+      "evidence": [
+        "High-risk guardrail pattern '**/migrations/**' matched db/migrations/20260426_add_payment_receipts.sql"
+      ],
+      "reviewer": null,
+      "supporting_finding_ids": [],
+      "explanation": "The patch changes files matched by high-risk project guardrails. These areas usually encode protected behavior or fragile architecture and need deliberate review before merge.",
+      "suggested_fix": "Review the changed high-risk files against the original task and add focused tests or reduce the patch scope if the changes are not required."
+    },
+    {
+      "id": "product_guardrail_protected_area_changed",
+      "title": "Patch touches protected product or architecture behavior",
+      "severity": "MEDIUM",
+      "confidence": "HIGH",
+      "evidence_type": "REVIEWER",
+      "files": [
+        "db/migrations/20260426_add_payment_receipts.sql"
+      ],
+      "evidence": [
+        "Project protected_behavior is configured.",
+        "Patch hit configured high- or medium-risk guardrail paths.",
+        "Protected behavior: Tax calculation trust must be preserved",
+        "Protected behavior: Paid state must distinguish Federal and California payments"
+      ],
+      "reviewer": "product_guardrail_reviewer",
+      "supporting_finding_ids": [
+        "high_risk_guardrail_file"
+      ],
+      "explanation": "The patch touches files that this repo marks as tied to protected product or architecture behavior. This needs review against the guardrails; it is not automatically a violation.",
+      "suggested_fix": "Review the changed files against the protected behavior list and add focused tests or reduce scope if needed."
+    }
+  ],
+  "static_signals": {
+    "changed_file_count": 1,
+    "added_line_count": 19,
+    "deleted_line_count": 0,
+    "source_files_changed": [],
+    "test_files_changed": [],
+    "tests_changed": false,
+    "deleted_test_files": [],
+    "weakened_test_files": [],
+    "dependency_files_changed": [],
+    "build_or_config_files_changed": [],
+    "persistence_or_schema_files_changed": [
+      "db/migrations/20260426_add_payment_receipts.sql"
+    ],
+    "generated_or_unrelated_files_changed": [],
+    "ui_or_copy_files_changed": [],
+    "binary_files_changed": []
+  },
+  "guardrail_hits": [
+    "High-risk guardrail pattern '**/migrations/**' matched db/migrations/20260426_add_payment_receipts.sql"
+  ],
+  "deterministic_checks": {
+    "run_requested": false,
+    "results": [],
+    "summary": {
+      "passed": 0,
+      "failed": 0,
+      "timed_out": 0,
+      "skipped": 0,
+      "not_configured": 0,
+      "errors": 0
+    }
+  },
+  "policy": {
+    "active_categories": [],
+    "finding_adjustments": [],
+    "suppressed_findings": [],
+    "posture_ceiling": null,
+    "posture_ceiling_reason": null,
+    "posture_ceiling_rule": null
+  },
+  "specialized_reviewers": {
+    "enabled": true,
+    "results": [
+      {
+        "reviewer_id": "scope_auditor",
+        "reviewer_name": "Scope Auditor",
+        "status": "completed",
+        "summary": "No additional scope concern found from task text and changed files.",
+        "findings": [],
+        "referenced_finding_ids": [],
+        "error_message": null
+      },
+      {
+        "reviewer_id": "test_skeptic",
+        "reviewer_name": "Test Skeptic",
+        "status": "completed",
+        "summary": "No additional test coverage concern found.",
+        "findings": [],
+        "referenced_finding_ids": [],
+        "error_message": null
+      },
+      {
+        "reviewer_id": "contract_keeper",
+        "reviewer_name": "Contract Keeper",
+        "status": "completed",
+        "summary": "Contract risk is already represented by existing static findings.",
+        "findings": [],
+        "referenced_finding_ids": [
+          "persistence_schema_changed"
+        ],
+        "error_message": null
+      },
+      {
+        "reviewer_id": "product_guardrail_reviewer",
+        "reviewer_name": "Product / Guardrail Reviewer",
+        "status": "completed",
+        "summary": "Found guardrail-related review concerns grounded in configured project policy.",
+        "findings": [
+          {
+            "id": "product_guardrail_protected_area_changed",
+            "title": "Patch touches protected product or architecture behavior",
+            "severity": "MEDIUM",
+            "confidence": "HIGH",
+            "evidence_type": "REVIEWER",
+            "files": [
+              "db/migrations/20260426_add_payment_receipts.sql"
+            ],
+            "evidence": [
+              "Project protected_behavior is configured.",
+              "Patch hit configured high- or medium-risk guardrail paths.",
+              "Protected behavior: Tax calculation trust must be preserved",
+              "Protected behavior: Paid state must distinguish Federal and California payments"
+            ],
+            "reviewer": "product_guardrail_reviewer",
+            "supporting_finding_ids": [
+              "high_risk_guardrail_file"
+            ],
+            "explanation": "The patch touches files that this repo marks as tied to protected product or architecture behavior. This needs review against the guardrails; it is not automatically a violation.",
+            "suggested_fix": "Review the changed files against the protected behavior list and add focused tests or reduce scope if needed."
+          }
+        ],
+        "referenced_finding_ids": [
+          "high_risk_guardrail_file"
+        ],
+        "error_message": null
+      }
+    ],
+    "findings": [
+      {
+        "id": "product_guardrail_protected_area_changed",
+        "title": "Patch touches protected product or architecture behavior",
+        "severity": "MEDIUM",
+        "confidence": "HIGH",
+        "evidence_type": "REVIEWER",
+        "files": [
+          "db/migrations/20260426_add_payment_receipts.sql"
+        ],
+        "evidence": [
+          "Project protected_behavior is configured.",
+          "Patch hit configured high- or medium-risk guardrail paths.",
+          "Protected behavior: Tax calculation trust must be preserved",
+          "Protected behavior: Paid state must distinguish Federal and California payments"
+        ],
+        "reviewer": "product_guardrail_reviewer",
+        "supporting_finding_ids": [
+          "high_risk_guardrail_file"
+        ],
+        "explanation": "The patch touches files that this repo marks as tied to protected product or architecture behavior. This needs review against the guardrails; it is not automatically a violation.",
+        "suggested_fix": "Review the changed files against the protected behavior list and add focused tests or reduce scope if needed."
+      }
+    ]
+  },
+  "llm_review": {
+    "enabled": false,
+    "provider": null,
+    "status": "skipped",
+    "reviewer_name": null,
+    "summary": null,
+    "findings": [],
+    "error_message": null
+  },
+  "pr_checkout": {
+    "requested": false,
+    "status": "not_requested",
+    "worktree_path": null,
+    "checks_target": "not_run",
+    "error_message": null,
+    "kept": false,
+    "cleanup_error": null
+  },
+  "generated_at": "2026-04-26T23:10:53+00:00"
+}

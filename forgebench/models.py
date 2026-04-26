@@ -113,12 +113,14 @@ class Finding:
 @dataclass
 class ChangedHunk:
     header: str
+    lines: list[str] = field(default_factory=list)
     added_lines: list[str] = field(default_factory=list)
     deleted_lines: list[str] = field(default_factory=list)
 
     def to_dict(self) -> dict[str, Any]:
         return {
             "header": self.header,
+            "lines": list(self.lines),
             "added_lines": list(self.added_lines),
             "deleted_lines": list(self.deleted_lines),
         }
@@ -486,6 +488,7 @@ class ForgeBenchReport:
     specialized_reviewers: SpecializedReviewReport = field(default_factory=SpecializedReviewReport)
     pre_llm_posture: MergePosture | None = None
     pr_checkout: PRCheckoutInfo = field(default_factory=PRCheckoutInfo)
+    diff_summary: DiffSummary | None = None
 
     def to_dict(self) -> dict[str, Any]:
         pre_llm_posture = self.pre_llm_posture or self.posture

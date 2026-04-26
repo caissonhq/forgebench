@@ -20,6 +20,7 @@ ForgeBench does not prove code is safe. It highlights merge risk before AI-gener
 - Optional evidence-constrained LLM review through a local command provider.
 - Markdown report, JSON report, repair prompt, and PR-comment-ready summary.
 - Golden corpus calibration.
+- Synthetic, human-approved sample reports for first-run UX.
 
 ## Evidence Hierarchy
 
@@ -71,6 +72,7 @@ Product / Guardrail Reviewer checks configured protected behavior, forbidden pat
 - Phase 1 review lenses are calibrated heuristics, not the full CAI-7 reviewer set.
 - `review-pr --run-checks` needs `--checkout-pr` to run checks against the PR worktree.
 - Optional LLM review is command-provider only and advisory.
+- Real anonymized sample reports are still required before broader public beta. Sprint 8 includes synthetic sample reports for first-run UX only.
 
 ## Required Before CAI-5 Done
 

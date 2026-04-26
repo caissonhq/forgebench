@@ -32,11 +32,14 @@ Update the example report to include a concise reviewer summary:
 - Product / Guardrail Reviewer: protected area changed
 
 Keep the current CLI alpha framing:
+- `forgebench init` creates a starter local guardrails file
 - Local diff review
 - GitHub PR URL review through local GitHub CLI
 - Optional `--checkout-pr --run-checks`
 - Optional `--llm-review`
 - Local artifacts: Markdown, JSON, repair prompt, PR-ready comment
+- Repair prompts now include relevant diff hunk context
+- Link to synthetic, human-approved sample reports and label them clearly as synthetic examples, not real customer reports
 
 Do not add:
 - hosted SaaS claims

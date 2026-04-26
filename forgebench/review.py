@@ -131,6 +131,7 @@ def run_review(
         specialized_reviewers=specialized_reviewers,
         pre_llm_posture=pre_llm_posture,
         pr_checkout=pr_checkout or PRCheckoutInfo(),
+        diff_summary=diff_summary,
         generated_at=datetime.now(timezone.utc).isoformat(timespec="seconds"),
     )
 

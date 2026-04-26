@@ -7,6 +7,7 @@ from pathlib import Path
 from forgebench import __version__
 from forgebench.calibration import format_calibration_result, run_calibration
 from forgebench.github_pr import GitHubPRError, GitHubPRReviewResult, run_github_pr_review
+from forgebench.init import InitError, write_starter_guardrails
 from forgebench.models import ForgeBenchReport
 from forgebench.review import ReviewInputError, run_review
 
@@ -18,6 +19,9 @@ def main(argv: list[str] | None = None) -> int:
     if args.command == "calibrate":
         return _run_calibrate(args)
 
+    if args.command == "init":
+        return _run_init(args)
+
     if args.command == "review-pr":
         return _run_review_pr(args)
 
@@ -26,6 +30,25 @@ def main(argv: list[str] | None = None) -> int:
         return 2
 
     return _run_review(args)
+
+
+def _run_init(args: argparse.Namespace) -> int:
+    try:
+        result = write_starter_guardrails(repo_path=args.repo, output_path=args.out, force=args.force)
+    except InitError as exc:
+        _fail(str(exc))
+
+    print("ForgeBench guardrails file created.")
+    print()
+    print(f"Repo: {result.repo_path}")
+    print(f"Output: {result.path}")
+    if result.detected:
+        print(f"Detected: {', '.join(result.detected)}")
+    else:
+        print("Detected: no supported project manifest; checks defaulted to null")
+    print()
+    print("Edit protected_behavior and forbidden_patterns before relying on project-specific guardrails.")
+    return 0
 
 
 def _run_review(args: argparse.Namespace) -> int:
@@ -100,6 +123,11 @@ def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="forgebench", description="Adversarial pre-merge QA for coding-agent output.")
     parser.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
     subparsers = parser.add_subparsers(dest="command")
+
+    init = subparsers.add_parser("init", help="Write a starter forgebench.yml for a local repo.")
+    init.add_argument("--repo", required=False, default=".", help="Repository to inspect. Defaults to current directory.")
+    init.add_argument("--out", required=False, default="forgebench.yml", help="Output guardrails path. Defaults to forgebench.yml in the repo.")
+    init.add_argument("--force", action="store_true", help="Overwrite the output file if it already exists.")
 
     review = subparsers.add_parser("review", help="Review an AI-generated diff before merge.")
     review.add_argument("--repo", required=True, help="Path to the repository being reviewed.")

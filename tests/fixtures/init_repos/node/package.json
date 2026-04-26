@@ -1,0 +1,10 @@
+{
+  "name": "node-demo",
+  "version": "0.1.0",
+  "scripts": {
+    "build": "vite build",
+    "test": "vitest run",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit"
+  }
+}

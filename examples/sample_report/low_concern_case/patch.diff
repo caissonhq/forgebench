@@ -1,0 +1,15 @@
+diff --git a/README.md b/README.md
+index 8ad12bb..9ce41a1 100644
+--- a/README.md
++++ b/README.md
+@@ -6,7 +6,9 @@ ForgeBench reviews AI-generated diffs before they hit main.
+ 
+ ## Quickstart
+ 
+-Run ForgeBench against a saved patch and task prompt.
++Save the agent-generated patch and the original task prompt, then run
++ForgeBench locally before merging. The first report should take less than a
++minute on a small diff.
+ 
+ ```bash
+ forgebench review --repo . --diff ./patch.diff --task ./task.md

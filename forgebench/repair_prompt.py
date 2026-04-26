@@ -1,9 +1,42 @@
 from __future__ import annotations
 
-from forgebench.models import CheckResult, CheckStatus, EvidenceType, ForgeBenchReport, Guardrails, MergePosture
+from forgebench.models import CheckResult, CheckStatus, EvidenceType, Finding, ForgeBenchReport, Guardrails, MergePosture, Severity
 
 
-def build_repair_prompt(task_text: str, report: ForgeBenchReport, guardrails: Guardrails) -> str:
+MAX_REPAIR_PROMPT_CHARS = 30000
+MAX_FINDING_HUNK_LINES = 40
+
+
+def build_repair_prompt(
+    task_text: str,
+    report: ForgeBenchReport,
+    guardrails: Guardrails,
+    max_prompt_chars: int = MAX_REPAIR_PROMPT_CHARS,
+) -> str:
+    omitted_keys: set[tuple[str, tuple[str, ...], str | None]] = set()
+    prompt = _render_repair_prompt(task_text, report, guardrails, omitted_keys)
+    if len(prompt) <= max_prompt_chars:
+        return prompt
+
+    for key in _droppable_finding_keys(report):
+        omitted_keys.add(key)
+        prompt = _render_repair_prompt(task_text, report, guardrails, omitted_keys)
+        if len(prompt) <= max_prompt_chars:
+            return prompt
+
+    if len(prompt) <= max_prompt_chars:
+        return prompt
+    suffix = "\n\n(Prompt truncated to fit prompt size cap. See patch.diff and forgebench-report.md for full context.)\n"
+    return prompt[: max(0, max_prompt_chars - len(suffix))].rstrip() + suffix
+
+
+def _render_repair_prompt(
+    task_text: str,
+    report: ForgeBenchReport,
+    guardrails: Guardrails,
+    omitted_keys: set[tuple[str, tuple[str, ...], str | None]],
+) -> str:
+    omitted_count = len(omitted_keys)
     lines: list[str] = [
         "You are repairing an AI-generated code change after ForgeBench review.",
         "",
@@ -16,26 +49,29 @@ def build_repair_prompt(task_text: str, report: ForgeBenchReport, guardrails: Gu
         _posture_instruction(report),
         "",
     ]
+    if omitted_count:
+        lines.extend([f"({omitted_count} findings omitted to fit prompt size cap.)", ""])
 
     lines.extend(["Deterministic check failures:"])
-    lines.extend(_format_check_failures(report))
+    lines.extend(_format_check_failures(report, omitted_keys))
 
     lines.extend(["", "Static and guardrail findings:"])
     static_findings = [
         finding
         for finding in report.findings
         if finding.evidence_type not in {EvidenceType.DETERMINISTIC, EvidenceType.REVIEWER, EvidenceType.LLM}
+        and _finding_key(finding) not in omitted_keys
     ]
     if static_findings:
-        lines.extend(_format_findings(static_findings))
+        lines.extend(_format_findings(static_findings, report))
     else:
         lines.append("- No static or guardrail findings.")
 
     lines.extend(["", "Heuristic review lens findings:"])
-    lines.extend(_format_specialized_reviewer_findings(report))
+    lines.extend(_format_specialized_reviewer_findings(report, omitted_keys))
 
     lines.extend(["", "LLM reviewer notes:"])
-    lines.extend(_format_llm_notes(report))
+    lines.extend(_format_llm_notes(report, omitted_keys))
 
     lines.extend(["", "Suppressed or policy-calibrated findings:"])
     lines.extend(_format_policy_notes(report))
@@ -86,7 +122,7 @@ def _format_evidence(evidence: list[str]) -> list[str]:
     return lines
 
 
-def _format_findings(findings) -> list[str]:
+def _format_findings(findings: list[Finding], report: ForgeBenchReport) -> list[str]:
     lines: list[str] = []
     for finding in findings:
         files = ", ".join(finding.files) if finding.files else "unknown"
@@ -99,12 +135,16 @@ def _format_findings(findings) -> list[str]:
                 *_format_evidence(finding.evidence),
                 f"  Explanation: {finding.explanation}",
                 f"  Suggested fix: {finding.suggested_fix}",
+                *_format_hunk_context(finding, report, indent="  "),
             ]
         )
     return lines
 
 
-def _format_check_failures(report: ForgeBenchReport) -> list[str]:
+def _format_check_failures(
+    report: ForgeBenchReport,
+    omitted_keys: set[tuple[str, tuple[str, ...], str | None]],
+) -> list[str]:
     failing_results = [
         result
         for result in report.deterministic_checks.results
@@ -113,7 +153,7 @@ def _format_check_failures(report: ForgeBenchReport) -> list[str]:
     if failing_results:
         lines: list[str] = []
         for result in failing_results:
-            lines.extend(_format_check_result(result, report))
+            lines.extend(_format_check_result(result, report, omitted_keys))
         return lines
     if not report.deterministic_checks.run_requested:
         return ["- Deterministic checks were not run."]
@@ -122,8 +162,14 @@ def _format_check_failures(report: ForgeBenchReport) -> list[str]:
     return ["- No deterministic check failures were reported."]
 
 
-def _format_check_result(result: CheckResult, report: ForgeBenchReport) -> list[str]:
+def _format_check_result(
+    result: CheckResult,
+    report: ForgeBenchReport,
+    omitted_keys: set[tuple[str, tuple[str, ...], str | None]],
+) -> list[str]:
     finding = _deterministic_finding_for_result(result, report)
+    if finding and _finding_key(finding) in omitted_keys:
+        finding = None
     prefix = f"- {finding.severity.value}: {finding.title}" if finding else f"- {result.name}: {result.status.value}"
     lines = [
         prefix,
@@ -139,6 +185,7 @@ def _format_check_result(result: CheckResult, report: ForgeBenchReport) -> list[
                 f"  Suggested fix: {finding.suggested_fix}",
             ]
         )
+        lines.extend(_format_hunk_context(finding, report, indent="  "))
     if result.error_message:
         lines.append(f"  Error: {result.error_message}")
     if result.stdout_excerpt:
@@ -189,16 +236,20 @@ def _format_policy_notes(report: ForgeBenchReport) -> list[str]:
     return notes or ["- None."]
 
 
-def _format_specialized_reviewer_findings(report: ForgeBenchReport) -> list[str]:
+def _format_specialized_reviewer_findings(
+    report: ForgeBenchReport,
+    omitted_keys: set[tuple[str, tuple[str, ...], str | None]],
+) -> list[str]:
     reviewers = report.specialized_reviewers
     if not reviewers.enabled:
         return ["- Heuristic review lenses were not run."]
     lines: list[str] = []
     for result in reviewers.results:
-        if not result.findings:
+        findings = [finding for finding in result.findings if _finding_key(finding) not in omitted_keys]
+        if not findings:
             continue
         lines.append(f"- {result.reviewer_name}:")
-        for finding in result.findings:
+        for finding in findings:
             files = ", ".join(finding.files) if finding.files else "unknown"
             lines.extend(
                 [
@@ -208,6 +259,7 @@ def _format_specialized_reviewer_findings(report: ForgeBenchReport) -> list[str]
                     *_format_nested_evidence(finding.evidence),
                     f"    Explanation: {finding.explanation}",
                     f"    Suggested fix: {finding.suggested_fix}",
+                    *_format_hunk_context(finding, report, indent="    "),
                 ]
             )
     return lines or ["- No heuristic review lens findings."]
@@ -221,7 +273,10 @@ def _format_nested_evidence(evidence: list[str]) -> list[str]:
     return lines
 
 
-def _format_llm_notes(report: ForgeBenchReport) -> list[str]:
+def _format_llm_notes(
+    report: ForgeBenchReport,
+    omitted_keys: set[tuple[str, tuple[str, ...], str | None]],
+) -> list[str]:
     review = report.llm_review
     if not review.enabled:
         return ["- LLM review was not run."]
@@ -232,8 +287,83 @@ def _format_llm_notes(report: ForgeBenchReport) -> list[str]:
     if not review.findings:
         summary = review.raw_summary or "No additional LLM findings beyond existing deterministic/static evidence."
         return [f"- {summary}"]
+    findings = [finding for finding in review.findings if _finding_key(finding) not in omitted_keys]
+    if not findings:
+        return ["- LLM findings were omitted to fit the prompt size cap."]
     lines = [
         "- LLM findings are advisory. Address them where useful, but do not treat low-confidence LLM notes as mandatory repairs."
     ]
-    lines.extend(_format_findings(review.findings))
+    lines.extend(_format_findings(findings, report))
     return lines
+
+
+def _format_hunk_context(finding: Finding, report: ForgeBenchReport, indent: str) -> list[str]:
+    hunk_lines, truncated = _hunk_lines_for_finding(finding, report)
+    lines = [f"{indent}Diff hunk context:"]
+    if not hunk_lines:
+        lines.append(f"{indent}No matching diff hunk was available for this finding.")
+        return lines
+    lines.append(f"{indent}```diff")
+    lines.extend(f"{indent}{line}" for line in hunk_lines)
+    lines.append(f"{indent}```")
+    if truncated:
+        lines.append(f"{indent}... (truncated, see patch.diff for full context)")
+    return lines
+
+
+def _hunk_lines_for_finding(finding: Finding, report: ForgeBenchReport) -> tuple[list[str], bool]:
+    diff = report.diff_summary
+    if diff is None or not finding.files:
+        return [], False
+
+    targets = {path.replace("\\", "/") for path in finding.files}
+    lines: list[str] = []
+    truncated = False
+    for changed_file in diff.files:
+        path_candidates = {changed_file.path.replace("\\", "/")}
+        if changed_file.old_path:
+            path_candidates.add(changed_file.old_path.replace("\\", "/"))
+        if not targets.intersection(path_candidates):
+            continue
+        for hunk in changed_file.hunks:
+            candidate = [f"diff -- {changed_file.path}", hunk.header, *hunk.lines]
+            for line in candidate:
+                if len(lines) >= MAX_FINDING_HUNK_LINES:
+                    return lines, True
+                lines.append(line)
+    return lines, truncated
+
+
+def _droppable_finding_keys(report: ForgeBenchReport) -> list[tuple[str, tuple[str, ...], str | None]]:
+    findings = list(report.findings)
+    ordered: list[Finding] = []
+    ordered.extend(
+        finding
+        for finding in findings
+        if finding.severity in {Severity.LOW, Severity.ADVISORY}
+        and not (finding.evidence_type == EvidenceType.DETERMINISTIC and finding.severity == Severity.BLOCKER)
+    )
+    ordered.extend(
+        finding
+        for finding in findings
+        if finding.severity == Severity.MEDIUM
+        and not (finding.evidence_type == EvidenceType.DETERMINISTIC and finding.severity == Severity.BLOCKER)
+    )
+    ordered.extend(
+        finding
+        for finding in findings
+        if finding.severity == Severity.HIGH and finding.evidence_type in {EvidenceType.REVIEWER, EvidenceType.LLM}
+    )
+    seen: set[tuple[str, tuple[str, ...], str | None]] = set()
+    keys: list[tuple[str, tuple[str, ...], str | None]] = []
+    for finding in ordered:
+        key = _finding_key(finding)
+        if key in seen:
+            continue
+        seen.add(key)
+        keys.append(key)
+    return keys
+
+
+def _finding_key(finding: Finding) -> tuple[str, tuple[str, ...], str | None]:
+    return finding.id, tuple(sorted(finding.files)), finding.reviewer

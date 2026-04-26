@@ -1,0 +1,22 @@
+project: Synthetic Quarterly
+
+protected_behavior:
+  - Tax calculation trust must be preserved
+  - Paid state must distinguish Federal and California payments
+
+risk_files:
+  high:
+    - "**/migrations/**"
+    - "**/schema/**"
+  medium:
+    - "**/views/**"
+
+forbidden_patterns: []
+
+checks:
+  build: null
+  test: null
+  lint: null
+  typecheck: null
+
+check_timeout_seconds: 120

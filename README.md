@@ -35,11 +35,21 @@ ForgeBench does not prove code is safe. It highlights merge risk before AI-gener
 
 ## Quickstart
 
-Install locally from this repo:
+Install from PyPI once published, or install locally from this repo during alpha dogfooding:
 
 ```bash
-pip install -e .
+pip install forgebench
 ```
+
+Create a starter guardrails file:
+
+```bash
+forgebench init \
+  --repo . \
+  --out forgebench.yml
+```
+
+`forgebench init` inspects local manifest files such as `pyproject.toml`, `package.json`, `Cargo.toml`, and `Package.swift` to suggest safe check commands. It does not run package managers, `git log`, `gh`, or network calls. Edit `protected_behavior` and `forbidden_patterns` yourself before relying on project-specific guardrails.
 
 Run the minimum local review:
 
@@ -54,8 +64,25 @@ ForgeBench writes:
 - `forgebench-output/repair-prompt.md`
 
 The JSON report is schema-versioned. See [docs/report-schema.md](docs/report-schema.md).
+Repair prompts include relevant diff hunk context when ForgeBench can match findings back to changed files.
+
+To inspect output shape before running on your own repo, see the synthetic, human-approved examples in [examples/sample_report](examples/sample_report).
 
 ## CLI Usage
+
+Initialize local guardrails:
+
+```bash
+forgebench init \
+  --repo . \
+  --out forgebench.yml
+```
+
+ForgeBench refuses to overwrite an existing file unless `--force` is passed:
+
+```bash
+forgebench init --repo . --out forgebench.yml --force
+```
 
 ```bash
 forgebench review \
@@ -520,6 +547,12 @@ open forgebench-output/forgebench-report.md
 ```
 
 For manual product learning, copy the outcome into `DOGFOOD_LOG.md`. Track whether the posture was right, which findings were useful, which were noisy, and whether the repair prompt helped.
+
+## Sample Reports
+
+ForgeBench includes synthetic, human-approved sample reports under [examples/sample_report](examples/sample_report). They are designed to show first-run output shape for a `BLOCK` case and a `LOW_CONCERN` case. They are not real customer reports and do not contain proprietary code.
+
+Real anonymized reports remain a future dogfood and beta requirement.
 
 ## Development Commands
 

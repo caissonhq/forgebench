@@ -1,0 +1,42 @@
+project: Synthetic Docs
+
+protected_behavior:
+  - Keep the CLI-first alpha framing clear
+
+risk_files:
+  high: []
+  medium: []
+
+forbidden_patterns: []
+
+checks:
+  build: null
+  test: null
+  lint: null
+  typecheck: null
+
+check_timeout_seconds: 120
+
+policy:
+  path_categories:
+    docs:
+      patterns:
+        - "README.md"
+        - "docs/**"
+        - "**/*.md"
+      default_severity: advisory
+  advisory_only:
+    - "README.md"
+    - "docs/**"
+    - "**/*.md"
+  suppress_findings:
+    - finding_id: ui_copy_changed
+      paths:
+        - "README.md"
+        - "docs/**"
+        - "**/*.md"
+      reason: "Docs-only copy changes are advisory in this sample."
+  posture_overrides:
+    docs_only_changes:
+      posture_ceiling: LOW_CONCERN
+      reason: "Docs-only changes should not escalate unless a blocker is present."

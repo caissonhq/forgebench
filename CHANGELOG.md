@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Sprint 8: Added `forgebench init`, synthetic sample reports for first-run UX, and repair prompt diff hunk context.
 - Sprint 7: Added Apache-2.0 license metadata, PyPI package metadata, release workflow scaffolding, CLI version support, JSON schema versioning, PyYAML guardrail parsing, and heuristic review lens naming.
 - Sprint 6.1: Calibrated Phase 1 review heuristics to reduce test, read-model, asset, and docs noise.
 - Sprint 6: Added Phase 1 review routing for scope, tests, contracts, and product guardrails.

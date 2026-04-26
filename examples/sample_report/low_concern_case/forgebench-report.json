@@ -1,0 +1,149 @@
+{
+  "schema_version": "1.0.0",
+  "posture": "LOW_CONCERN",
+  "pre_llm_posture": "LOW_CONCERN",
+  "final_posture": "LOW_CONCERN",
+  "summary": "Low concern. Deterministic checks were not run. ForgeBench found no high-confidence merge blockers, but this is not a substitute for human review.",
+  "task_summary": "Synthetic sample task: Clarify the README quickstart wording. This is a synthetic ForgeBench sample case designed to demonstrate output shape.",
+  "changed_files": [
+    "README.md"
+  ],
+  "findings": [],
+  "static_signals": {
+    "changed_file_count": 1,
+    "added_line_count": 3,
+    "deleted_line_count": 1,
+    "source_files_changed": [],
+    "test_files_changed": [],
+    "tests_changed": false,
+    "deleted_test_files": [],
+    "weakened_test_files": [],
+    "dependency_files_changed": [],
+    "build_or_config_files_changed": [],
+    "persistence_or_schema_files_changed": [],
+    "generated_or_unrelated_files_changed": [],
+    "ui_or_copy_files_changed": [],
+    "binary_files_changed": []
+  },
+  "guardrail_hits": [],
+  "deterministic_checks": {
+    "run_requested": false,
+    "results": [],
+    "summary": {
+      "passed": 0,
+      "failed": 0,
+      "timed_out": 0,
+      "skipped": 0,
+      "not_configured": 0,
+      "errors": 0
+    }
+  },
+  "policy": {
+    "active_categories": [
+      {
+        "name": "docs",
+        "files": [
+          "README.md"
+        ],
+        "patterns": [
+          "README.md",
+          "docs/**",
+          "**/*.md"
+        ],
+        "default_severity": "ADVISORY"
+      }
+    ],
+    "finding_adjustments": [
+      {
+        "finding_id": "ui_copy_changed",
+        "action": "suppress",
+        "original_severity": "ADVISORY",
+        "new_severity": null,
+        "original_confidence": "LOW",
+        "new_confidence": null,
+        "matched_rule": "policy.suppress_findings[0].paths",
+        "reason": "Docs-only copy changes are advisory in this sample.",
+        "files": [
+          "README.md"
+        ]
+      }
+    ],
+    "suppressed_findings": [
+      {
+        "finding_id": "ui_copy_changed",
+        "title": "User-facing copy or UI surface changed",
+        "original_severity": "ADVISORY",
+        "original_confidence": "LOW",
+        "reason": "Docs-only copy changes are advisory in this sample.",
+        "matched_rule": "policy.suppress_findings[0].paths",
+        "files": [
+          "README.md"
+        ]
+      }
+    ],
+    "posture_ceiling": "LOW_CONCERN",
+    "posture_ceiling_reason": "Docs-only changes should not escalate unless a blocker is present.",
+    "posture_ceiling_rule": "policy.posture_overrides.docs_only_changes"
+  },
+  "specialized_reviewers": {
+    "enabled": true,
+    "results": [
+      {
+        "reviewer_id": "scope_auditor",
+        "reviewer_name": "Scope Auditor",
+        "status": "completed",
+        "summary": "No additional scope concern found from task text and changed files.",
+        "findings": [],
+        "referenced_finding_ids": [],
+        "error_message": null
+      },
+      {
+        "reviewer_id": "test_skeptic",
+        "reviewer_name": "Test Skeptic",
+        "status": "completed",
+        "summary": "No additional test coverage concern found.",
+        "findings": [],
+        "referenced_finding_ids": [],
+        "error_message": null
+      },
+      {
+        "reviewer_id": "contract_keeper",
+        "reviewer_name": "Contract Keeper",
+        "status": "completed",
+        "summary": "No additional contract-surface concern found.",
+        "findings": [],
+        "referenced_finding_ids": [],
+        "error_message": null
+      },
+      {
+        "reviewer_id": "product_guardrail_reviewer",
+        "reviewer_name": "Product / Guardrail Reviewer",
+        "status": "completed",
+        "summary": "No additional product or guardrail concern found.",
+        "findings": [],
+        "referenced_finding_ids": [],
+        "error_message": null
+      }
+    ],
+    "findings": []
+  },
+  "llm_review": {
+    "enabled": false,
+    "provider": null,
+    "status": "skipped",
+    "reviewer_name": null,
+    "summary": null,
+    "findings": [],
+    "error_message": null
+  },
+  "pr_checkout": {
+    "requested": false,
+    "status": "not_requested",
+    "worktree_path": null,
+    "checks_target": "not_run",
+    "error_message": null,
+    "kept": false,
+    "cleanup_error": null
+  },
+  "generated_at": "2026-04-26T23:10:53+00:00"
+}

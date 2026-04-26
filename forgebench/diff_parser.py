@@ -87,6 +87,7 @@ def parse_unified_diff(text: str) -> DiffSummary:
             current.added_line_count += 1
             current.added_lines.append(added)
             if current_hunk is not None:
+                current_hunk.lines.append(line)
                 current_hunk.added_lines.append(added)
             continue
 
@@ -95,7 +96,12 @@ def parse_unified_diff(text: str) -> DiffSummary:
             current.deleted_line_count += 1
             current.deleted_lines.append(deleted)
             if current_hunk is not None:
+                current_hunk.lines.append(line)
                 current_hunk.deleted_lines.append(deleted)
+            continue
+
+        if current_hunk is not None and (line.startswith(" ") or line.startswith("\\")):
+            current_hunk.lines.append(line)
             continue
 
     return DiffSummary(files=files)
