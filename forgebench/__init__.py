@@ -14,7 +14,7 @@ def _version() -> str:
     try:
         return version("forgebench")
     except PackageNotFoundError:
-        return "0.5.0"
+        return "0.6.0"
 
 
 __version__ = _version()

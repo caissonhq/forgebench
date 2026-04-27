@@ -129,6 +129,8 @@ def _format_findings(findings: list[Finding], report: ForgeBenchReport) -> list[
         lines.extend(
             [
                 f"- {finding.severity.value}: {finding.title}",
+                f"  UID: {finding.uid}",
+                f"  Kind: {finding.kind}",
                 f"  Confidence: {finding.confidence.value}",
                 f"  Evidence: {finding.evidence_type.value}",
                 f"  Files: {files}",
@@ -181,6 +183,8 @@ def _format_check_result(
     if finding:
         lines.extend(
             [
+                f"  UID: {finding.uid}",
+                f"  Kind: {finding.kind}",
                 f"  Explanation: {finding.explanation}",
                 f"  Suggested fix: {finding.suggested_fix}",
             ]
@@ -254,6 +258,8 @@ def _format_specialized_reviewer_findings(
             lines.extend(
                 [
                     f"  - {finding.severity.value}: {finding.title}",
+                    f"    UID: {finding.uid}",
+                    f"    Kind: {finding.kind}",
                     f"    Confidence: {finding.confidence.value}",
                     f"    Files: {files}",
                     *_format_nested_evidence(finding.evidence),

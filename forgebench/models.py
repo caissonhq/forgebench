@@ -2,10 +2,11 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from enum import Enum
+import hashlib
 from typing import Any
 
 
-REPORT_SCHEMA_VERSION = "1.0.0"
+REPORT_SCHEMA_VERSION = "1.1.0"
 
 
 class EvidenceType(str, Enum):
@@ -93,10 +94,29 @@ class Finding:
     evidence: list[str] = field(default_factory=list)
     reviewer: str | None = None
     supporting_finding_ids: list[str] = field(default_factory=list)
+    kind: str | None = None
+    uid: str | None = None
+
+    def __post_init__(self) -> None:
+        kind = self.kind or self.id
+        object.__setattr__(self, "kind", kind)
+        if not self.uid:
+            object.__setattr__(
+                self,
+                "uid",
+                stable_finding_uid(
+                    kind=kind,
+                    files=self.files,
+                    evidence_type=self.evidence_type,
+                    reviewer=self.reviewer,
+                ),
+            )
 
     def to_dict(self) -> dict[str, Any]:
         return {
             "id": self.id,
+            "uid": self.uid,
+            "kind": self.kind,
             "title": self.title,
             "severity": self.severity.value,
             "confidence": self.confidence.value,
@@ -108,6 +128,39 @@ class Finding:
             "explanation": self.explanation,
             "suggested_fix": self.suggested_fix,
         }
+
+
+def stable_finding_uid(
+    *,
+    kind: str,
+    files: list[str],
+    evidence_type: EvidenceType,
+    reviewer: str | None = None,
+) -> str:
+    normalized_files = sorted({_normalize_uid_path(path) for path in files if path})
+    payload = "\x1f".join(
+        [
+            f"kind={kind}",
+            f"evidence_type={evidence_type.value}",
+            f"reviewer={reviewer or ''}",
+            "files=" + "\x1e".join(normalized_files),
+        ]
+    )
+    digest = hashlib.sha256(payload.encode("utf-8")).hexdigest()[:12]
+    return f"fnd_{digest}"
+
+
+def _normalize_uid_path(path: str) -> str:
+    normalized = str(path).replace("\\", "/").strip()
+    if not normalized:
+        return ""
+    drive_removed = normalized
+    if len(drive_removed) >= 3 and drive_removed[1] == ":" and drive_removed[2] == "/":
+        drive_removed = drive_removed[2:]
+    parts = [part for part in drive_removed.split("/") if part and part != "."]
+    if normalized.startswith("/") or drive_removed.startswith("/"):
+        return "/".join(parts[-4:])
+    return "/".join(parts)
 
 
 @dataclass

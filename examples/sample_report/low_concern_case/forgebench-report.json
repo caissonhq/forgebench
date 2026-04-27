@@ -1,5 +1,5 @@
 {
-  "schema_version": "1.0.0",
+  "schema_version": "1.1.0",
   "posture": "LOW_CONCERN",
   "pre_llm_posture": "LOW_CONCERN",
   "final_posture": "LOW_CONCERN",
@@ -163,5 +163,5 @@
     "kept": false,
     "cleanup_error": null
   },
-  "generated_at": "2026-04-26T23:29:16+00:00"
+  "generated_at": "2026-04-27T00:56:16+00:00"
 }

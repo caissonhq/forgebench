@@ -62,7 +62,7 @@ class ReportWriterTests(unittest.TestCase):
 
             payload = json.loads(written["json"].read_text(encoding="utf-8"))
 
-            self.assertEqual(payload["schema_version"], "1.0.0")
+            self.assertEqual(payload["schema_version"], "1.1.0")
             self.assertEqual(payload["posture"], report.posture.value)
             self.assertEqual(payload["final_posture"], report.posture.value)
             self.assertIn("pre_llm_posture", payload)

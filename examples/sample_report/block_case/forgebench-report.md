@@ -66,6 +66,8 @@ Phase 1 review lenses are deterministic heuristics. They route attention to risk
   - MEDIUM: Patch touches protected product or architecture behavior
     - Confidence: HIGH
     - Evidence: REVIEWER
+    - UID: fnd_724e6a0e806a
+    - Kind: product_guardrail_protected_area_changed
     - Files: db/migrations/20260426_add_payment_receipts.sql
     - Explanation: The patch touches files that this repo marks as tied to protected product or architecture behavior. This needs review against the guardrails; it is not automatically a violation.
     - Suggested fix: Review the changed files against the protected behavior list and add focused tests or reduce scope if needed.
@@ -106,6 +108,8 @@ LLM review was not run.
 - Severity: HIGH
 - Confidence: HIGH
 - Evidence: STATIC
+- UID: fnd_cd55d425b94e
+- Kind: persistence_schema_changed
 - Files: db/migrations/20260426_add_payment_receipts.sql
 - Evidence snippets:
   - Persistence, schema, model, or migration file changed: db/migrations/20260426_add_payment_receipts.sql
@@ -118,6 +122,8 @@ LLM review was not run.
 - Severity: HIGH
 - Confidence: HIGH
 - Evidence: STATIC
+- UID: fnd_5d37fa82a240
+- Kind: high_risk_guardrail_file
 - Files: db/migrations/20260426_add_payment_receipts.sql
 - Evidence snippets:
   - High-risk guardrail pattern '**/migrations/**' matched db/migrations/20260426_add_payment_receipts.sql
@@ -129,6 +135,8 @@ LLM review was not run.
 - Severity: MEDIUM
 - Confidence: HIGH
 - Evidence: REVIEWER
+- UID: fnd_724e6a0e806a
+- Kind: product_guardrail_protected_area_changed
 - Files: db/migrations/20260426_add_payment_receipts.sql
 - Evidence snippets:
   - Project protected_behavior is configured.

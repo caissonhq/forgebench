@@ -1,5 +1,5 @@
 {
-  "schema_version": "1.0.0",
+  "schema_version": "1.1.0",
   "posture": "BLOCK",
   "pre_llm_posture": "BLOCK",
   "final_posture": "BLOCK",
@@ -11,6 +11,8 @@
   "findings": [
     {
       "id": "persistence_schema_changed",
+      "uid": "fnd_cd55d425b94e",
+      "kind": "persistence_schema_changed",
       "title": "Persistence or schema behavior may have changed",
       "severity": "HIGH",
       "confidence": "HIGH",
@@ -29,6 +31,8 @@
     },
     {
       "id": "high_risk_guardrail_file",
+      "uid": "fnd_5d37fa82a240",
+      "kind": "high_risk_guardrail_file",
       "title": "High-risk project area changed",
       "severity": "HIGH",
       "confidence": "HIGH",
@@ -46,6 +50,8 @@
     },
     {
       "id": "product_guardrail_protected_area_changed",
+      "uid": "fnd_724e6a0e806a",
+      "kind": "product_guardrail_protected_area_changed",
       "title": "Patch touches protected product or architecture behavior",
       "severity": "MEDIUM",
       "confidence": "HIGH",
@@ -148,6 +154,8 @@
         "findings": [
           {
             "id": "product_guardrail_protected_area_changed",
+            "uid": "fnd_724e6a0e806a",
+            "kind": "product_guardrail_protected_area_changed",
             "title": "Patch touches protected product or architecture behavior",
             "severity": "MEDIUM",
             "confidence": "HIGH",
@@ -187,6 +195,8 @@
     "findings": [
       {
         "id": "product_guardrail_protected_area_changed",
+        "uid": "fnd_724e6a0e806a",
+        "kind": "product_guardrail_protected_area_changed",
         "title": "Patch touches protected product or architecture behavior",
         "severity": "MEDIUM",
         "confidence": "HIGH",
@@ -236,5 +246,5 @@
     "kept": false,
     "cleanup_error": null
   },
-  "generated_at": "2026-04-26T23:29:16+00:00"
+  "generated_at": "2026-04-27T00:56:12+00:00"
 }

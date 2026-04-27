@@ -12,7 +12,7 @@ from forgebench.cli import main
 
 class VersionTests(unittest.TestCase):
     def test_package_version_is_non_empty(self) -> None:
-        self.assertEqual(forgebench.__version__, "0.5.0")
+        self.assertEqual(forgebench.__version__, "0.6.0")
 
     def test_cli_version_exits_successfully(self) -> None:
         stdout = StringIO()
@@ -20,7 +20,7 @@ class VersionTests(unittest.TestCase):
             main(["--version"])
 
         self.assertEqual(raised.exception.code, 0)
-        self.assertIn("forgebench 0.5.0", stdout.getvalue())
+        self.assertIn("forgebench 0.6.0", stdout.getvalue())
 
     def test_python_module_help_exits_successfully(self) -> None:
         result = subprocess.run(

@@ -50,6 +50,9 @@ class ReportSchemaTests(unittest.TestCase):
 
         self.assertEqual(payload["schema_version"], REPORT_SCHEMA_VERSION)
         self.assertEqual(set(payload), EXPECTED_TOP_LEVEL_KEYS)
+        self.assertEqual(payload["schema_version"], "1.1.0")
+        self.assertIn("uid", payload["findings"][0])
+        self.assertIn("kind", payload["findings"][0])
 
 
 def _sample_report() -> ForgeBenchReport:

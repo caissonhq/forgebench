@@ -17,6 +17,8 @@ Deterministic check failures:
 
 Static and guardrail findings:
 - HIGH: Persistence or schema behavior may have changed
+  UID: fnd_cd55d425b94e
+  Kind: persistence_schema_changed
   Confidence: HIGH
   Evidence: STATIC
   Files: db/migrations/20260426_add_payment_receipts.sql
@@ -50,6 +52,8 @@ Static and guardrail findings:
   +  WHERE latest_receipt_id IS NULL;
   ```
 - HIGH: High-risk project area changed
+  UID: fnd_5d37fa82a240
+  Kind: high_risk_guardrail_file
   Confidence: HIGH
   Evidence: STATIC
   Files: db/migrations/20260426_add_payment_receipts.sql
@@ -85,6 +89,8 @@ Static and guardrail findings:
 Heuristic review lens findings:
 - Product / Guardrail Reviewer:
   - MEDIUM: Patch touches protected product or architecture behavior
+    UID: fnd_724e6a0e806a
+    Kind: product_guardrail_protected_area_changed
     Confidence: HIGH
     Files: db/migrations/20260426_add_payment_receipts.sql
     Evidence snippets:

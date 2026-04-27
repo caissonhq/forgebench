@@ -1,6 +1,6 @@
 # ForgeBench JSON Report Schema
 
-Current schema version: `1.0.0`
+Current schema version: `1.1.0`
 
 ForgeBench writes `forgebench-report.json` as a stable machine-readable report for local tooling and future integrations.
 
@@ -8,7 +8,7 @@ ForgeBench will only break this schema with a major schema version bump.
 
 ## Top-Level Fields
 
-- `schema_version`: string. Current value is `1.0.0`.
+- `schema_version`: string. Current value is `1.1.0`.
 - `posture`: string enum. Final merge posture.
 - `pre_llm_posture`: string enum. Posture before optional LLM review.
 - `final_posture`: string enum. Same value as `posture`.
@@ -24,6 +24,28 @@ ForgeBench will only break this schema with a major schema version bump.
 - `llm_review`: object. Optional LLM review result.
 - `pr_checkout`: object. PR worktree checkout metadata.
 - `generated_at`: string. ISO-8601 generation timestamp.
+
+## Finding Objects
+
+Each object in `findings`, `llm_review.findings`, and `specialized_reviewers.findings` includes:
+
+- `uid`: string. Stable finding UID, such as `fnd_3a91c0e88d12`.
+- `kind`: string. Logical finding type, such as `implementation_without_tests`.
+- `id`: string. Historical alias for `kind` in schema `1.x`.
+- `title`: string.
+- `severity`: string enum.
+- `confidence`: string enum.
+- `evidence_type`: string enum.
+- `files`: array of changed file paths from the patch.
+- `evidence`: array of evidence snippets.
+- `reviewer`: string or null.
+- `supporting_finding_ids`: array of logical finding kinds referenced by this finding.
+- `explanation`: string.
+- `suggested_fix`: string.
+
+Stable finding UIDs are deterministic for the same logical kind, file set, evidence type, and reviewer/lens source. They do not include timestamps, output directories, or absolute local machine paths. Logical finding types remain available as `kind` and through the historical `id` alias.
+
+Local feedback recorded with `forgebench feedback` is not part of the report schema. Feedback is stored separately as local JSONL.
 
 ## Enum Values
 

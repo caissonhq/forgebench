@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Sprint 10: Bumped package version to `0.6.0`, bumped JSON schema to `1.1.0`, added stable finding UIDs/kinds, local-only feedback logging, and a dogfood feedback summary script.
 - Sprint 9: Added trigger-gated Test Skeptic v2 LLM lens, LLM lens skip metadata, and LLM threat model docs.
 - Sprint 8: Added `forgebench init`, synthetic sample reports for first-run UX, and repair prompt diff hunk context.
 - Sprint 7: Added Apache-2.0 license metadata, PyPI package metadata, release workflow scaffolding, CLI version support, JSON schema versioning, PyYAML guardrail parsing, and heuristic review lens naming.

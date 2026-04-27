@@ -63,7 +63,7 @@ ForgeBench writes:
 - `forgebench-output/forgebench-report.json`
 - `forgebench-output/repair-prompt.md`
 
-The JSON report is schema-versioned. See [docs/report-schema.md](docs/report-schema.md).
+The JSON report is schema-versioned. Current reports use schema `1.1.0`. See [docs/report-schema.md](docs/report-schema.md).
 Repair prompts include relevant diff hunk context when ForgeBench can match findings back to changed files.
 
 To inspect output shape before running on your own repo, see the synthetic, human-approved examples in [examples/sample_report](examples/sample_report).
@@ -563,6 +563,39 @@ open forgebench-output/forgebench-report.md
 ```
 
 For manual product learning, copy the outcome into `DOGFOOD_LOG.md`. Track whether the posture was right, which findings were useful, which were noisy, and whether the repair prompt helped.
+
+## Local Finding Feedback
+
+Every finding has a stable local UID such as `fnd_3a91c0e88d12` plus a logical `kind` such as `implementation_without_tests`. The UID is deterministic for the same finding kind, files, evidence type, and lens/source. It does not include timestamps, output paths, or absolute machine-specific paths.
+
+Record local dogfood feedback on a finding:
+
+```bash
+forgebench feedback fnd_3a91c0e88d12 \
+  --status accepted \
+  --kind implementation_without_tests \
+  --note "caught missing regression coverage"
+```
+
+Valid statuses are:
+
+- `accepted`: useful signal.
+- `dismissed`: noisy or not useful for this patch.
+- `wrong`: incorrect finding.
+
+Feedback is local-only. ForgeBench writes JSONL to `forgebench-output/feedback.jsonl` by default. No telemetry, analytics, auth, or upload is involved.
+
+Summarize the local feedback log:
+
+```bash
+forgebench feedback --summarize
+```
+
+Generate a Markdown dogfood summary from one or more feedback logs:
+
+```bash
+python3 scripts/dogfood_summary.py forgebench-output/feedback.jsonl
+```
 
 ## Sample Reports
 

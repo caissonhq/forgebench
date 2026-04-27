@@ -6,6 +6,7 @@ from pathlib import Path
 
 from forgebench import __version__
 from forgebench.calibration import format_calibration_result, run_calibration
+from forgebench.feedback import FeedbackError, append_feedback, format_feedback_summary, summarize_feedback
 from forgebench.github_pr import GitHubPRError, GitHubPRReviewResult, run_github_pr_review
 from forgebench.init import InitError, write_starter_guardrails
 from forgebench.models import ForgeBenchReport
@@ -21,6 +22,9 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.command == "init":
         return _run_init(args)
+
+    if args.command == "feedback":
+        return _run_feedback(args)
 
     if args.command == "review-pr":
         return _run_review_pr(args)
@@ -119,6 +123,36 @@ def _run_calibrate(args: argparse.Namespace) -> int:
     return 1 if result.failed_count else 0
 
 
+def _run_feedback(args: argparse.Namespace) -> int:
+    if args.summarize:
+        summary = summarize_feedback([args.feedback_log])
+        if summary.total == 0 and summary.malformed_count == 0:
+            print(f"No feedback entries found in {args.feedback_log}.")
+        else:
+            print(format_feedback_summary(summary))
+        return 0
+
+    if not args.finding_uid:
+        _fail("feedback requires a finding UID unless --summarize is passed.")
+    if not args.status:
+        _fail("feedback requires --status accepted|dismissed|wrong.")
+    try:
+        path = append_feedback(
+            args.finding_uid,
+            status=args.status,
+            note=args.note,
+            feedback_log=args.feedback_log,
+            kind=args.kind,
+            repo_name=args.repo_name,
+            source=args.source,
+        )
+    except FeedbackError as exc:
+        _fail(str(exc))
+    print("ForgeBench feedback recorded.")
+    print(f"Log: {path}")
+    return 0
+
+
 def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="forgebench", description="Adversarial pre-merge QA for coding-agent output.")
     parser.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
@@ -163,6 +197,16 @@ def _build_parser() -> argparse.ArgumentParser:
     review_pr.add_argument("--llm-timeout", type=int, default=60, help="LLM command timeout in seconds. Defaults to 60.")
     review_pr.add_argument("--llm-max-diff-chars", type=int, default=20000, help="Maximum diff characters included in the LLM bundle.")
 
+    feedback = subparsers.add_parser("feedback", help="Record or summarize local finding feedback.")
+    feedback.add_argument("finding_uid", nargs="?", help="Stable finding UID, such as fnd_3a91c0e88d12.")
+    feedback.add_argument("--status", required=False, help="Feedback status: accepted, dismissed, or wrong.")
+    feedback.add_argument("--note", required=False, help="Optional local note about the finding.")
+    feedback.add_argument("--kind", required=False, help="Optional logical finding kind.")
+    feedback.add_argument("--repo-name", required=False, help="Optional repo/project name for local dogfood summaries.")
+    feedback.add_argument("--source", required=False, help="Optional feedback source label.")
+    feedback.add_argument("--feedback-log", required=False, default="forgebench-output/feedback.jsonl", help="Local JSONL feedback log path.")
+    feedback.add_argument("--summarize", action="store_true", help="Summarize a local feedback JSONL log.")
+
     calibrate = subparsers.add_parser("calibrate", help="Run the golden corpus calibration suite.")
     calibrate.add_argument("--cases", required=True, help="Path to the golden cases directory.")
     calibrate.add_argument("--out", required=False, default="forgebench-calibration-output", help="Output directory for calibration reports.")
@@ -186,7 +230,7 @@ def _print_summary(report: ForgeBenchReport, written: dict[str, Path]) -> None:
     print("Findings:")
     if report.findings:
         for finding in report.findings:
-            print(f"- {finding.severity.value}: {finding.title}")
+            print(f"- {finding.severity.value}: {finding.title} [{finding.uid}]")
     else:
         print("- No findings.")
     print()

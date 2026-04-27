@@ -20,6 +20,8 @@ ForgeBench does not prove code is safe. It highlights merge risk before AI-gener
 - Phase 1.5 Test Skeptic v2 LLM-assisted lens, gated by deterministic weak-test triggers and `--llm-review`.
 - Optional evidence-constrained LLM review through a local command provider.
 - Markdown report, JSON report, repair prompt, and PR-comment-ready summary.
+- Stable finding UIDs for local dogfood feedback.
+- Local-only feedback logging and dogfood feedback summaries.
 - Golden corpus calibration.
 - Synthetic, human-approved sample reports for first-run UX.
 
@@ -77,6 +79,7 @@ Test Skeptic v2 is an opt-in LLM-assisted lens. It runs only when deterministic 
 - Optional LLM review is command-provider only and advisory.
 - LLM-assisted lenses are limited to Test Skeptic v2 and require `--llm-review`.
 - Real anonymized sample reports are still required before broader public beta. Sprint 8 includes synthetic sample reports for first-run UX only.
+- Feedback is local-only and useful for alpha dogfood, but ForgeBench does not aggregate or upload feedback anywhere.
 
 ## Required Before CAI-5 Done
 
@@ -99,5 +102,6 @@ Test Skeptic v2 is an opt-in LLM-assisted lens. It runs only when deterministic 
 - Run ForgeBench on one active AI-generated app diff per week.
 - Compare reviewer-enabled output with `--no-reviewers` for the next few serious patches.
 - Log noisy static findings separately from noisy reviewer findings.
+- Record accepted/dismissed/wrong finding feedback locally and summarize it with `scripts/dogfood_summary.py`.
 - Add golden cases whenever dogfood exposes a false positive or missed review concern.
 - Keep deterministic check coverage explicit in `forgebench.yml` for repos where build/test commands are cheap and trusted.
