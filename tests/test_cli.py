@@ -98,6 +98,9 @@ class CliTests(unittest.TestCase):
 
             self.assertEqual(result, 0)
             self.assertIn("Posture: LOW_CONCERN", stdout.getvalue())
+            self.assertIn("No forgebench.yml found.", stdout.getvalue())
+            self.assertIn("Configuration mode: generic", stdout.getvalue())
+            self.assertIn("Run `forgebench init --repo . --out forgebench.yml`", stdout.getvalue())
             self.assertTrue((out_dir / "forgebench-report.json").exists())
             payload = json.loads((out_dir / "forgebench-report.json").read_text(encoding="utf-8"))
             markdown = (out_dir / "forgebench-report.md").read_text(encoding="utf-8")
@@ -134,9 +137,36 @@ class CliTests(unittest.TestCase):
             payload = json.loads((out_dir / "forgebench-report.json").read_text(encoding="utf-8"))
 
         self.assertEqual(result, 0)
+        self.assertIn(f"Found guardrails: {guardrails_path}", stdout.getvalue())
+        self.assertIn("Configuration mode: configured", stdout.getvalue())
         self.assertEqual(payload["config_mode"], "configured")
         self.assertFalse(payload["first_run_guidance"])
         self.assertEqual(payload["guardrails_source"], str(guardrails_path))
+
+    def test_cli_review_with_explicit_guardrails_prints_using_guardrails(self) -> None:
+        with TemporaryDirectory() as tmp:
+            out_dir = Path(tmp) / "out"
+            stdout = StringIO()
+            with redirect_stdout(stdout):
+                result = main(
+                    [
+                        "review",
+                        "--repo",
+                        str(Path.cwd()),
+                        "--diff",
+                        str(FIXTURES / "docs_only.patch"),
+                        "--task",
+                        str(FIXTURES / "task.md"),
+                        "--guardrails",
+                        str(FIXTURES / "checks_test_fail.yml"),
+                        "--out",
+                        str(out_dir),
+                    ]
+                )
+
+        self.assertEqual(result, 0)
+        self.assertIn(f"Using guardrails: {FIXTURES / 'checks_test_fail.yml'}", stdout.getvalue())
+        self.assertIn("Configuration mode: configured", stdout.getvalue())
 
     def test_run_checks_omitted_does_not_execute_commands(self) -> None:
         with TemporaryDirectory() as tmp:

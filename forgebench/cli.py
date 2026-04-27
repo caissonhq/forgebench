@@ -74,7 +74,7 @@ def _run_review(args: argparse.Namespace) -> int:
     except ReviewInputError as exc:
         _fail(str(exc))
 
-    _print_summary(result.report, result.written_paths)
+    _print_summary(result.report, result.written_paths, guardrails_explicit=bool(args.guardrails))
     return 0
 
 
@@ -107,7 +107,7 @@ def _run_review_pr(args: argparse.Namespace) -> int:
     except (ReviewInputError, GitHubPRError) as exc:
         _fail(str(exc))
 
-    _print_pr_summary(result)
+    _print_pr_summary(result, guardrails_explicit=bool(args.guardrails))
     if result.comment_posted:
         print("PR comment posted.")
     return 0
@@ -239,12 +239,14 @@ def _fail(message: str) -> None:
     raise SystemExit(2)
 
 
-def _print_summary(report: ForgeBenchReport, written: dict[str, Path]) -> None:
+def _print_summary(report: ForgeBenchReport, written: dict[str, Path], guardrails_explicit: bool = False) -> None:
     print("ForgeBench review complete.")
     print()
     print(f"Posture: {report.posture.value}")
     if report.pre_llm_posture and report.pre_llm_posture != report.posture:
         print(f"Pre-LLM posture: {report.pre_llm_posture.value}")
+    print()
+    _print_configuration_mode(report, guardrails_explicit=guardrails_explicit)
     print()
     print("Findings:")
     if report.findings:
@@ -263,13 +265,13 @@ def _print_summary(report: ForgeBenchReport, written: dict[str, Path]) -> None:
     print(f"- {written['repair_prompt']}")
 
 
-def _print_pr_summary(result: GitHubPRReviewResult) -> None:
+def _print_pr_summary(result: GitHubPRReviewResult, guardrails_explicit: bool = False) -> None:
     print("ForgeBench GitHub PR review complete.")
     print()
     print(f"PR: {result.intake.ref.url}")
     print(f"Title: {result.intake.metadata.title or '(No PR title provided.)'}")
     print()
-    _print_summary(result.review_result.report, result.review_result.written_paths)
+    _print_summary(result.review_result.report, result.review_result.written_paths, guardrails_explicit=guardrails_explicit)
     print(f"- {result.comment_path}")
     print()
     print("PR checkout:")
@@ -306,6 +308,30 @@ def _checks_summary(report: ForgeBenchReport) -> str:
         f"errors={summary['errors']}",
     ]
     return ", ".join(parts)
+
+
+def _print_configuration_mode(report: ForgeBenchReport, guardrails_explicit: bool = False) -> None:
+    if report.config_mode == "configured":
+        source = _display_guardrails_source(report.guardrails_source)
+        label = "Using guardrails" if guardrails_explicit else "Found guardrails"
+        print(f"{label}: {source}")
+        print("Configuration mode: configured")
+        return
+
+    print("No forgebench.yml found.")
+    print("Configuration mode: generic")
+    print("Run `forgebench init --repo . --out forgebench.yml`")
+    print("to create starter guardrails.")
+
+
+def _display_guardrails_source(source: str | None) -> str:
+    if not source:
+        return "unknown"
+    path = Path(source)
+    text = str(path)
+    if not path.is_absolute() and "/" not in text and not text.startswith("."):
+        return f"./{text}"
+    return text
 
 
 def _llm_summary(report: ForgeBenchReport) -> str:
