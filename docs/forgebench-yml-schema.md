@@ -8,6 +8,8 @@ Checks declared in `forgebench.yml` are only run when `--run-checks` is explicit
 
 `forgebench.yml` is local project configuration. Treat check commands as trusted local commands only in repositories you trust. Parsing the file is passive, but running checks executes user-configured shell commands from the repo root.
 
+Do not run checks from an untrusted PR-head `forgebench.yml`. Prefer the base-branch or local trusted guardrails file unless you intentionally trust the PR branch configuration.
+
 ## Top-Level Keys
 
 ### `project`

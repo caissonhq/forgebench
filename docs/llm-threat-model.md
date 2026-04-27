@@ -22,6 +22,8 @@ Code comments, string literals, docs, fixtures, or generated files in a diff may
 
 The command LLM provider runs a user-supplied local shell command. This is intentionally explicit and local, but it has the same trust requirements as running any shell command.
 
+Do not point `--llm-command` at scripts supplied by an untrusted PR. Treat the command provider as trusted local code execution.
+
 ### Structured Output Attacks
 
 An LLM may attempt finding-ID forgery, severity forgery, confidence forgery, or output extra fields that imply stronger authority than ForgeBench allows.
@@ -45,6 +47,8 @@ Large tasks, diffs, and reports can hide relevant details or dilute instructions
 - LLM review cannot override deterministic checks.
 - LLM review cannot post PR comments.
 - Bundle size caps are enforced for task text, diff excerpts, and lens-specific evidence.
+- PR comments still require explicit `--post-comment`.
+- Feedback remains local JSONL and is not uploaded.
 
 ## Test Skeptic v2
 

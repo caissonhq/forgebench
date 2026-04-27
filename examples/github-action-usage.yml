@@ -1,0 +1,33 @@
+name: ForgeBench
+
+on:
+  pull_request:
+
+jobs:
+  forgebench:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: ForgeBench review
+        uses: caissonhq/forgebench/action@main
+        env:
+          GH_TOKEN: ${{ github.token }}
+        with:
+          guardrails-path: forgebench.yml
+          run-checks: "false"
+          post-comment: "false"
+
+      # Posting is explicit. Uncomment only when you want ForgeBench
+      # to write the generated PR summary back to the pull request.
+      #
+      # - name: ForgeBench review and post comment
+      #   uses: caissonhq/forgebench/action@main
+      #   env:
+      #     GH_TOKEN: ${{ github.token }}
+      #   with:
+      #     run-checks: "true"
+      #     post-comment: "true"

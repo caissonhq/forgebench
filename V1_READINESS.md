@@ -8,6 +8,7 @@ ForgeBench does not prove code is safe. It highlights merge risk before AI-gener
 
 - Local diff review from a unified git patch and original task prompt.
 - GitHub PR URL intake through the local GitHub CLI.
+- Docker-based GitHub Action wrapper for pull request workflows.
 - Optional safe PR worktree checkout for deterministic checks.
 - Optional deterministic local build/test/lint/typecheck/custom checks.
 - Static risk findings for tests, dependencies, config, persistence/schema, generated files, UI/copy, and broad file surface.
@@ -78,6 +79,7 @@ Test Skeptic v2 is an opt-in LLM-assisted lens. It runs only when deterministic 
 - `review-pr --run-checks` needs `--checkout-pr` to run checks against the PR worktree.
 - Optional LLM review is command-provider only and advisory.
 - LLM-assisted lenses are limited to Test Skeptic v2 and require `--llm-review`.
+- The GitHub Action wrapper packages the local CLI for workflows. It is not a hosted GitHub App.
 - Real anonymized sample reports are still required before broader public beta. Sprint 8 includes synthetic sample reports for first-run UX only.
 - Feedback is local-only and useful for alpha dogfood, but ForgeBench does not aggregate or upload feedback anywhere.
 

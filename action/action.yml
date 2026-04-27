@@ -1,0 +1,40 @@
+name: ForgeBench
+description: Review AI-generated pull request diffs before merge.
+
+inputs:
+  pr-url:
+    description: GitHub pull request URL. Defaults to the pull_request event URL when available.
+    required: false
+    default: ""
+  guardrails-path:
+    description: Path to forgebench.yml. Missing files fall back to generic review rules.
+    required: false
+    default: forgebench.yml
+  run-checks:
+    description: Run configured deterministic checks.
+    required: false
+    default: "false"
+  post-comment:
+    description: Post the generated PR comment. Defaults to false.
+    required: false
+    default: "false"
+  llm-review:
+    description: Run optional advisory LLM review.
+    required: false
+    default: "false"
+  llm-command:
+    description: Local command used by the command LLM provider.
+    required: false
+    default: ""
+
+outputs:
+  posture:
+    description: ForgeBench merge posture.
+  report-path:
+    description: Path to forgebench-report.md.
+  pr-comment-path:
+    description: Path to pr-comment.md.
+
+runs:
+  using: docker
+  image: Dockerfile

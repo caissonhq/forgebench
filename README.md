@@ -35,7 +35,7 @@ ForgeBench does not prove code is safe. It highlights merge risk before AI-gener
 
 ## Quickstart
 
-Install from PyPI once published, or install locally from this repo during alpha dogfooding:
+Install ForgeBench:
 
 ```bash
 pip install forgebench
@@ -51,7 +51,15 @@ forgebench init \
 
 `forgebench init` inspects local manifest files such as `pyproject.toml`, `package.json`, `Cargo.toml`, and `Package.swift` to suggest safe check commands. It does not run package managers, `git log`, `gh`, or network calls. Edit `protected_behavior` and `forbidden_patterns` yourself before relying on project-specific guardrails.
 
-Run the minimum local review:
+Review a GitHub PR and run configured checks against a temporary PR worktree:
+
+```bash
+forgebench review-pr PR_URL \
+  --checkout-pr \
+  --run-checks
+```
+
+Run a minimum local diff review:
 
 ```bash
 forgebench review --repo . --diff ./patch.diff --task ./task.md
@@ -178,6 +186,47 @@ forgebench review-pr https://github.com/OWNER/REPO/pull/123 --post-comment
 ```
 
 PR comments are never posted by default. `--dry-run` can be passed explicitly when you want local artifacts only. ForgeBench does not store GitHub tokens or secrets.
+
+## GitHub Action
+
+ForgeBench includes an official Docker action wrapper for pull request workflows. The action still runs ForgeBench locally inside the workflow container; it is not a hosted GitHub App.
+
+Minimal workflow:
+
+```yaml
+name: ForgeBench
+
+on:
+  pull_request:
+
+jobs:
+  forgebench:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: ForgeBench review
+        uses: caissonhq/forgebench/action@main
+        env:
+          GH_TOKEN: ${{ github.token }}
+        with:
+          guardrails-path: forgebench.yml
+          run-checks: "false"
+          post-comment: "false"
+```
+
+See [examples/github-action-usage.yml](examples/github-action-usage.yml) for a fuller example.
+
+Safe defaults:
+
+- `post-comment` defaults to `false`; the action writes local artifacts unless you explicitly set `post-comment: "true"`.
+- `run-checks` defaults to `false`; deterministic checks run only when configured in `forgebench.yml` and requested.
+- Missing `forgebench.yml` falls back to generic review rules.
+- LLM review is off unless `llm-review: "true"` is provided.
+
+When posting comments, the workflow needs `pull-requests: write` and a `GH_TOKEN` environment variable. The generated comment remains a concise ForgeBench summary, not an approval.
 
 ## Guardrails File
 
@@ -605,11 +654,7 @@ Real anonymized reports remain a future dogfood and beta requirement.
 
 ## Development Commands
 
-Install locally:
-
-```bash
-python -m pip install -e .
-```
+For editable source installs, see [CONTRIBUTING.md](CONTRIBUTING.md).
 
 Show CLI help:
 
