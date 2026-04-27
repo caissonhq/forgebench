@@ -1,5 +1,8 @@
 {
-  "schema_version": "1.1.0",
+  "schema_version": "1.2.0",
+  "config_mode": "configured",
+  "guardrails_source": "examples/sample_report/block_case/forgebench.yml",
+  "first_run_guidance": false,
   "posture": "BLOCK",
   "pre_llm_posture": "BLOCK",
   "final_posture": "BLOCK",
@@ -89,7 +92,8 @@
     ],
     "generated_or_unrelated_files_changed": [],
     "ui_or_copy_files_changed": [],
-    "binary_files_changed": []
+    "binary_files_changed": [],
+    "config_mode": "configured"
   },
   "guardrail_hits": [
     "High-risk guardrail pattern '**/migrations/**' matched db/migrations/20260426_add_payment_receipts.sql"
@@ -259,5 +263,5 @@
     "kept": false,
     "cleanup_error": null
   },
-  "generated_at": "2026-04-27T02:09:13+00:00"
+  "generated_at": "2026-04-27T03:24:54+00:00"
 }

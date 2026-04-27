@@ -21,6 +21,11 @@ Proceed cautiously with normal human review. Deterministic checks were not run.
 - Task: examples/sample_report/low_concern_case/task.md
 - Guardrails: examples/sample_report/low_concern_case/forgebench.yml
 
+## Configuration Mode
+
+Configured review mode.
+- Guardrails source: examples/sample_report/low_concern_case/forgebench.yml
+
 ## PR Checkout
 
 - Status: not requested

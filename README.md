@@ -41,6 +41,14 @@ Install ForgeBench:
 pip install forgebench
 ```
 
+First run a PR review with generic heuristics:
+
+```bash
+forgebench review-pr PR_URL
+```
+
+Generic mode is useful for a first look, but it may be noisier because ForgeBench has not learned your repo's protected behavior, risk paths, or checks yet.
+
 Create a starter guardrails file:
 
 ```bash
@@ -49,12 +57,13 @@ forgebench init \
   --out forgebench.yml
 ```
 
-`forgebench init` inspects local manifest files such as `pyproject.toml`, `package.json`, `Cargo.toml`, and `Package.swift` to suggest safe check commands. It does not run package managers, `git log`, `gh`, or network calls. Edit `protected_behavior` and `forbidden_patterns` yourself before relying on project-specific guardrails.
+`forgebench init` defaults to `--preset auto` and inspects local manifest files such as `pyproject.toml`, `package.json`, `Cargo.toml`, and `Package.swift` to suggest safe check commands. It does not run package managers, `git log`, `gh`, or network calls. Edit `protected_behavior` and `forbidden_patterns` yourself before relying on project-specific guardrails.
 
 Review a GitHub PR and run configured checks against a temporary PR worktree:
 
 ```bash
 forgebench review-pr PR_URL \
+  --guardrails forgebench.yml \
   --checkout-pr \
   --run-checks
 ```
@@ -71,7 +80,7 @@ ForgeBench writes:
 - `forgebench-output/forgebench-report.json`
 - `forgebench-output/repair-prompt.md`
 
-The JSON report is schema-versioned. Current reports use schema `1.1.0`. See [docs/report-schema.md](docs/report-schema.md).
+The JSON report is schema-versioned. Current reports use schema `1.2.0`. See [docs/report-schema.md](docs/report-schema.md).
 Repair prompts include relevant diff hunk context when ForgeBench can match findings back to changed files.
 
 To inspect output shape before running on your own repo, see the synthetic, human-approved examples in [examples/sample_report](examples/sample_report).
@@ -85,6 +94,18 @@ forgebench init \
   --repo . \
   --out forgebench.yml
 ```
+
+Preset options are available when you want explicit starter defaults:
+
+```bash
+forgebench init --preset python --repo . --out forgebench.yml
+forgebench init --preset node --repo . --out forgebench.yml
+forgebench init --preset nextjs --repo . --out forgebench.yml
+forgebench init --preset swift --repo . --out forgebench.yml
+forgebench init --preset rust --repo . --out forgebench.yml
+```
+
+`--preset auto` remains the default. Explicit presets still do not install dependencies, run package managers, inspect git history, or make network calls.
 
 ForgeBench refuses to overwrite an existing file unless `--force` is passed:
 
@@ -115,6 +136,20 @@ Arguments:
 - `--out`: optional output directory. Defaults to `./forgebench-output/`.
 
 No LLM or network dependency is required by default.
+
+## Generic Mode
+
+When no guardrails file is passed and no `forgebench.yml` is found in the repo, ForgeBench runs in generic review mode. Reports include a Configuration Mode section so the result is honest about that first-run state.
+
+Generic mode keeps serious evidence serious: deterministic failures, deleted tests, explicit forbidden patterns, explicit high-risk guardrail hits, and true migration/schema/database changes can still block. It also avoids over-punishing normal first runs from broad docs/assets/sample-report changes, generic model-like files, or dependency manifests without repo-specific guardrails.
+
+To reduce first-run noise:
+
+```bash
+forgebench init --repo . --out forgebench.yml
+```
+
+Then edit the generated guardrails and rerun with `--guardrails forgebench.yml`. Local feedback can suggest candidate suppressions and path tuning, but it never changes future runs automatically.
 
 ## GitHub PR Intake
 
@@ -664,6 +699,15 @@ Summarize the local feedback log:
 ```bash
 forgebench feedback --summarize
 ```
+
+Suggest guardrail tuning from dismissed or wrong local feedback:
+
+```bash
+forgebench feedback --suggest-guardrails \
+  --feedback-log forgebench-output/feedback.jsonl
+```
+
+This prints Markdown snippets you can review and copy into `forgebench.yml` if they make sense. ForgeBench does not automatically suppress findings or tune future runs from feedback.
 
 Generate a Markdown dogfood summary from one or more feedback logs:
 

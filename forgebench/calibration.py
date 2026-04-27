@@ -198,6 +198,7 @@ def validate_markdown_report(path: str | Path) -> list[str]:
     for required in [
         "# ForgeBench Merge Risk Report",
         "## Merge Posture",
+        "## Configuration Mode",
         "## Deterministic Checks",
         "## Heuristic Review Lenses",
         "## LLM Review",
@@ -222,6 +223,9 @@ def validate_json_report(path: str | Path) -> list[str]:
     errors: list[str] = []
     for key in [
         "schema_version",
+        "config_mode",
+        "guardrails_source",
+        "first_run_guidance",
         "posture",
         "pre_llm_posture",
         "final_posture",

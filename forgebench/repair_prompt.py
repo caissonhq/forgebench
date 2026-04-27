@@ -49,6 +49,14 @@ def _render_repair_prompt(
         _posture_instruction(report),
         "",
     ]
+    if report.config_mode == "generic":
+        lines.extend(
+            [
+                "Configuration note:",
+                "This review ran with generic heuristics. Do not broaden scope based on low-confidence generic findings.",
+                "",
+            ]
+        )
     if omitted_count:
         lines.extend([f"({omitted_count} findings omitted to fit prompt size cap.)", ""])
 

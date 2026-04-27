@@ -4,6 +4,8 @@ ForgeBench reads optional repo guardrails from `forgebench.yml` using `yaml.safe
 
 Checks declared in `forgebench.yml` are only run when `--run-checks` is explicitly passed.
 
+If no guardrails file is passed and no `forgebench.yml` exists in the repo, ForgeBench runs in generic mode. Generic mode uses first-run heuristics and reports that it is unconfigured. Run `forgebench init --repo . --out forgebench.yml` to create local guardrails, then edit the protected behavior, forbidden patterns, risk paths, and checks before relying on strict posture decisions.
+
 ## Local Trust Note
 
 `forgebench.yml` is local project configuration. Treat check commands as trusted local commands only in repositories you trust. Parsing the file is passive, but running checks executes user-configured shell commands from the repo root.
@@ -74,6 +76,21 @@ Supported policy children:
 ## Unknown Keys
 
 Unknown top-level keys are non-fatal. ForgeBench records a warning and ignores them.
+
+## `forgebench init` Presets
+
+`forgebench init` writes a starter configuration without running package managers, `git`, `gh`, or network calls.
+
+Supported presets:
+
+- `auto`: default. Detects `pyproject.toml`, `package.json`, `Cargo.toml`, `Package.swift`, and `CODEOWNERS` when present.
+- `python`: adds `python3 -m unittest discover -s tests` as the test command and marks common Python source paths as medium risk.
+- `node`: uses scripts from `package.json` when present and marks common Node source paths as medium risk.
+- `nextjs`: uses scripts from `package.json` when present, treats docs/assets as advisory, and marks `app/**`, `pages/**`, `components/**`, and `src/**` as medium risk.
+- `swift`: uses `swift build` / `swift test` only for Swift package repos and marks `Sources/**`, `Tests/**`, and asset paths appropriately.
+- `rust`: adds `cargo build` / `cargo test` and marks `src/**` and `tests/**` as medium risk.
+
+Starter files intentionally leave `protected_behavior`, `forbidden_patterns`, and `risk_files.high` empty because those require human repo knowledge.
 
 ## Malformed YAML
 

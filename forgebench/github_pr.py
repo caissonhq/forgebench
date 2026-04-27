@@ -299,6 +299,14 @@ def generate_pr_comment(
             lines.append(f"- ...and {len(high_confidence) - 8} more high-confidence issue(s).")
     else:
         lines.append("- None.")
+    if report.config_mode == "generic":
+        lines.extend(
+            [
+                "",
+                "Configuration:",
+                "- Generic mode: no forgebench.yml found. Add guardrails with `forgebench init` to reduce noise.",
+            ]
+        )
 
     lines.extend(["", "Deterministic checks:"])
     checkout = report.pr_checkout

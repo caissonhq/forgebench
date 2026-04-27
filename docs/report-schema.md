@@ -1,6 +1,6 @@
 # ForgeBench JSON Report Schema
 
-Current schema version: `1.1.0`
+Current schema version: `1.2.0`
 
 ForgeBench writes `forgebench-report.json` as a stable machine-readable report for local tooling and future integrations.
 
@@ -8,7 +8,10 @@ ForgeBench will only break this schema with a major schema version bump.
 
 ## Top-Level Fields
 
-- `schema_version`: string. Current value is `1.1.0`.
+- `schema_version`: string. Current value is `1.2.0`.
+- `config_mode`: string enum. `configured` when a guardrails file was provided or discovered, `generic` when ForgeBench used generic heuristics only.
+- `guardrails_source`: string or null. Path to the guardrails file used for the run, or null in generic mode.
+- `first_run_guidance`: boolean. True when the report should show first-run generic-mode guidance.
 - `posture`: string enum. Final merge posture.
 - `pre_llm_posture`: string enum. Posture before optional LLM review.
 - `final_posture`: string enum. Same value as `posture`.
@@ -48,6 +51,11 @@ Stable finding UIDs are deterministic for the same logical kind, file set, evide
 Local feedback recorded with `forgebench feedback` is not part of the report schema. Feedback is stored separately as local JSONL.
 
 ## Enum Values
+
+`config_mode`:
+
+- `configured`
+- `generic`
 
 `posture`, `pre_llm_posture`, and `final_posture`:
 

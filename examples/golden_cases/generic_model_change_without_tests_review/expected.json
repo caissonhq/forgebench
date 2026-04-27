@@ -1,0 +1,17 @@
+{
+  "case_name": "generic_model_change_without_tests_review",
+  "run_checks": false,
+  "expected_posture": "REVIEW",
+  "required_finding_ids": [
+    "implementation_without_tests",
+    "test_skeptic_missing_behavior_coverage"
+  ],
+  "allowed_extra_finding_ids": [],
+  "forbidden_finding_ids": [
+    "persistence_schema_changed",
+    "deleted_tests",
+    "tests_failed"
+  ],
+  "allow_unlisted_findings": false,
+  "rationale": "Generic model-like source files should not be treated as persistence/schema blockers, but behavior-like source changes still need review when tests did not change."
+}

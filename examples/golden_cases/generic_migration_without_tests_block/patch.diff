@@ -1,0 +1,7 @@
+diff --git a/db/migrations/003_add_paid_state.sql b/db/migrations/003_add_paid_state.sql
+new file mode 100644
+index 0000000..2222222
+--- /dev/null
++++ b/db/migrations/003_add_paid_state.sql
+@@ -0,0 +1 @@
++ALTER TABLE payments ADD COLUMN paid_state TEXT NOT NULL DEFAULT 'pending';

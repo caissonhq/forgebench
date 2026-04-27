@@ -51,8 +51,8 @@ class FindingUidTests(unittest.TestCase):
             )
             payload = json.loads((Path(tmp) / "forgebench-report.json").read_text(encoding="utf-8"))
 
-        self.assertEqual(payload["schema_version"], "1.1.0")
-        self.assertEqual(REPORT_SCHEMA_VERSION, "1.1.0")
+        self.assertEqual(payload["schema_version"], "1.2.0")
+        self.assertEqual(REPORT_SCHEMA_VERSION, "1.2.0")
         self.assertTrue(payload["findings"])
         first = payload["findings"][0]
         self.assertTrue(first["uid"].startswith("fnd_"))

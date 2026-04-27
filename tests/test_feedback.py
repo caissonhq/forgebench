@@ -10,7 +10,7 @@ import unittest
 from unittest.mock import patch
 
 from forgebench.cli import main
-from forgebench.feedback import FeedbackError, append_feedback, summarize_feedback
+from forgebench.feedback import FeedbackError, append_feedback, suggest_guardrails, summarize_feedback
 
 
 class FeedbackTests(unittest.TestCase):
@@ -136,9 +136,86 @@ class FeedbackTests(unittest.TestCase):
 
         self.assertEqual(summary.total, 1)
 
+    def test_suggest_guardrails_for_dismissed_ui_copy(self) -> None:
+        with TemporaryDirectory() as tmp:
+            path = Path(tmp) / "feedback.jsonl"
+            append_feedback("fnd_copy", status="dismissed", kind="ui_copy_changed", feedback_log=path)
+
+            suggestions = suggest_guardrails([path])
+
+        self.assertIn("ui_copy_changed", suggestions)
+        self.assertIn("suppress_findings", suggestions)
+        self.assertIn("ForgeBench did not modify forgebench.yml", suggestions)
+
+    def test_suggest_guardrails_for_wrong_broad_asset_surface(self) -> None:
+        with TemporaryDirectory() as tmp:
+            path = Path(tmp) / "feedback.jsonl"
+            _write_jsonl(
+                path,
+                {
+                    "uid": "fnd_broad",
+                    "status": "wrong",
+                    "kind": "broad_file_surface",
+                    "files": ["Assets.xcassets/Icon.appiconset/icon.png"],
+                    "fb_version": 1,
+                },
+            )
+
+            suggestions = suggest_guardrails([path])
+
+        self.assertIn("broad_file_surface", suggestions)
+        self.assertIn("asset_only_changes", suggestions)
+
+    def test_suggest_guardrails_does_not_blanket_suppress_implementation_without_tests(self) -> None:
+        with TemporaryDirectory() as tmp:
+            path = Path(tmp) / "feedback.jsonl"
+            append_feedback("fnd_impl", status="dismissed", kind="implementation_without_tests", feedback_log=path)
+
+            suggestions = suggest_guardrails([path])
+
+        self.assertIn("Do not blanket-suppress implementation_without_tests", suggestions)
+        self.assertNotIn("finding_id: implementation_without_tests", suggestions)
+
+    def test_suggest_guardrails_missing_and_malformed_logs_are_clear(self) -> None:
+        with TemporaryDirectory() as tmp:
+            path = Path(tmp) / "feedback.jsonl"
+            path.write_text("{not json}\n", encoding="utf-8")
+
+            suggestions = suggest_guardrails([path, Path(tmp) / "missing.jsonl"])
+
+        self.assertIn("Missing feedback logs:", suggestions)
+        self.assertIn("Malformed feedback lines skipped: 1", suggestions)
+
+    def test_cli_suggest_guardrails_writes_only_when_out_is_passed(self) -> None:
+        with TemporaryDirectory() as tmp:
+            path = Path(tmp) / "feedback.jsonl"
+            output = Path(tmp) / "suggestions.md"
+            append_feedback("fnd_copy", status="dismissed", kind="ui_copy_changed", feedback_log=path)
+            stdout = StringIO()
+
+            with redirect_stdout(stdout):
+                code = main(
+                    [
+                        "feedback",
+                        "--suggest-guardrails",
+                        "--feedback-log",
+                        str(path),
+                        "--out",
+                        str(output),
+                    ]
+                )
+
+            self.assertEqual(code, 0)
+            self.assertTrue(output.exists())
+            self.assertIn("guardrail suggestions written", stdout.getvalue())
+
 
 def _read_entries(path: Path) -> list[dict[str, object]]:
     return [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
+
+
+def _write_jsonl(path: Path, payload: dict[str, object]) -> None:
+    path.write_text(json.dumps(payload) + "\n", encoding="utf-8")
 
 
 if __name__ == "__main__":

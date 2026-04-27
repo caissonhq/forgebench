@@ -1,0 +1,16 @@
+{
+  "case_name": "generic_broad_docs_assets_low_concern",
+  "run_checks": false,
+  "expected_posture": "LOW_CONCERN",
+  "required_finding_ids": [],
+  "allowed_extra_finding_ids": [
+    "ui_copy_changed"
+  ],
+  "forbidden_finding_ids": [
+    "broad_file_surface",
+    "implementation_without_tests",
+    "deleted_tests"
+  ],
+  "allow_unlisted_findings": false,
+  "rationale": "Generic mode should not review-escalate broad docs/assets-only changes solely because many files changed."
+}

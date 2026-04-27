@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from dataclasses import replace
 from datetime import datetime, timezone
 from pathlib import Path
+from pathlib import PurePosixPath
 
 from forgebench.adversaries import run_specialized_reviewers, specialized_reviewers_not_run
 from forgebench.adversaries.models import ReviewerContext
@@ -50,7 +52,9 @@ def run_review(
     repo = Path(repo_path)
     diff = _resolve_input_path(Path(diff_path), repo)
     task = _resolve_input_path(Path(task_path), repo)
-    guardrails_file = _resolve_input_path(Path(guardrails_path), repo) if guardrails_path else None
+    guardrails_file = _resolve_guardrails_path(repo, guardrails_path)
+    config_mode = "configured" if guardrails_file else "generic"
+    first_run_guidance = config_mode == "generic"
     out_dir = Path(output_dir) if output_dir else Path("forgebench-output")
 
     _validate_inputs(repo, diff, task, guardrails_file)
@@ -69,6 +73,8 @@ def run_review(
     guardrail_findings, guardrail_hits = evaluate_guardrails(diff_summary, guardrails)
     findings = _dedupe_findings(deterministic_findings + static_findings + guardrail_findings)
     findings, static_signals, policy_decision = apply_guardrails_policy(diff_summary, findings, static_signals, guardrails)
+    static_signals["config_mode"] = config_mode
+    findings = _apply_generic_mode_calibration(findings, diff_summary) if config_mode == "generic" else findings
 
     llm_config = LLMReviewerConfig(
         enabled=llm_review,
@@ -96,7 +102,14 @@ def run_review(
         specialized_reviewers = specialized_reviewers_not_run()
     findings = _dedupe_findings(findings + specialized_reviewers.findings)
 
-    pre_llm_posture, pre_llm_summary = determine_posture(findings, static_signals, guardrail_hits, deterministic_checks, policy_decision)
+    pre_llm_posture, pre_llm_summary = determine_posture(
+        findings,
+        static_signals,
+        guardrail_hits,
+        deterministic_checks,
+        policy_decision,
+        config_mode=config_mode,
+    )
 
     if llm_review and specialized_reviewers.metadata.get("llm_call_used"):
         llm_result = llm_review_skipped(
@@ -138,6 +151,9 @@ def run_review(
         pre_llm_posture=pre_llm_posture,
         pr_checkout=pr_checkout or PRCheckoutInfo(),
         diff_summary=diff_summary,
+        config_mode=config_mode,
+        guardrails_source=str(guardrails_file) if guardrails_file else None,
+        first_run_guidance=first_run_guidance,
         generated_at=datetime.now(timezone.utc).isoformat(timespec="seconds"),
     )
 
@@ -163,6 +179,13 @@ def run_review(
     )
 
 
+def _resolve_guardrails_path(repo: Path, guardrails_path: str | Path | None) -> Path | None:
+    if guardrails_path:
+        return _resolve_input_path(Path(guardrails_path), repo)
+    candidate = repo / "forgebench.yml"
+    return candidate if candidate.exists() else None
+
+
 def _validate_inputs(repo_path: Path, diff_path: Path, task_path: Path, guardrails_path: Path | None) -> None:
     if not repo_path.exists() or not repo_path.is_dir():
         raise ReviewInputError(f"repo path does not exist or is not a directory: {repo_path}")
@@ -181,6 +204,57 @@ def _resolve_input_path(path: Path, repo_path: Path) -> Path:
     if repo_relative.exists():
         return repo_relative
     return path
+
+
+def _apply_generic_mode_calibration(findings: list[Finding], diff_summary) -> list[Finding]:
+    calibrated: list[Finding] = []
+    for finding in findings:
+        if finding.id == "broad_file_surface" and _all_generic_low_noise_paths(diff_summary.changed_files):
+            continue
+        if finding.id == "implementation_without_tests":
+            calibrated.append(
+                replace(
+                    finding,
+                    title="Changed implementation files without test changes",
+                    confidence=finding.confidence,
+                    evidence=[
+                        *finding.evidence,
+                        "Generic mode: this signal may be noisy when tests live outside the changed paths or were not required by the task.",
+                    ],
+                    explanation=(
+                        "The patch changes likely implementation files, but no likely test files changed. "
+                        "In generic mode this is a review signal, not proof that coverage is missing; "
+                        "some repos organize tests separately or rely on configured checks."
+                    ),
+                    suggested_fix=(
+                        "Review whether the changed behavior needs tests. If the signal is noisy for this repo, "
+                        "run forgebench init and tune guardrails or checks."
+                    ),
+                )
+            )
+            continue
+        calibrated.append(finding)
+    return calibrated
+
+
+def _all_generic_low_noise_paths(paths: list[str]) -> bool:
+    return bool(paths) and all(_is_generic_low_noise_path(path) for path in paths)
+
+
+def _is_generic_low_noise_path(path: str) -> bool:
+    normalized = path.replace("\\", "/").lower()
+    suffix = PurePosixPath(normalized).suffix
+    if normalized.startswith(("docs/", "examples/golden_cases/", "examples/sample_report/")):
+        return True
+    if PurePosixPath(normalized).name in {"readme.md", "changelog.md", "contributing.md", "security.md"}:
+        return True
+    if suffix in {".md", ".markdown", ".rst", ".txt"}:
+        return True
+    if suffix in {".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg", ".ico", ".icns"}:
+        return True
+    if "assets.xcassets/" in normalized:
+        return True
+    return any(marker in normalized for marker in ("dist/", "build/", "deriveddata/", "node_modules/", ".pyc", ".ds_store"))
 
 
 def _task_summary(task_text: str) -> str:

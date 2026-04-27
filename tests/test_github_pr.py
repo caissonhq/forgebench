@@ -175,6 +175,7 @@ class GitHubPRTests(unittest.TestCase):
             comment = result.comment_path.read_text(encoding="utf-8")
 
         self.assertIn("## ForgeBench Merge Risk Report", comment)
+        self.assertIn("Generic mode: no forgebench.yml found", comment)
         self.assertIn("ForgeBench does not prove code is safe", comment)
         self.assertNotIn("diff --git", comment)
         self.assertNotIn("You are repairing an AI-generated code change", comment)

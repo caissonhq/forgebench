@@ -9,8 +9,9 @@ def determine_posture(
     guardrail_hits: list[str],
     deterministic_checks: DeterministicChecks | None = None,
     policy_decision: PolicyDecision | None = None,
+    config_mode: str = "configured",
 ) -> tuple[MergePosture, str]:
-    posture, summary = _determine_posture(findings, static_signals, guardrail_hits, deterministic_checks)
+    posture, summary = _determine_posture(findings, static_signals, guardrail_hits, deterministic_checks, config_mode)
     return _apply_posture_ceiling(posture, summary, findings, policy_decision)
 
 
@@ -19,11 +20,13 @@ def _determine_posture(
     static_signals: dict[str, object],
     guardrail_hits: list[str],
     deterministic_checks: DeterministicChecks | None = None,
+    config_mode: str = "configured",
 ) -> tuple[MergePosture, str]:
     finding_ids = {finding.id for finding in findings}
     tests_changed = bool(static_signals.get("tests_changed"))
     dependency_files = static_signals.get("dependency_files_changed") or []
     persistence_files = static_signals.get("persistence_or_schema_files_changed") or []
+    generic_mode = config_mode == "generic"
 
     if any(finding.severity == Severity.BLOCKER for finding in findings):
         return (
@@ -49,7 +52,7 @@ def _determine_posture(
             ),
         )
 
-    if persistence_files and not tests_changed:
+    if persistence_files and not tests_changed and (not generic_mode or _has_strong_generic_persistence_path(persistence_files)):
         return (
             MergePosture.BLOCK,
             _with_check_context(
@@ -58,7 +61,7 @@ def _determine_posture(
             ),
         )
 
-    if dependency_files and not tests_changed:
+    if dependency_files and not tests_changed and not generic_mode:
         return (
             MergePosture.BLOCK,
             _with_check_context(
@@ -133,7 +136,9 @@ def _determine_posture(
             ),
         )
 
-    if "broad_file_surface" in finding_ids:
+    if "broad_file_surface" in finding_ids and not (
+        generic_mode and _generic_broad_surface_without_code_or_config_risk(finding_ids, static_signals)
+    ):
         return (
             MergePosture.REVIEW,
             _with_check_context(
@@ -183,6 +188,39 @@ def _determine_posture(
         MergePosture.LOW_CONCERN,
         _low_concern_summary(deterministic_checks),
     )
+
+
+def _has_strong_generic_persistence_path(paths: object) -> bool:
+    if not isinstance(paths, list):
+        return False
+    return any(_is_strong_generic_persistence_path(str(path)) for path in paths)
+
+
+def _is_strong_generic_persistence_path(path: str) -> bool:
+    lower = path.replace("\\", "/").lower()
+    markers = (
+        "migration",
+        "migrations",
+        "schema",
+        "database",
+        "prisma",
+        "drizzle",
+        "alembic",
+        "coredata",
+        "swiftdata",
+    )
+    if lower.endswith(".sql"):
+        return True
+    if any(marker in lower for marker in markers):
+        return True
+    tokens = [token for token in lower.replace(".", "/").replace("_", "/").replace("-", "/").split("/") if token]
+    return "db" in tokens
+
+
+def _generic_broad_surface_without_code_or_config_risk(finding_ids: set[str], static_signals: dict[str, object]) -> bool:
+    if finding_ids & {"implementation_without_tests", "build_config_changed", "dependency_surface_changed", "persistence_schema_changed"}:
+        return False
+    return bool(static_signals.get("broad_file_surface_low_noise"))
 
 
 def _apply_posture_ceiling(

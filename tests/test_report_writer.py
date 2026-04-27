@@ -62,7 +62,7 @@ class ReportWriterTests(unittest.TestCase):
 
             payload = json.loads(written["json"].read_text(encoding="utf-8"))
 
-            self.assertEqual(payload["schema_version"], "1.1.0")
+            self.assertEqual(payload["schema_version"], "1.2.0")
             self.assertEqual(payload["posture"], report.posture.value)
             self.assertEqual(payload["final_posture"], report.posture.value)
             self.assertIn("pre_llm_posture", payload)
@@ -85,10 +85,36 @@ class ReportWriterTests(unittest.TestCase):
             markdown = written["markdown"].read_text(encoding="utf-8")
 
             self.assertIn("## Suggested Next Action", markdown)
+            self.assertIn("## Configuration Mode", markdown)
             self.assertIn("## Deterministic Checks", markdown)
             self.assertIn("## LLM Review", markdown)
             self.assertIn("## Guardrails Policy", markdown)
             self.assertIn("Finding counts by severity", markdown)
+
+    def test_markdown_json_and_repair_prompt_include_generic_mode_guidance(self) -> None:
+        report, guardrails, task_text = _sample_report()
+        report.config_mode = "generic"
+        report.guardrails_source = None
+        report.first_run_guidance = True
+
+        with TemporaryDirectory() as tmp:
+            written = write_reports(
+                tmp,
+                report,
+                guardrails,
+                task_text,
+                inputs={"repo": ".", "diff": "patch.diff", "task": "task.md", "guardrails": "none"},
+            )
+            markdown = written["markdown"].read_text(encoding="utf-8")
+            payload = json.loads(written["json"].read_text(encoding="utf-8"))
+            repair = written["repair_prompt"].read_text(encoding="utf-8")
+
+        self.assertIn("Generic review mode.", markdown)
+        self.assertIn("forgebench init --repo . --out forgebench.yml", markdown)
+        self.assertEqual(payload["config_mode"], "generic")
+        self.assertIsNone(payload["guardrails_source"])
+        self.assertTrue(payload["first_run_guidance"])
+        self.assertIn("This review ran with generic heuristics", repair)
 
     def test_repair_prompt_includes_guardrails(self) -> None:
         report, guardrails, task_text = _guardrail_report()

@@ -12,8 +12,18 @@ class InstallDocsTests(unittest.TestCase):
         readme = (ROOT / "README.md").read_text(encoding="utf-8")
 
         self.assertIn("pip install forgebench", readme)
-        self.assertIn("forgebench init", readme)
         self.assertIn("forgebench review-pr PR_URL", readme)
+        self.assertIn("forgebench init", readme)
+        self.assertIn("--guardrails forgebench.yml", readme)
+
+    def test_readme_mentions_generic_mode_presets_and_feedback_suggestions(self) -> None:
+        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+
+        self.assertIn("Generic mode", readme)
+        self.assertIn("--preset python", readme)
+        self.assertIn("--preset nextjs", readme)
+        self.assertIn("forgebench feedback --suggest-guardrails", readme)
+        self.assertIn("does not automatically suppress findings", readme)
 
     def test_readme_says_post_comment_is_explicit(self) -> None:
         readme = (ROOT / "README.md").read_text(encoding="utf-8")

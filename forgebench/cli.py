@@ -6,7 +6,7 @@ from pathlib import Path
 
 from forgebench import __version__
 from forgebench.calibration import format_calibration_result, run_calibration
-from forgebench.feedback import FeedbackError, append_feedback, format_feedback_summary, summarize_feedback
+from forgebench.feedback import FeedbackError, append_feedback, format_feedback_summary, suggest_guardrails, summarize_feedback
 from forgebench.github_pr import GitHubPRError, GitHubPRReviewResult, run_github_pr_review
 from forgebench.init import InitError, write_starter_guardrails
 from forgebench.models import ForgeBenchReport
@@ -38,7 +38,7 @@ def main(argv: list[str] | None = None) -> int:
 
 def _run_init(args: argparse.Namespace) -> int:
     try:
-        result = write_starter_guardrails(repo_path=args.repo, output_path=args.out, force=args.force)
+        result = write_starter_guardrails(repo_path=args.repo, output_path=args.out, force=args.force, preset=args.preset)
     except InitError as exc:
         _fail(str(exc))
 
@@ -124,6 +124,17 @@ def _run_calibrate(args: argparse.Namespace) -> int:
 
 
 def _run_feedback(args: argparse.Namespace) -> int:
+    if args.suggest_guardrails:
+        suggestions = suggest_guardrails([args.feedback_log])
+        if args.out:
+            output = Path(args.out)
+            output.parent.mkdir(parents=True, exist_ok=True)
+            output.write_text(suggestions, encoding="utf-8")
+            print(f"ForgeBench guardrail suggestions written to {output}.")
+        else:
+            print(suggestions)
+        return 0
+
     if args.summarize:
         summary = summarize_feedback([args.feedback_log])
         if summary.total == 0 and summary.malformed_count == 0:
@@ -162,6 +173,12 @@ def _build_parser() -> argparse.ArgumentParser:
     init.add_argument("--repo", required=False, default=".", help="Repository to inspect. Defaults to current directory.")
     init.add_argument("--out", required=False, default="forgebench.yml", help="Output guardrails path. Defaults to forgebench.yml in the repo.")
     init.add_argument("--force", action="store_true", help="Overwrite the output file if it already exists.")
+    init.add_argument(
+        "--preset",
+        choices=["auto", "python", "node", "nextjs", "swift", "rust"],
+        default="auto",
+        help="Starter guardrails preset. Defaults to auto.",
+    )
 
     review = subparsers.add_parser("review", help="Review an AI-generated diff before merge.")
     review.add_argument("--repo", required=True, help="Path to the repository being reviewed.")
@@ -206,6 +223,8 @@ def _build_parser() -> argparse.ArgumentParser:
     feedback.add_argument("--source", required=False, help="Optional feedback source label.")
     feedback.add_argument("--feedback-log", required=False, default="forgebench-output/feedback.jsonl", help="Local JSONL feedback log path.")
     feedback.add_argument("--summarize", action="store_true", help="Summarize a local feedback JSONL log.")
+    feedback.add_argument("--suggest-guardrails", action="store_true", help="Suggest forgebench.yml tuning from local feedback.")
+    feedback.add_argument("--out", required=False, help="Optional path to write guardrail suggestions Markdown.")
 
     calibrate = subparsers.add_parser("calibrate", help="Run the golden corpus calibration suite.")
     calibrate.add_argument("--cases", required=True, help="Path to the golden cases directory.")

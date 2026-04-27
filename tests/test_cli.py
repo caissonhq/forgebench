@@ -99,6 +99,44 @@ class CliTests(unittest.TestCase):
             self.assertEqual(result, 0)
             self.assertIn("Posture: LOW_CONCERN", stdout.getvalue())
             self.assertTrue((out_dir / "forgebench-report.json").exists())
+            payload = json.loads((out_dir / "forgebench-report.json").read_text(encoding="utf-8"))
+            markdown = (out_dir / "forgebench-report.md").read_text(encoding="utf-8")
+            repair = (out_dir / "repair-prompt.md").read_text(encoding="utf-8")
+
+        self.assertEqual(payload["config_mode"], "generic")
+        self.assertTrue(payload["first_run_guidance"])
+        self.assertIsNone(payload["guardrails_source"])
+        self.assertIn("Generic review mode.", markdown)
+        self.assertIn("This review ran with generic heuristics", repair)
+
+    def test_cli_auto_discovers_repo_guardrails_as_configured(self) -> None:
+        with TemporaryDirectory() as tmp:
+            repo = Path(tmp) / "repo"
+            repo.mkdir()
+            guardrails_path = repo / "forgebench.yml"
+            guardrails_path.write_text("project: Configured Repo\n", encoding="utf-8")
+            out_dir = Path(tmp) / "out"
+            stdout = StringIO()
+            with redirect_stdout(stdout):
+                result = main(
+                    [
+                        "review",
+                        "--repo",
+                        str(repo),
+                        "--diff",
+                        str(FIXTURES / "docs_only.patch"),
+                        "--task",
+                        str(FIXTURES / "task.md"),
+                        "--out",
+                        str(out_dir),
+                    ]
+                )
+            payload = json.loads((out_dir / "forgebench-report.json").read_text(encoding="utf-8"))
+
+        self.assertEqual(result, 0)
+        self.assertEqual(payload["config_mode"], "configured")
+        self.assertFalse(payload["first_run_guidance"])
+        self.assertEqual(payload["guardrails_source"], str(guardrails_path))
 
     def test_run_checks_omitted_does_not_execute_commands(self) -> None:
         with TemporaryDirectory() as tmp:

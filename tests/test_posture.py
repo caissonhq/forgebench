@@ -10,6 +10,7 @@ from forgebench.static_checks import run_static_checks
 
 
 FIXTURES = Path(__file__).parent / "fixtures"
+GOLDEN_CASES = Path(__file__).resolve().parents[1] / "examples" / "golden_cases"
 
 
 class PostureTests(unittest.TestCase):
@@ -60,6 +61,23 @@ class PostureTests(unittest.TestCase):
         self.assertEqual(posture, MergePosture.BLOCK)
         self.assertIn("dependency", summary.lower())
 
+    def test_generic_dependency_change_without_tests_results_in_review(self) -> None:
+        posture, summary = _posture_for_fixture("dependency_change_without_tests.patch", config_mode="generic")
+
+        self.assertEqual(posture, MergePosture.REVIEW)
+        self.assertIn("dependency", summary.lower())
+
+    def test_generic_model_like_change_without_tests_is_not_schema_block(self) -> None:
+        posture, _ = _posture_for_golden("generic_model_change_without_tests_review", config_mode="generic")
+
+        self.assertEqual(posture, MergePosture.REVIEW)
+
+    def test_generic_true_migration_without_tests_still_blocks(self) -> None:
+        posture, summary = _posture_for_golden("generic_migration_without_tests_block", config_mode="generic")
+
+        self.assertEqual(posture, MergePosture.BLOCK)
+        self.assertIn("persistence", summary.lower())
+
     def test_generated_file_noise_results_in_review(self) -> None:
         posture, _ = _posture_for_fixture("generated_file_noise.patch")
 
@@ -106,10 +124,16 @@ class PostureTests(unittest.TestCase):
         self.assertNotIn("passed", summary.lower())
 
 
-def _posture_for_fixture(name: str):
+def _posture_for_fixture(name: str, config_mode: str = "configured"):
     diff = parse_diff_file(FIXTURES / name)
     findings, signals = run_static_checks(diff)
-    return determine_posture(findings, signals, [])
+    return determine_posture(findings, signals, [], config_mode=config_mode)
+
+
+def _posture_for_golden(name: str, config_mode: str = "configured"):
+    diff = parse_diff_file(GOLDEN_CASES / name / "patch.diff")
+    findings, signals = run_static_checks(diff)
+    return determine_posture(findings, signals, [], config_mode=config_mode)
 
 
 def _posture_for_fixture_with_checks(diff_name: str, guardrails_name: str):

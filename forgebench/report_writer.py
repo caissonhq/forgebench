@@ -66,6 +66,10 @@ def build_markdown_report(report: ForgeBenchReport, guardrails: Guardrails, inpu
         f"- Guardrails: {inputs.get('guardrails', 'none')}",
         *_format_input_notes(inputs.get("notes")),
         "",
+        "## Configuration Mode",
+        "",
+        *_format_configuration_mode(report),
+        "",
         "## PR Checkout",
         "",
         *_format_pr_checkout(report),
@@ -154,6 +158,27 @@ def _format_input_notes(notes) -> list[str]:
     if not notes:
         return []
     return ["- Notes:"] + [f"  - {note}" for note in notes]
+
+
+def _format_configuration_mode(report: ForgeBenchReport) -> list[str]:
+    if report.config_mode == "generic":
+        return [
+            "Generic review mode.",
+            "",
+            "ForgeBench did not find a forgebench.yml file for this run. Generic heuristics are useful for initial review, but may be noisier than repo-specific guardrails.",
+            "",
+            "Run:",
+            "",
+            "```bash",
+            "forgebench init --repo . --out forgebench.yml",
+            "```",
+            "",
+            "Then edit the generated guardrails before relying on strict posture decisions.",
+        ]
+    return [
+        "Configured review mode.",
+        f"- Guardrails source: {report.guardrails_source or 'provided configuration'}",
+    ]
 
 
 def _format_pr_checkout(report: ForgeBenchReport) -> list[str]:

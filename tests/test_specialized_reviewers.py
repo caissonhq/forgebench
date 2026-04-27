@@ -351,7 +351,7 @@ check_timeout_seconds: 5
         self.assertNotIn("Specialized Reviewers", markdown)
         self.assertIn("specialized_reviewers", payload)
         self.assertIn("Heuristic review lens findings:", repair)
-        self.assertIn("Changed behavior lacks corresponding test coverage", repair)
+        self.assertIn("Changed implementation files need coverage review", repair)
         self.assertNotIn("No additional scope concern found from task text and changed files.\n  Explanation", repair)
 
     def test_pr_comment_includes_concise_reviewer_summary(self) -> None:

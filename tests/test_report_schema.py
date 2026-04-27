@@ -17,6 +17,9 @@ FIXTURES = Path(__file__).parent / "fixtures"
 
 EXPECTED_TOP_LEVEL_KEYS = {
     "schema_version",
+    "config_mode",
+    "guardrails_source",
+    "first_run_guidance",
     "posture",
     "pre_llm_posture",
     "final_posture",
@@ -50,7 +53,7 @@ class ReportSchemaTests(unittest.TestCase):
 
         self.assertEqual(payload["schema_version"], REPORT_SCHEMA_VERSION)
         self.assertEqual(set(payload), EXPECTED_TOP_LEVEL_KEYS)
-        self.assertEqual(payload["schema_version"], "1.1.0")
+        self.assertEqual(payload["schema_version"], "1.2.0")
         self.assertIn("uid", payload["findings"][0])
         self.assertIn("kind", payload["findings"][0])
 

@@ -12,6 +12,8 @@ ForgeBench does not prove code is safe. It highlights merge risk before AI-gener
 - Optional safe PR worktree checkout for deterministic checks.
 - Optional deterministic local build/test/lint/typecheck/custom checks.
 - Static risk findings for tests, dependencies, config, persistence/schema, generated files, UI/copy, and broad file surface.
+- Generic first-run mode when no `forgebench.yml` is present, with visible report guidance and less punitive unconfigured path heuristics.
+- `forgebench init` presets for Python, Node, Next.js, Swift, and Rust starter guardrails.
 - Guardrails v2 policy calibration with path categories, suppressions, severity/confidence overrides, and posture ceilings.
 - Phase 1 heuristic review lenses:
   - Scope Auditor
@@ -23,7 +25,7 @@ ForgeBench does not prove code is safe. It highlights merge risk before AI-gener
 - Optional evidence-constrained LLM review through a local command provider.
 - Markdown report, JSON report, repair prompt, and PR-comment-ready summary.
 - Stable finding UIDs for local dogfood feedback.
-- Local-only feedback logging and dogfood feedback summaries.
+- Local-only feedback logging, dogfood feedback summaries, and guardrail tuning suggestions.
 - Golden corpus calibration with posture distribution, finding-kind counts, and review-lens fire-rate summaries.
 - Synthetic, human-approved sample reports for first-run UX.
 
@@ -87,8 +89,9 @@ Regression Hunter is the first narrow Phase 2 lens. It only checks for potential
 - The GitHub Action wrapper packages the local CLI for workflows. It is not a hosted GitHub App.
 - Real anonymized sample reports are still required before broader public beta. Sprint 8 includes synthetic sample reports for first-run UX only.
 - Real anonymized PR corpus remains blocked pending approved source material. Sprint 12A implements the Regression Hunter lens and calibration summary only.
-- Current golden corpus count: 32 synthetic or fixture-based cases, 0 real anonymized PR cases.
-- Feedback is local-only and useful for alpha dogfood, but ForgeBench does not aggregate or upload feedback anywhere.
+- Current golden corpus count: 37 synthetic or fixture-based cases, 0 real anonymized PR cases.
+- Generic mode is intentionally less strict for unconfigured repos; teams should still add `forgebench.yml` before relying on strict posture decisions.
+- Feedback is local-only and useful for alpha dogfood, but ForgeBench does not aggregate or upload feedback anywhere. Feedback suggestions do not automatically tune future runs.
 
 ## Required Before CAI-5 Done
 
@@ -112,5 +115,6 @@ Regression Hunter is the first narrow Phase 2 lens. It only checks for potential
 - Compare reviewer-enabled output with `--no-reviewers` for the next few serious patches.
 - Log noisy static findings separately from noisy reviewer findings.
 - Record accepted/dismissed/wrong finding feedback locally and summarize it with `scripts/dogfood_summary.py`.
+- Use `forgebench feedback --suggest-guardrails` to draft candidate suppressions, then review them manually before editing `forgebench.yml`.
 - Add golden cases whenever dogfood exposes a false positive or missed review concern.
 - Keep deterministic check coverage explicit in `forgebench.yml` for repos where build/test commands are cheap and trusted.

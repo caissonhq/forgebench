@@ -1,5 +1,8 @@
 {
-  "schema_version": "1.1.0",
+  "schema_version": "1.2.0",
+  "config_mode": "configured",
+  "guardrails_source": "examples/sample_report/low_concern_case/forgebench.yml",
+  "first_run_guidance": false,
   "posture": "LOW_CONCERN",
   "pre_llm_posture": "LOW_CONCERN",
   "final_posture": "LOW_CONCERN",
@@ -23,7 +26,8 @@
     "persistence_or_schema_files_changed": [],
     "generated_or_unrelated_files_changed": [],
     "ui_or_copy_files_changed": [],
-    "binary_files_changed": []
+    "binary_files_changed": [],
+    "config_mode": "configured"
   },
   "guardrail_hits": [],
   "deterministic_checks": {
@@ -176,5 +180,5 @@
     "kept": false,
     "cleanup_error": null
   },
-  "generated_at": "2026-04-27T02:09:13+00:00"
+  "generated_at": "2026-04-27T03:24:54+00:00"
 }

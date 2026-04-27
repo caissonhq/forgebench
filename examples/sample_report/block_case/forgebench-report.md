@@ -21,6 +21,11 @@ Do not merge yet. Run the repair prompt, regenerate the diff, and rerun ForgeBen
 - Task: examples/sample_report/block_case/task.md
 - Guardrails: examples/sample_report/block_case/forgebench.yml
 
+## Configuration Mode
+
+Configured review mode.
+- Guardrails source: examples/sample_report/block_case/forgebench.yml
+
 ## PR Checkout
 
 - Status: not requested

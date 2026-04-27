@@ -1,0 +1,9 @@
+diff --git a/src/payment_model.py b/src/payment_model.py
+index 1111111..2222222 100644
+--- a/src/payment_model.py
++++ b/src/payment_model.py
+@@ -1,3 +1,4 @@
+ class PaymentModel:
+     id: str
+     amount_cents: int
++    display_state: str = "pending"

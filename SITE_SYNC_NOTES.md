@@ -32,13 +32,17 @@ Update the example report to include a concise reviewer summary:
 - Product / Guardrail Reviewer: protected area changed
 
 Keep the current CLI alpha framing:
+- First runs may use generic mode when no `forgebench.yml` exists
+- Generic mode is useful for initial review but may be noisier than repo-specific guardrails
 - `forgebench init` creates a starter local guardrails file
+- `forgebench init --preset auto|python|node|nextjs|swift|rust` helps users generate starter guardrails
 - Local diff review
 - GitHub PR URL review through local GitHub CLI
 - Optional `--checkout-pr --run-checks`
 - Optional `--llm-review`
 - Local artifacts: Markdown, JSON, repair prompt, PR-ready comment
 - Repair prompts now include relevant diff hunk context
+- Local feedback can suggest guardrail tuning, but it never auto-tunes future runs
 - Link to synthetic, human-approved sample reports and label them clearly as synthetic examples, not real customer reports
 
 Do not add:

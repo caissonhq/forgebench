@@ -27,15 +27,20 @@ def review(context: ReviewerContext) -> SpecializedReviewerResult:
     existing_ids = {finding.id for finding in context.findings}
     source_files = _list_signal(context, "source_files_changed")
     test_files = _list_signal(context, "test_files_changed")
+    generic_mode = context.static_signals.get("config_mode") == "generic"
 
     if "implementation_without_tests" in existing_ids:
         referenced.append("implementation_without_tests")
         findings.append(
             Finding(
                 id="test_skeptic_missing_behavior_coverage",
-                title="Changed behavior lacks corresponding test coverage",
+                title=(
+                    "Changed implementation files need coverage review"
+                    if generic_mode
+                    else "Changed behavior lacks corresponding test coverage"
+                ),
                 severity=Severity.MEDIUM,
-                confidence=Confidence.MEDIUM,
+                confidence=Confidence.LOW if generic_mode else Confidence.MEDIUM,
                 evidence_type=EvidenceType.REVIEWER,
                 files=source_files,
                 evidence=[
@@ -44,10 +49,19 @@ def review(context: ReviewerContext) -> SpecializedReviewerResult:
                 ]
                 + [f"Source file changed without test coverage: {path}" for path in source_files[:8]],
                 explanation=(
-                    "The patch changes likely behavior without a corresponding test update. A serious reviewer should ask "
-                    "what regression would catch this if the agent got the behavior wrong."
+                    "The patch changes likely implementation files without a corresponding test update. "
+                    "In generic mode this is a coverage-review prompt, not proof that behavior lacks tests."
+                    if generic_mode
+                    else (
+                        "The patch changes likely behavior without a corresponding test update. A serious reviewer should ask "
+                        "what regression would catch this if the agent got the behavior wrong."
+                    )
                 ),
-                suggested_fix="Add tests covering the changed behavior and nearby regression cases.",
+                suggested_fix=(
+                    "Review whether the changed behavior needs tests, or configure repo-specific checks/guardrails if this signal is noisy."
+                    if generic_mode
+                    else "Add tests covering the changed behavior and nearby regression cases."
+                ),
                 reviewer=TEST_SKEPTIC,
                 supporting_finding_ids=["implementation_without_tests"],
             )

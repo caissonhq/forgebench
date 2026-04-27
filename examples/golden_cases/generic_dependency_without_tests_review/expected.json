@@ -1,0 +1,15 @@
+{
+  "case_name": "generic_dependency_without_tests_review",
+  "run_checks": false,
+  "expected_posture": "REVIEW",
+  "required_finding_ids": [
+    "dependency_surface_changed"
+  ],
+  "allowed_extra_finding_ids": [],
+  "forbidden_finding_ids": [
+    "deleted_tests",
+    "tests_failed"
+  ],
+  "allow_unlisted_findings": false,
+  "rationale": "In generic first-run mode, a dependency manifest change without tests should require review but not block solely from generic heuristics."
+}

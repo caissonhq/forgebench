@@ -6,7 +6,7 @@ import hashlib
 from typing import Any
 
 
-REPORT_SCHEMA_VERSION = "1.1.0"
+REPORT_SCHEMA_VERSION = "1.2.0"
 
 
 class EvidenceType(str, Enum):
@@ -544,11 +544,17 @@ class ForgeBenchReport:
     pre_llm_posture: MergePosture | None = None
     pr_checkout: PRCheckoutInfo = field(default_factory=PRCheckoutInfo)
     diff_summary: DiffSummary | None = None
+    config_mode: str = "configured"
+    guardrails_source: str | None = None
+    first_run_guidance: bool = False
 
     def to_dict(self) -> dict[str, Any]:
         pre_llm_posture = self.pre_llm_posture or self.posture
         return {
             "schema_version": REPORT_SCHEMA_VERSION,
+            "config_mode": self.config_mode,
+            "guardrails_source": self.guardrails_source,
+            "first_run_guidance": self.first_run_guidance,
             "posture": self.posture.value,
             "pre_llm_posture": pre_llm_posture.value,
             "final_posture": self.posture.value,

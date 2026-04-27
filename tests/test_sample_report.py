@@ -29,14 +29,15 @@ class SampleReportTests(unittest.TestCase):
 
                 self.assertEqual(result.report.posture.value, expected_posture)
                 self.assertEqual(committed_payload["posture"], expected_posture)
-                self.assertEqual(generated_payload["schema_version"], "1.1.0")
-                self.assertEqual(committed_payload["schema_version"], "1.1.0")
+                self.assertEqual(generated_payload["schema_version"], "1.2.0")
+                self.assertEqual(committed_payload["schema_version"], "1.2.0")
                 self.assertEqual(_normalize_report_json(generated_payload), _normalize_report_json(committed_payload))
 
     def test_sample_markdown_contains_important_sections(self) -> None:
         required_sections = [
             "# ForgeBench Merge Risk Report",
             "## Merge Posture",
+            "## Configuration Mode",
             "## Deterministic Checks",
             "## Heuristic Review Lenses",
             "## Guardrail Review",
