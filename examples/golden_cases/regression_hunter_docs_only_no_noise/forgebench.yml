@@ -1,0 +1,9 @@
+project: Regression Hunter Docs Case
+
+policy:
+  suppress_findings:
+    - finding_id: ui_copy_changed
+      paths:
+        - "README.md"
+        - "**/*.md"
+      reason: "Docs-only changes should not create copy-review noise."

@@ -1,0 +1,18 @@
+{
+  "case_name": "regression_hunter_assertion_removed_review",
+  "run_checks": false,
+  "expected_posture": "REVIEW",
+  "required_finding_ids": [
+    "tests_assertions_removed_without_replacement",
+    "regression_hunter_load_bearing_assertion_removed"
+  ],
+  "allowed_extra_finding_ids": [],
+  "forbidden_finding_ids": [
+    "deleted_tests"
+  ],
+  "required_reviewer_finding_ids": [
+    "regression_hunter_load_bearing_assertion_removed"
+  ],
+  "allow_unlisted_findings": false,
+  "rationale": "A source change plus removed assertion without replacement should produce narrow Regression Hunter review signal, not a BLOCK."
+}

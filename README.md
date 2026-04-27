@@ -395,7 +395,7 @@ forgebench review --repo . --diff ./patch.diff --task ./task.md --guardrails ./f
 
 ## Heuristic Review Lenses
 
-ForgeBench runs four deterministic Phase 1 review lenses by default. They are evidence-constrained heuristics over the task text, parsed diff, static findings, deterministic check results, and guardrails. They do not call an LLM, approve merges, assign scores, or override deterministic failures.
+ForgeBench runs deterministic Phase 1 review lenses by default. They are evidence-constrained heuristics over the task text, parsed diff, static findings, deterministic check results, and guardrails. They do not call an LLM, approve merges, assign scores, or override deterministic failures.
 
 Phase 1 review lenses are deterministic heuristics. They route attention to risk. They do not perform semantic human-level code review.
 
@@ -428,6 +428,14 @@ Sprint 6.1 calibration tightened the Phase 1 lenses around real dogfood noise:
 - Contract Keeper separates read/view-model contract changes from persistence/schema changes. Read models can still require review when their public shape changes, but they should not block as schema risk unless policy marks them high risk.
 - Scope Auditor focuses on task-scope drift, such as README-only tasks that also change code or CI/config.
 - Product / Guardrail Reviewer adds product-review framing to configured guardrail hits without claiming semantic violations unless forbidden patterns match.
+
+## Phase 2: Regression Hunter
+
+Sprint 12A adds Regression Hunter as the first narrow Phase 2 lens. It is intentionally limited: it looks for potentially load-bearing test assertion removal when the same patch also changes source files and no obvious replacement assertion is present.
+
+Regression Hunter emits `regression_hunter_load_bearing_assertion_removed`. The finding is capped at `HIGH` severity and `MEDIUM` confidence, can raise a low-concern patch to `REVIEW`, and cannot create `BLOCK` by itself.
+
+This is not broad regression detection. It does not predict arbitrary behavior regressions, review security, watch dependencies, or replace deterministic tests.
 
 ## Phase 1.5: LLM-Assisted Lenses
 
@@ -522,6 +530,21 @@ Run calibration:
 forgebench calibrate --cases examples/golden_cases
 ```
 
+The calibration output includes deterministic corpus summaries:
+
+```text
+Posture distribution:
+- BLOCK: N
+- REVIEW: N
+- LOW_CONCERN: N
+
+Top finding kinds:
+- implementation_without_tests: N
+
+Review lens fire-rate:
+- Test Skeptic: N
+```
+
 Write calibration artifacts to a specific directory:
 
 ```bash
@@ -529,6 +552,8 @@ forgebench calibrate --cases examples/golden_cases --out forgebench-calibration-
 ```
 
 Calibration is not a benchmark. It is a local product-quality regression suite for checking that ForgeBench judges realistic diffs the way a serious engineer would expect.
+
+Real anonymized AI-generated PR cases remain pending approved source material. Current Regression Hunter cases are synthetic golden cases and are not labeled as real PRs.
 
 To add a new golden case:
 
@@ -704,7 +729,8 @@ See `SITE_SYNC_NOTES.md` for the Lovable update prompt that keeps the public alp
 - The diff parser targets common local `git diff` output, not every possible patch format.
 - The guardrails parser uses PyYAML and validates the documented ForgeBench YAML shapes.
 - Guardrails v2 policy is path-pattern based. It does not interpret copy intent or program semantics.
-- Heuristic review lenses are Phase 1 deterministic heuristics only; they are not the full CAI-7 reviewer set.
+- Heuristic review lenses remain limited; Phase 1 lenses are deterministic heuristics and Regression Hunter is only the first narrow Phase 2 lens.
+- Regression Hunter is a narrow Phase 2 lens for load-bearing assertion removal only; ForgeBench does not provide broad regression detection.
 - Command execution is opt-in and limited to commands you configure locally.
 - LLM review is opt-in and advisory. The command provider can run any command you configure, so only use it with trusted local commands.
 - GitHub PR intake depends on the local `gh` CLI and network/auth state. It is not a GitHub App.

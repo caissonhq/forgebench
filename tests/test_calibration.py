@@ -6,9 +6,12 @@ import json
 import unittest
 
 from forgebench.calibration import (
+    CalibrationResult,
+    CaseResult,
     ExpectedCase,
     compare_expected,
     discover_cases,
+    format_calibration_result,
     load_case,
     run_calibration,
     validate_json_report,
@@ -149,7 +152,7 @@ class CalibrationTests(unittest.TestCase):
             result = run_calibration(GOLDEN_CASES, output_dir=Path(tmp) / "out", repo_path=ROOT)
 
         self.assertEqual(result.failed_count, 0)
-        self.assertEqual(result.passed_count, 29)
+        self.assertEqual(result.passed_count, 32)
 
     def test_cli_calibrate_command_works(self) -> None:
         with TemporaryDirectory() as tmp:
@@ -168,8 +171,11 @@ class CalibrationTests(unittest.TestCase):
             )
 
             self.assertEqual(result, 0)
-            self.assertIn("Cases: 29", stdout.getvalue())
+            self.assertIn("Cases: 32", stdout.getvalue())
             self.assertIn("Failed: 0", stdout.getvalue())
+            self.assertIn("Posture distribution:", stdout.getvalue())
+            self.assertIn("Top finding kinds:", stdout.getvalue())
+            self.assertIn("Review lens fire-rate:", stdout.getvalue())
 
     def test_cli_calibrate_returns_nonzero_when_case_fails(self) -> None:
         with TemporaryDirectory() as tmp:
@@ -208,6 +214,41 @@ class CalibrationTests(unittest.TestCase):
 
             self.assertEqual(result, 1)
             self.assertIn("FAIL bad_case", stdout.getvalue())
+
+    def test_calibration_summary_counts_are_deterministic(self) -> None:
+        result = CalibrationResult(
+            cases=[
+                CaseResult(
+                    case_name="a",
+                    passed=True,
+                    expected_posture="REVIEW",
+                    actual_posture="REVIEW",
+                    actual_finding_kinds=["z_kind", "a_kind"],
+                    review_lenses_with_findings=["Regression Hunter"],
+                ),
+                CaseResult(
+                    case_name="b",
+                    passed=True,
+                    expected_posture="LOW_CONCERN",
+                    actual_posture="LOW_CONCERN",
+                    actual_finding_kinds=["a_kind"],
+                    review_lenses_with_findings=["Test Skeptic"],
+                ),
+            ]
+        )
+
+        output = format_calibration_result(result)
+
+        self.assertIn("Posture distribution:\n- BLOCK: 0\n- REVIEW: 1\n- LOW_CONCERN: 1", output)
+        self.assertLess(output.index("- a_kind: 2"), output.index("- z_kind: 1"))
+        self.assertLess(output.index("- Regression Hunter: 1"), output.index("- Test Skeptic: 1"))
+
+    def test_calibration_summary_empty_corpus_is_clear(self) -> None:
+        output = format_calibration_result(CalibrationResult(cases=[]))
+
+        self.assertIn("Cases: 0", output)
+        self.assertIn("Top finding kinds:\n- none", output)
+        self.assertIn("Review lens fire-rate:\n- none", output)
 
 
 def _report(posture: MergePosture, finding_ids: list[str]) -> ForgeBenchReport:

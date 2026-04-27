@@ -132,6 +132,15 @@
         "findings": [],
         "referenced_finding_ids": [],
         "error_message": null
+      },
+      {
+        "reviewer_id": "regression_hunter",
+        "reviewer_name": "Regression Hunter",
+        "status": "skipped",
+        "summary": "No source file changed alongside removed test assertions.",
+        "findings": [],
+        "referenced_finding_ids": [],
+        "error_message": null
       }
     ],
     "findings": [],
@@ -140,6 +149,10 @@
         {
           "lens_id": "test_skeptic_v2",
           "reason": "No test files with added lines were present."
+        },
+        {
+          "lens_id": "regression_hunter",
+          "reason": "No source file changed alongside removed test assertions."
         }
       ],
       "llm_call_used": false
@@ -163,5 +176,5 @@
     "kept": false,
     "cleanup_error": null
   },
-  "generated_at": "2026-04-27T00:56:16+00:00"
+  "generated_at": "2026-04-27T02:09:13+00:00"
 }

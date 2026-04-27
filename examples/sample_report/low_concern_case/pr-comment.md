@@ -22,6 +22,7 @@ Heuristic review lenses:
 - Contract Keeper: no additional concern
 - Product / Guardrail Reviewer: no additional concern
 - Test Skeptic v2: no additional concern
+- Regression Hunter: no additional concern
 
 LLM review:
 - Not run.

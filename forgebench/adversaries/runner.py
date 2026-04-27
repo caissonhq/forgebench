@@ -3,7 +3,7 @@ from __future__ import annotations
 from collections.abc import Callable
 
 from forgebench.adversaries.contract_keeper import review as contract_keeper_review
-from forgebench.adversaries.lenses import test_skeptic_v2
+from forgebench.adversaries.lenses import regression_hunter, test_skeptic_v2
 from forgebench.adversaries.models import ReviewerContext
 from forgebench.adversaries.product_guardrail_reviewer import review as product_guardrail_review
 from forgebench.adversaries.scope_auditor import review as scope_auditor_review
@@ -55,6 +55,18 @@ def run_specialized_reviewers(
     if skip_reason:
         skipped_lenses.append({"lens_id": test_skeptic_v2.LENS_ID, "reason": skip_reason})
     llm_call_used = llm_call_used or lens_used_call
+
+    lens_result, lens_used_call, skip_reason = _run_regression_hunter(
+        context,
+        llm_config,
+        allow_llm_call=not llm_call_used,
+    )
+    if lens_result is not None:
+        results.append(lens_result)
+    if skip_reason:
+        skipped_lenses.append({"lens_id": regression_hunter.LENS_ID, "reason": skip_reason})
+    llm_call_used = llm_call_used or lens_used_call
+
     findings = [finding for result in results for finding in result.findings]
     return SpecializedReviewReport(
         enabled=True,
@@ -113,3 +125,29 @@ def _skipped_lens(reason: str) -> SpecializedReviewerResult:
         findings=[],
         referenced_finding_ids=[],
     )
+
+
+def _run_regression_hunter(
+    context: ReviewerContext,
+    llm_config: LLMReviewerConfig | None,
+    *,
+    allow_llm_call: bool,
+) -> tuple[SpecializedReviewerResult | None, bool, str | None]:
+    try:
+        result, used_call = regression_hunter.run(context, llm_config, allow_llm_call=allow_llm_call)
+    except Exception as exc:  # pragma: no cover - defensive boundary
+        return (
+            SpecializedReviewerResult(
+                reviewer_id=regression_hunter.LENS_ID,
+                reviewer_name=regression_hunter.REVIEWER_NAME,
+                status=SpecializedReviewerStatus.FAILED,
+                summary="Regression Hunter failed before producing findings.",
+                findings=[],
+                referenced_finding_ids=[],
+                error_message=str(exc),
+            ),
+            False,
+            None,
+        )
+    skip_reason = result.summary if result.status == SpecializedReviewerStatus.SKIPPED else None
+    return result, used_call, skip_reason

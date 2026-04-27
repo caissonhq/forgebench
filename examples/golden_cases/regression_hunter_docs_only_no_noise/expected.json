@@ -1,0 +1,18 @@
+{
+  "case_name": "regression_hunter_docs_only_no_noise",
+  "run_checks": false,
+  "expected_posture": "LOW_CONCERN",
+  "required_finding_ids": [],
+  "allowed_extra_finding_ids": [],
+  "forbidden_finding_ids": [
+    "implementation_without_tests",
+    "deleted_tests",
+    "tests_assertions_removed_without_replacement",
+    "regression_hunter_load_bearing_assertion_removed"
+  ],
+  "forbidden_reviewer_finding_ids": [
+    "regression_hunter_load_bearing_assertion_removed"
+  ],
+  "allow_unlisted_findings": false,
+  "rationale": "Docs-only changes should not trigger Regression Hunter."
+}

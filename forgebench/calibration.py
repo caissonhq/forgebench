@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from collections import Counter
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -55,6 +56,8 @@ class CaseResult:
     artifact_errors: list[str] = field(default_factory=list)
     error_message: str | None = None
     report_path: Path | None = None
+    actual_finding_kinds: list[str] = field(default_factory=list)
+    review_lenses_with_findings: list[str] = field(default_factory=list)
 
 
 @dataclass(frozen=True)
@@ -68,6 +71,29 @@ class CalibrationResult:
     @property
     def failed_count(self) -> int:
         return sum(1 for case in self.cases if not case.passed)
+
+    @property
+    def posture_distribution(self) -> dict[str, int]:
+        counts = Counter(case.actual_posture for case in self.cases if case.actual_posture)
+        return {
+            "BLOCK": counts.get("BLOCK", 0),
+            "REVIEW": counts.get("REVIEW", 0),
+            "LOW_CONCERN": counts.get("LOW_CONCERN", 0),
+        }
+
+    @property
+    def finding_kind_counts(self) -> dict[str, int]:
+        counts: Counter[str] = Counter()
+        for case in self.cases:
+            counts.update(case.actual_finding_kinds)
+        return _sorted_count_dict(counts)
+
+    @property
+    def review_lens_counts(self) -> dict[str, int]:
+        counts: Counter[str] = Counter()
+        for case in self.cases:
+            counts.update(case.review_lenses_with_findings)
+        return _sorted_count_dict(counts)
 
 
 def discover_cases(cases_dir: str | Path) -> list[GoldenCase]:
@@ -154,6 +180,12 @@ def compare_expected(report: ForgeBenchReport, expected: ExpectedCase) -> CaseRe
         missing_required_reviewers=missing_reviewers,
         missing_required_reviewer_findings=missing_reviewer_findings,
         forbidden_reviewer_findings_present=forbidden_reviewer_findings,
+        actual_finding_kinds=[str(finding.kind or finding.id) for finding in report.findings],
+        review_lenses_with_findings=[
+            result.reviewer_name
+            for result in report.specialized_reviewers.results
+            if result.findings
+        ],
     )
 
 
@@ -241,6 +273,17 @@ def format_calibration_result(result: CalibrationResult) -> str:
         f"Passed: {result.passed_count}",
         f"Failed: {result.failed_count}",
         "",
+        "Posture distribution:",
+        f"- BLOCK: {result.posture_distribution['BLOCK']}",
+        f"- REVIEW: {result.posture_distribution['REVIEW']}",
+        f"- LOW_CONCERN: {result.posture_distribution['LOW_CONCERN']}",
+        "",
+        "Top finding kinds:",
+        *_format_count_lines(result.finding_kind_counts),
+        "",
+        "Review lens fire-rate:",
+        *_format_count_lines(result.review_lens_counts),
+        "",
     ]
     for case in result.cases:
         lines.append(("PASS " if case.passed else "FAIL ") + case.case_name)
@@ -279,6 +322,16 @@ def _run_case(case: GoldenCase, repo_path: Path, output_root: Path) -> CaseResul
     comparison.report_path = review_result.written_paths["markdown"]
     comparison.passed = comparison.passed and not artifact_errors
     return comparison
+
+
+def _sorted_count_dict(counts: Counter[str]) -> dict[str, int]:
+    return dict(sorted(counts.items(), key=lambda item: (-item[1], item[0])))
+
+
+def _format_count_lines(counts: dict[str, int]) -> list[str]:
+    if not counts:
+        return ["- none"]
+    return [f"- {name}: {count}" for name, count in counts.items()]
 
 
 def _load_expected(path: Path) -> ExpectedCase:

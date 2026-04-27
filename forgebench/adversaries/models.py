@@ -18,6 +18,7 @@ SCOPE_AUDITOR = "scope_auditor"
 TEST_SKEPTIC = "test_skeptic"
 CONTRACT_KEEPER = "contract_keeper"
 PRODUCT_GUARDRAIL_REVIEWER = "product_guardrail_reviewer"
+REGRESSION_HUNTER = "regression_hunter"
 
 
 @dataclass(frozen=True)
@@ -35,6 +36,7 @@ class ReviewerContext:
 __all__ = [
     "CONTRACT_KEEPER",
     "PRODUCT_GUARDRAIL_REVIEWER",
+    "REGRESSION_HUNTER",
     "ReviewerContext",
     "SCOPE_AUDITOR",
     "TEST_SKEPTIC",

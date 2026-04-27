@@ -1,0 +1,20 @@
+diff --git a/src/payments.py b/src/payments.py
+index 1111111..2222222 100644
+--- a/src/payments.py
++++ b/src/payments.py
+@@ -1,2 +1,4 @@
+ def status(payment):
+-    return "paid" if payment.get("paid") else "unpaid"
++    if payment.get("paid") or payment.get("settled"):
++        return "paid"
++    return "unpaid"
+diff --git a/tests/test_payments.py b/tests/test_payments.py
+index 1111111..2222222 100644
+--- a/tests/test_payments.py
++++ b/tests/test_payments.py
+@@ -1,5 +1,4 @@
+ from src.payments import status
+ 
+ def test_paid_status():
+-    assert status({"paid": True}) == "paid"
+     assert status({"paid": False}) == "unpaid"

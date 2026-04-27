@@ -19,11 +19,12 @@ ForgeBench does not prove code is safe. It highlights merge risk before AI-gener
   - Contract Keeper
   - Product / Guardrail Reviewer
 - Phase 1.5 Test Skeptic v2 LLM-assisted lens, gated by deterministic weak-test triggers and `--llm-review`.
+- Narrow Phase 2 Regression Hunter lens for potentially load-bearing assertion removal.
 - Optional evidence-constrained LLM review through a local command provider.
 - Markdown report, JSON report, repair prompt, and PR-comment-ready summary.
 - Stable finding UIDs for local dogfood feedback.
 - Local-only feedback logging and dogfood feedback summaries.
-- Golden corpus calibration.
+- Golden corpus calibration with posture distribution, finding-kind counts, and review-lens fire-rate summaries.
 - Synthetic, human-approved sample reports for first-run UX.
 
 ## Evidence Hierarchy
@@ -59,6 +60,10 @@ Product / Guardrail Reviewer checks configured protected behavior, forbidden pat
 
 Test Skeptic v2 is an opt-in LLM-assisted lens. It runs only when deterministic triggers show source changes plus tests with added lines but no common assertion tokens. Its findings are advisory, capped at medium severity/confidence, and cannot block merge by themselves.
 
+## Phase 2 Review Lenses
+
+Regression Hunter is the first narrow Phase 2 lens. It only checks for potentially load-bearing assertion removal when source files also change and no obvious replacement assertion is present. It does not perform broad regression detection.
+
 ## Deliberate Non-Goals
 
 - No hosted service.
@@ -78,9 +83,11 @@ Test Skeptic v2 is an opt-in LLM-assisted lens. It runs only when deterministic 
 - Phase 1 review lenses are calibrated heuristics, not the full CAI-7 reviewer set.
 - `review-pr --run-checks` needs `--checkout-pr` to run checks against the PR worktree.
 - Optional LLM review is command-provider only and advisory.
-- LLM-assisted lenses are limited to Test Skeptic v2 and require `--llm-review`.
+- LLM-assisted lenses are limited to Test Skeptic v2 and optional Regression Hunter refinement when `--llm-review` is configured.
 - The GitHub Action wrapper packages the local CLI for workflows. It is not a hosted GitHub App.
 - Real anonymized sample reports are still required before broader public beta. Sprint 8 includes synthetic sample reports for first-run UX only.
+- Real anonymized PR corpus remains blocked pending approved source material. Sprint 12A implements the Regression Hunter lens and calibration summary only.
+- Current golden corpus count: 32 synthetic or fixture-based cases, 0 real anonymized PR cases.
 - Feedback is local-only and useful for alpha dogfood, but ForgeBench does not aggregate or upload feedback anywhere.
 
 ## Required Before CAI-5 Done
@@ -95,7 +102,7 @@ Test Skeptic v2 is an opt-in LLM-assisted lens. It runs only when deterministic 
 
 - Security Reviewer.
 - Dependency Watcher as a standalone reviewer.
-- Regression Hunter.
+- Broader regression analysis beyond load-bearing assertion removal.
 - Repo Convention Reviewer.
 - Any fuller reviewer/persona system.
 

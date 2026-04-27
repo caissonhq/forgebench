@@ -79,8 +79,16 @@ Phase 1 review lenses are deterministic heuristics. They route attention to risk
 - Findings:
   - None.
 
+### Regression Hunter
+
+- Status: skipped
+- Summary: No source file changed alongside removed test assertions.
+- Findings:
+  - None.
+
 Skipped LLM-assisted lenses:
 - test_skeptic_v2: No test files with added lines were present.
+- regression_hunter: No source file changed alongside removed test assertions.
 
 
 ## LLM Review
