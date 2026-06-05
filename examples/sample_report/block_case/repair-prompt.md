@@ -12,6 +12,16 @@ BLOCK
 
 Do not proceed to merge until these issues are addressed.
 
+Review context:
+- Changed files in scope: 1
+- Finding count: 3 (HIGH=2, MEDIUM=1)
+- Top changed files: db/migrations/20260426_add_payment_receipts.sql
+
+Repair priority:
+1. HIGH: High-risk project area changed (db/migrations/20260426_add_payment_receipts.sql)
+2. HIGH: Persistence or schema behavior may have changed (db/migrations/20260426_add_payment_receipts.sql)
+3. MEDIUM: Patch touches protected product or architecture behavior (db/migrations/20260426_add_payment_receipts.sql)
+
 Deterministic check failures:
 - Deterministic checks were not run.
 
@@ -130,6 +140,17 @@ LLM reviewer notes:
 
 Suppressed or policy-calibrated findings:
 - None.
+
+Reviewer summaries:
+- Scope Auditor: No additional scope concern found from task text and changed files.
+- Test Skeptic: No additional test coverage concern found.
+- Contract Keeper: Contract risk is already represented by existing static findings.
+- Product / Guardrail Reviewer: Found guardrail-related review concerns grounded in configured project policy. (1 finding(s))
+- Security Reviewer: No secret or dangerous-import signals detected in added lines.
+- Dependency Watcher: No dependency manifest changes detected.
+- Repo Convention Reviewer: No repo convention concerns detected.
+- Test Skeptic v2: No test files with added lines were present.
+- Regression Hunter: No source file changed alongside removed test assertions.
 
 Instructions:
 - Fix only the issues listed above.

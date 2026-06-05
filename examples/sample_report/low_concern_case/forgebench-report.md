@@ -75,6 +75,20 @@ Phase 1 review lenses are deterministic heuristics. They route attention to risk
 - Findings:
   - None.
 
+### Dependency Watcher
+
+- Status: completed
+- Summary: No dependency manifest changes detected.
+- Findings:
+  - None.
+
+### Repo Convention Reviewer
+
+- Status: completed
+- Summary: No repo convention concerns detected.
+- Findings:
+  - None.
+
 ### Test Skeptic v2
 
 - Status: skipped

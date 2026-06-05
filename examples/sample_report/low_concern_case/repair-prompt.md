@@ -12,6 +12,14 @@ LOW_CONCERN
 
 No required repair was identified. Use this only to tighten tests or advisory concerns.
 
+Review context:
+- Changed files in scope: 1
+- Finding count: 0 (none)
+- Top changed files: README.md
+
+Repair priority:
+- No required repairs identified.
+
 Deterministic check failures:
 - Deterministic checks were not run.
 
@@ -27,6 +35,17 @@ LLM reviewer notes:
 Suppressed or policy-calibrated findings:
 - ui_copy_changed was suppressed by policy.suppress_findings[0].paths: Docs-only copy changes are advisory in this sample. Do not repair this unless the policy is wrong.
 - Merge posture was capped at LOW_CONCERN: Docs-only changes should not escalate unless a blocker is present.
+
+Reviewer summaries:
+- Scope Auditor: No additional scope concern found from task text and changed files.
+- Test Skeptic: No additional test coverage concern found.
+- Contract Keeper: No additional contract-surface concern found.
+- Product / Guardrail Reviewer: No additional product or guardrail concern found.
+- Security Reviewer: No secret or dangerous-import signals detected in added lines.
+- Dependency Watcher: No dependency manifest changes detected.
+- Repo Convention Reviewer: No repo convention concerns detected.
+- Test Skeptic v2: No test files with added lines were present.
+- Regression Hunter: No source file changed alongside removed test assertions.
 
 Instructions:
 - Fix only the issues listed above.

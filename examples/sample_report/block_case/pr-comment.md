@@ -21,6 +21,9 @@ Heuristic review lenses:
 - Test Skeptic: no additional concern
 - Contract Keeper: no additional concern
 - Product / Guardrail Reviewer: Patch touches protected product or architecture behavior
+- Security Reviewer: no additional concern
+- Dependency Watcher: no additional concern
+- Repo Convention Reviewer: no additional concern
 - Test Skeptic v2: no additional concern
 - Regression Hunter: no additional concern
 

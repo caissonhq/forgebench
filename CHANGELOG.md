@@ -13,6 +13,7 @@
 - EO-004 (LLM provider): OpenAI-compatible built-in LLM provider (`--llm-provider openai`, `FORGEBENCH_LLM_API_KEY`), and `FORGEBENCH_LLM_COMMAND` default for command provider.
 - EO-004 (reviewers): Dependency Watcher v0, Repo Convention Reviewer, and improved Test Skeptic with setup-only and paired-test-path signals.
 - EO-004 (path filter): Monorepo `review_scope` include/exclude path filters with package-root detection hints.
+- EO-004 (repair prompt): Richer repair prompts with review context, repair priority, reviewer summaries, and diff hunk context.
 - EO-003: Production hardening and CI polish — SARIF output, GitHub Check Run annotations (`review-pr --check-run`), `forgebench validate`, Security Reviewer v0, trust model docs, and EO-002 generic-mode noise fixes.
 - EO-002: Dogfooded 10 real agent PRs; added `dogfood_runs/eo002-2026-06-05/`, 10 golden cases, and `examples/real_reports/` anonymized artifacts.
 - Sprint 12A: Bumped package version to `0.8.0`, added the narrow Regression Hunter lens for potentially load-bearing assertion removal, added synthetic Regression Hunter golden cases, and added calibration posture/finding/lens summaries. Real anonymized PR corpus work remains blocked pending approved source material.

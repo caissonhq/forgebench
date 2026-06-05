@@ -27,6 +27,12 @@
     "generated_or_unrelated_files_changed": [],
     "ui_or_copy_files_changed": [],
     "binary_files_changed": [],
+    "path_filter_active": false,
+    "path_filter_included_count": 1,
+    "path_filter_excluded_count": 0,
+    "path_filter_excluded_paths": [],
+    "monorepo_packages_detected": [],
+    "monorepo_hint": null,
     "config_mode": "configured"
   },
   "guardrail_hits": [],
@@ -138,6 +144,24 @@
         "error_message": null
       },
       {
+        "reviewer_id": "dependency_watcher",
+        "reviewer_name": "Dependency Watcher",
+        "status": "completed",
+        "summary": "No dependency manifest changes detected.",
+        "findings": [],
+        "referenced_finding_ids": [],
+        "error_message": null
+      },
+      {
+        "reviewer_id": "repo_convention_reviewer",
+        "reviewer_name": "Repo Convention Reviewer",
+        "status": "completed",
+        "summary": "No repo convention concerns detected.",
+        "findings": [],
+        "referenced_finding_ids": [],
+        "error_message": null
+      },
+      {
         "reviewer_id": "test_skeptic_v2",
         "reviewer_name": "Test Skeptic v2",
         "status": "skipped",
@@ -189,5 +213,5 @@
     "kept": false,
     "cleanup_error": null
   },
-  "generated_at": "2026-06-05T22:28:37+00:00"
+  "generated_at": "2026-06-05T22:39:26+00:00"
 }

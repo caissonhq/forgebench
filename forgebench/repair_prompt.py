@@ -48,6 +48,12 @@ def _render_repair_prompt(
         "",
         _posture_instruction(report),
         "",
+        "Review context:",
+        *_format_review_context(report),
+        "",
+        "Repair priority:",
+        *_format_repair_priority(report, omitted_keys),
+        "",
     ]
     if report.config_mode == "generic":
         lines.extend(
@@ -84,6 +90,13 @@ def _render_repair_prompt(
     lines.extend(["", "Suppressed or policy-calibrated findings:"])
     lines.extend(_format_policy_notes(report))
 
+    lines.extend(["", "Reviewer summaries:"])
+    lines.extend(_format_reviewer_summaries(report))
+
+    if guardrails.forbidden_patterns:
+        lines.extend(["", "Forbidden patterns (do not introduce):"])
+        lines.extend(f"- {pattern}" for pattern in guardrails.forbidden_patterns[:12])
+
     lines.extend(
         [
             "",
@@ -110,6 +123,78 @@ def _render_repair_prompt(
 
     lines.append("")
     return "\n".join(lines)
+
+
+def _format_review_context(report: ForgeBenchReport) -> list[str]:
+    signals = report.static_signals
+    lines = [
+        f"- Changed files in scope: {len(report.changed_files)}",
+        f"- Finding count: {len(report.findings)} ({_severity_counts(report)})",
+    ]
+    if signals.get("path_filter_active"):
+        excluded = signals.get("path_filter_excluded_count", 0)
+        lines.append(f"- Path filter active: {signals.get('path_filter_included_count', 0)} included, {excluded} excluded.")
+        excluded_paths = signals.get("path_filter_excluded_paths") or []
+        if excluded_paths:
+            lines.append("- Excluded paths: " + ", ".join(excluded_paths[:8]))
+    monorepo_hint = signals.get("monorepo_hint")
+    if monorepo_hint:
+        lines.append(f"- Monorepo note: {monorepo_hint}")
+    if report.changed_files:
+        lines.append("- Top changed files: " + ", ".join(report.changed_files[:12]))
+    return lines
+
+
+def _format_repair_priority(
+    report: ForgeBenchReport,
+    omitted_keys: set[tuple[str, tuple[str, ...], str | None]],
+) -> list[str]:
+    ordered = [
+        finding
+        for finding in report.findings
+        if _finding_key(finding) not in omitted_keys
+    ]
+    severity_order = {
+        Severity.BLOCKER: 0,
+        Severity.HIGH: 1,
+        Severity.MEDIUM: 2,
+        Severity.LOW: 3,
+        Severity.ADVISORY: 4,
+    }
+    ordered.sort(key=lambda finding: (severity_order.get(finding.severity, 99), finding.id))
+    if not ordered:
+        return ["- No required repairs identified."]
+    lines: list[str] = []
+    for index, finding in enumerate(ordered[:12], start=1):
+        files = ", ".join(finding.files[:2]) if finding.files else "unknown"
+        lines.append(f"{index}. {finding.severity.value}: {finding.title} ({files})")
+    if len(ordered) > 12:
+        lines.append(f"- ...and {len(ordered) - 12} more findings.")
+    return lines
+
+
+def _severity_counts(report: ForgeBenchReport) -> str:
+    counts: dict[str, int] = {}
+    for finding in report.findings:
+        counts[finding.severity.value] = counts.get(finding.severity.value, 0) + 1
+    if not counts:
+        return "none"
+    order = ["BLOCKER", "HIGH", "MEDIUM", "LOW", "ADVISORY"]
+    return ", ".join(f"{severity}={counts[severity]}" for severity in order if severity in counts)
+
+
+def _format_reviewer_summaries(report: ForgeBenchReport) -> list[str]:
+    reviewers = report.specialized_reviewers
+    if not reviewers.enabled or not reviewers.results:
+        return ["- Heuristic review lenses were not run."]
+    lines: list[str] = []
+    for result in reviewers.results:
+        finding_count = len(result.findings)
+        if finding_count:
+            lines.append(f"- {result.reviewer_name}: {result.summary} ({finding_count} finding(s))")
+        else:
+            lines.append(f"- {result.reviewer_name}: {result.summary}")
+    return lines
 
 
 def _posture_instruction(report: ForgeBenchReport) -> str:
