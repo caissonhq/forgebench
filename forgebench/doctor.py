@@ -33,13 +33,15 @@ class DoctorReport:
     def exit_code(self) -> int:
         if any(check.status == DoctorStatus.FAIL for check in self.checks):
             return 2
-        if any(check.status == DoctorStatus.WARN for check in self.checks):
-            return 1
         return 0
 
     @property
     def ready(self) -> bool:
-        return self.exit_code == 0
+        return not any(check.status == DoctorStatus.FAIL for check in self.checks)
+
+    @property
+    def has_warnings(self) -> bool:
+        return any(check.status == DoctorStatus.WARN for check in self.checks)
 
 
 def run_doctor(repo_path: str | Path | None = None) -> DoctorReport:
@@ -69,14 +71,16 @@ def format_doctor_report(report: DoctorReport) -> str:
         if check.fix_hint and check.status != DoctorStatus.OK:
             lines.append(f"       fix: {check.fix_hint}")
     lines.append("")
-    if report.ready:
+    if not report.ready:
+        lines.append("Fix failed checks before relying on ForgeBench in CI or PR review.")
+    elif report.has_warnings:
+        lines.append("Core install looks usable. Address warnings before GitHub PR review.")
+        lines.append("Next: forgebench review --repo . --diff ./patch.diff --task ./task.md")
+        lines.append("      forgebench review-pr PR_URL   # requires gh auth")
+    else:
         lines.append("Ready for a first local review.")
         lines.append("Next: forgebench review-pr PR_URL")
         lines.append("      forgebench init --repo . --out forgebench.yml")
-    elif report.exit_code == 1:
-        lines.append("Core install looks usable. Address warnings before GitHub PR review.")
-    else:
-        lines.append("Fix failed checks before relying on ForgeBench in CI or PR review.")
     return "\n".join(lines)
 
 

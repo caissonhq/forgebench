@@ -27,7 +27,10 @@ class DoctorTests(unittest.TestCase):
 
         self.assertIn("ForgeBench doctor", text)
         self.assertIn("0.9.0", text)
-        self.assertIn("forgebench review-pr PR_URL", text)
+        if report.has_warnings:
+            self.assertIn("forgebench review --repo", text)
+        else:
+            self.assertIn("forgebench review-pr PR_URL", text)
 
     def test_cli_doctor_exits_zero_when_core_checks_pass(self) -> None:
         stdout = StringIO()
@@ -36,6 +39,12 @@ class DoctorTests(unittest.TestCase):
 
         self.assertEqual(result, 0)
         self.assertIn("ForgeBench doctor", stdout.getvalue())
+
+    def test_doctor_warn_does_not_change_exit_code(self) -> None:
+        report = run_doctor(repo_path=Path.cwd())
+        if not report.has_warnings:
+            self.skipTest("no warnings in this environment")
+        self.assertEqual(report.exit_code, 0)
 
     def test_cli_doctor_fails_when_python_version_too_old(self) -> None:
         stdout = StringIO()
