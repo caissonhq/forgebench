@@ -1,0 +1,15 @@
+{
+  "case_name": "dogfood_codex_autocomplete_broad_review",
+  "run_checks": false,
+  "expected_posture": "REVIEW",
+  "required_finding_ids": [
+    "broad_file_surface"
+  ],
+  "allowed_extra_finding_ids": [],
+  "forbidden_finding_ids": [
+    "deleted_tests",
+    "forbidden_pattern_added"
+  ],
+  "allow_unlisted_findings": true,
+  "rationale": "Real Codex workspace skill autocomplete fix across many files; broad surface REVIEW is appropriate."
+}

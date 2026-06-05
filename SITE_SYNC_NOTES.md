@@ -44,6 +44,11 @@ Keep the current CLI alpha framing:
 - Repair prompts now include relevant diff hunk context
 - Local feedback can suggest guardrail tuning, but it never auto-tunes future runs
 - Link to synthetic, human-approved sample reports and label them clearly as synthetic examples, not real customer reports
+- Add a "Real anonymized reports" section linking to three EO-002 examples (redacted paths/authors):
+  - `agent_env_secret_cleanup_low_concern` → LOW_CONCERN, Codex security/env cleanup with tests
+  - `agent_docs_scope_review` → REVIEW, Codex docs task with Scope Auditor + Test Skeptic
+  - `monorepo_effect_refactor_review` → REVIEW, Cursor broad refactor with dependency/broad-surface signals
+- Publish metrics callout from EO-002: ~63% labeled false-positive rate in generic mode (mostly `ui_copy_changed` on markdown PRs); reviewers fired on 3/10 PRs
 
 Do not add:
 - hosted SaaS claims

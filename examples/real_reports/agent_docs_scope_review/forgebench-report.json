@@ -1,0 +1,343 @@
+{
+  "schema_version": "1.2.0",
+  "config_mode": "generic",
+  "guardrails_source": null,
+  "first_run_guidance": true,
+  "posture": "REVIEW",
+  "pre_llm_posture": "REVIEW",
+  "final_posture": "REVIEW",
+  "summary": "Review before merge. Multiple static signals indicate risk even though ForgeBench did not find a deterministic blocker. Deterministic checks were not run.",
+  "task_summary": "GitHub PR Review PR: https://github.com/example-org/agent-plugin/pull/5 Title: [codex] clarify Codex Hyperflow invocation Body: ## Summary - Clarifies that Codex App/CLI does not expose a bare `/hyperflow` root sl...",
+  "changed_files": [
+    "README.md",
+    "docs/installation.html",
+    "docs/installation.md",
+    "scripts/validate-plugin.py"
+  ],
+  "findings": [
+    {
+      "id": "implementation_without_tests",
+      "uid": "fnd_0e9268b39393",
+      "kind": "implementation_without_tests",
+      "title": "Changed implementation files without test changes",
+      "severity": "MEDIUM",
+      "confidence": "MEDIUM",
+      "evidence_type": "STATIC",
+      "files": [
+        "scripts/validate-plugin.py"
+      ],
+      "evidence": [
+        "Implementation file changed without a likely test file: scripts/validate-plugin.py",
+        "Generic mode: this signal may be noisy when tests live outside the changed paths or were not required by the task."
+      ],
+      "reviewer": null,
+      "supporting_finding_ids": [],
+      "explanation": "The patch changes likely implementation files, but no likely test files changed. In generic mode this is a review signal, not proof that coverage is missing; some repos organize tests separately or rely on configured checks.",
+      "suggested_fix": "Review whether the changed behavior needs tests. If the signal is noisy for this repo, run forgebench init and tune guardrails or checks."
+    },
+    {
+      "id": "ui_copy_changed",
+      "uid": "fnd_1c3f7df87d11",
+      "kind": "ui_copy_changed",
+      "title": "User-facing copy or UI surface changed",
+      "severity": "ADVISORY",
+      "confidence": "LOW",
+      "evidence_type": "STATIC",
+      "files": [
+        "README.md",
+        "docs/installation.html",
+        "docs/installation.md"
+      ],
+      "evidence": [
+        "Likely user-facing, documentation, or UI file changed: README.md",
+        "Likely user-facing, documentation, or UI file changed: docs/installation.html",
+        "Likely user-facing, documentation, or UI file changed: docs/installation.md"
+      ],
+      "reviewer": null,
+      "supporting_finding_ids": [],
+      "explanation": "The patch touches files that often affect user-facing copy, documentation, or UI. This is not automatically a defect, but it deserves product review when relevant.",
+      "suggested_fix": "Review the changed UI or copy for accuracy, tone, and unintended product behavior."
+    },
+    {
+      "id": "scope_auditor_task_scope_expansion",
+      "uid": "fnd_1bba588b56e6",
+      "kind": "scope_auditor_task_scope_expansion",
+      "title": "Patch changes files outside the apparent task scope",
+      "severity": "MEDIUM",
+      "confidence": "MEDIUM",
+      "evidence_type": "REVIEWER",
+      "files": [
+        "scripts/validate-plugin.py"
+      ],
+      "evidence": [
+        "Task text appears documentation/copy-only.",
+        "Patch also changes implementation, dependency, configuration, or persistence files.",
+        "Out-of-scope file changed: scripts/validate-plugin.py"
+      ],
+      "reviewer": "scope_auditor",
+      "supporting_finding_ids": [
+        "implementation_without_tests"
+      ],
+      "explanation": "The task appears limited to documentation, copy, typo, or comment changes, but the patch also changes files that can affect runtime, build, dependency, or data behavior.",
+      "suggested_fix": "Confirm these changes were intentionally requested or split unrelated changes into a separate patch."
+    },
+    {
+      "id": "test_skeptic_missing_behavior_coverage",
+      "uid": "fnd_4923e95aa072",
+      "kind": "test_skeptic_missing_behavior_coverage",
+      "title": "Changed implementation files need coverage review",
+      "severity": "MEDIUM",
+      "confidence": "LOW",
+      "evidence_type": "REVIEWER",
+      "files": [
+        "scripts/validate-plugin.py"
+      ],
+      "evidence": [
+        "Static finding implementation_without_tests is present.",
+        "No likely test file changed with the source behavior change.",
+        "Source file changed without test coverage: scripts/validate-plugin.py"
+      ],
+      "reviewer": "test_skeptic",
+      "supporting_finding_ids": [
+        "implementation_without_tests"
+      ],
+      "explanation": "The patch changes likely implementation files without a corresponding test update. In generic mode this is a coverage-review prompt, not proof that behavior lacks tests.",
+      "suggested_fix": "Review whether the changed behavior needs tests, or configure repo-specific checks/guardrails if this signal is noisy."
+    }
+  ],
+  "static_signals": {
+    "changed_file_count": 4,
+    "added_line_count": 15,
+    "deleted_line_count": 13,
+    "source_files_changed": [
+      "scripts/validate-plugin.py"
+    ],
+    "test_files_changed": [],
+    "tests_changed": false,
+    "deleted_test_files": [],
+    "weakened_test_files": [],
+    "dependency_files_changed": [],
+    "build_or_config_files_changed": [],
+    "persistence_or_schema_files_changed": [],
+    "generated_or_unrelated_files_changed": [],
+    "ui_or_copy_files_changed": [
+      "README.md",
+      "docs/installation.html",
+      "docs/installation.md"
+    ],
+    "binary_files_changed": [],
+    "config_mode": "generic"
+  },
+  "guardrail_hits": [],
+  "deterministic_checks": {
+    "run_requested": false,
+    "results": [],
+    "summary": {
+      "passed": 0,
+      "failed": 0,
+      "timed_out": 0,
+      "skipped": 0,
+      "not_configured": 0,
+      "errors": 0
+    }
+  },
+  "policy": {
+    "active_categories": [],
+    "finding_adjustments": [],
+    "suppressed_findings": [],
+    "posture_ceiling": null,
+    "posture_ceiling_reason": null,
+    "posture_ceiling_rule": null
+  },
+  "specialized_reviewers": {
+    "enabled": true,
+    "results": [
+      {
+        "reviewer_id": "scope_auditor",
+        "reviewer_name": "Scope Auditor",
+        "status": "completed",
+        "summary": "Found task-scope drift that should be reviewed before merge.",
+        "findings": [
+          {
+            "id": "scope_auditor_task_scope_expansion",
+            "uid": "fnd_1bba588b56e6",
+            "kind": "scope_auditor_task_scope_expansion",
+            "title": "Patch changes files outside the apparent task scope",
+            "severity": "MEDIUM",
+            "confidence": "MEDIUM",
+            "evidence_type": "REVIEWER",
+            "files": [
+              "scripts/validate-plugin.py"
+            ],
+            "evidence": [
+              "Task text appears documentation/copy-only.",
+              "Patch also changes implementation, dependency, configuration, or persistence files.",
+              "Out-of-scope file changed: scripts/validate-plugin.py"
+            ],
+            "reviewer": "scope_auditor",
+            "supporting_finding_ids": [
+              "implementation_without_tests"
+            ],
+            "explanation": "The task appears limited to documentation, copy, typo, or comment changes, but the patch also changes files that can affect runtime, build, dependency, or data behavior.",
+            "suggested_fix": "Confirm these changes were intentionally requested or split unrelated changes into a separate patch."
+          }
+        ],
+        "referenced_finding_ids": [
+          "implementation_without_tests"
+        ],
+        "error_message": null
+      },
+      {
+        "reviewer_id": "test_skeptic",
+        "reviewer_name": "Test Skeptic",
+        "status": "completed",
+        "summary": "Found test coverage concerns for the changed behavior.",
+        "findings": [
+          {
+            "id": "test_skeptic_missing_behavior_coverage",
+            "uid": "fnd_4923e95aa072",
+            "kind": "test_skeptic_missing_behavior_coverage",
+            "title": "Changed implementation files need coverage review",
+            "severity": "MEDIUM",
+            "confidence": "LOW",
+            "evidence_type": "REVIEWER",
+            "files": [
+              "scripts/validate-plugin.py"
+            ],
+            "evidence": [
+              "Static finding implementation_without_tests is present.",
+              "No likely test file changed with the source behavior change.",
+              "Source file changed without test coverage: scripts/validate-plugin.py"
+            ],
+            "reviewer": "test_skeptic",
+            "supporting_finding_ids": [
+              "implementation_without_tests"
+            ],
+            "explanation": "The patch changes likely implementation files without a corresponding test update. In generic mode this is a coverage-review prompt, not proof that behavior lacks tests.",
+            "suggested_fix": "Review whether the changed behavior needs tests, or configure repo-specific checks/guardrails if this signal is noisy."
+          }
+        ],
+        "referenced_finding_ids": [
+          "implementation_without_tests"
+        ],
+        "error_message": null
+      },
+      {
+        "reviewer_id": "contract_keeper",
+        "reviewer_name": "Contract Keeper",
+        "status": "completed",
+        "summary": "No additional contract-surface concern found.",
+        "findings": [],
+        "referenced_finding_ids": [],
+        "error_message": null
+      },
+      {
+        "reviewer_id": "product_guardrail_reviewer",
+        "reviewer_name": "Product / Guardrail Reviewer",
+        "status": "completed",
+        "summary": "No additional product or guardrail concern found.",
+        "findings": [],
+        "referenced_finding_ids": [],
+        "error_message": null
+      },
+      {
+        "reviewer_id": "test_skeptic_v2",
+        "reviewer_name": "Test Skeptic v2",
+        "status": "skipped",
+        "summary": "No test files with added lines were present.",
+        "findings": [],
+        "referenced_finding_ids": [],
+        "error_message": null
+      },
+      {
+        "reviewer_id": "regression_hunter",
+        "reviewer_name": "Regression Hunter",
+        "status": "skipped",
+        "summary": "No removed test assertion lines were present.",
+        "findings": [],
+        "referenced_finding_ids": [],
+        "error_message": null
+      }
+    ],
+    "findings": [
+      {
+        "id": "scope_auditor_task_scope_expansion",
+        "uid": "fnd_1bba588b56e6",
+        "kind": "scope_auditor_task_scope_expansion",
+        "title": "Patch changes files outside the apparent task scope",
+        "severity": "MEDIUM",
+        "confidence": "MEDIUM",
+        "evidence_type": "REVIEWER",
+        "files": [
+          "scripts/validate-plugin.py"
+        ],
+        "evidence": [
+          "Task text appears documentation/copy-only.",
+          "Patch also changes implementation, dependency, configuration, or persistence files.",
+          "Out-of-scope file changed: scripts/validate-plugin.py"
+        ],
+        "reviewer": "scope_auditor",
+        "supporting_finding_ids": [
+          "implementation_without_tests"
+        ],
+        "explanation": "The task appears limited to documentation, copy, typo, or comment changes, but the patch also changes files that can affect runtime, build, dependency, or data behavior.",
+        "suggested_fix": "Confirm these changes were intentionally requested or split unrelated changes into a separate patch."
+      },
+      {
+        "id": "test_skeptic_missing_behavior_coverage",
+        "uid": "fnd_4923e95aa072",
+        "kind": "test_skeptic_missing_behavior_coverage",
+        "title": "Changed implementation files need coverage review",
+        "severity": "MEDIUM",
+        "confidence": "LOW",
+        "evidence_type": "REVIEWER",
+        "files": [
+          "scripts/validate-plugin.py"
+        ],
+        "evidence": [
+          "Static finding implementation_without_tests is present.",
+          "No likely test file changed with the source behavior change.",
+          "Source file changed without test coverage: scripts/validate-plugin.py"
+        ],
+        "reviewer": "test_skeptic",
+        "supporting_finding_ids": [
+          "implementation_without_tests"
+        ],
+        "explanation": "The patch changes likely implementation files without a corresponding test update. In generic mode this is a coverage-review prompt, not proof that behavior lacks tests.",
+        "suggested_fix": "Review whether the changed behavior needs tests, or configure repo-specific checks/guardrails if this signal is noisy."
+      }
+    ],
+    "metadata": {
+      "skipped_lenses": [
+        {
+          "lens_id": "test_skeptic_v2",
+          "reason": "No test files with added lines were present."
+        },
+        {
+          "lens_id": "regression_hunter",
+          "reason": "No removed test assertion lines were present."
+        }
+      ],
+      "llm_call_used": false
+    }
+  },
+  "llm_review": {
+    "enabled": false,
+    "provider": null,
+    "status": "skipped",
+    "reviewer_name": null,
+    "summary": null,
+    "findings": [],
+    "error_message": null
+  },
+  "pr_checkout": {
+    "requested": false,
+    "status": "not_requested",
+    "worktree_path": null,
+    "checks_target": "not_run",
+    "error_message": null,
+    "kept": false,
+    "cleanup_error": null
+  },
+  "generated_at": "2026-06-05T22:15:55+00:00"
+}

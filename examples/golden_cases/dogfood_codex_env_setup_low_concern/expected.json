@@ -1,0 +1,15 @@
+{
+  "case_name": "dogfood_codex_env_setup_low_concern",
+  "run_checks": false,
+  "expected_posture": "LOW_CONCERN",
+  "required_finding_ids": [
+    "ui_copy_changed"
+  ],
+  "allowed_extra_finding_ids": [],
+  "forbidden_finding_ids": [
+    "implementation_without_tests",
+    "persistence_schema_changed"
+  ],
+  "allow_unlisted_findings": true,
+  "rationale": "Real Codex environment bootstrap PR; config-only with advisory copy noise."
+}

@@ -1,0 +1,13 @@
+{
+  "case_name": "dogfood_codex_metrics_tests_low_concern",
+  "run_checks": false,
+  "expected_posture": "LOW_CONCERN",
+  "required_finding_ids": [],
+  "allowed_extra_finding_ids": [],
+  "forbidden_finding_ids": [
+    "implementation_without_tests",
+    "persistence_schema_changed"
+  ],
+  "allow_unlisted_findings": false,
+  "rationale": "Real Codex L5 publisher freshness PR with regression tests; no static escalation."
+}

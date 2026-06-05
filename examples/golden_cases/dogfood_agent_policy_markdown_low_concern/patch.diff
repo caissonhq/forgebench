@@ -1,0 +1,154 @@
+From 0a9b87ecbfd06e44604ef08c7f30ef0012b9fca5 Mon Sep 17 00:00:00 2001
+From: Beats <officebeats@gmail.com>
+Date: Tue, 2 Jun 2026 13:48:15 -0400
+Subject: [PATCH] Add Codex browser-first policy
+
+---
+ .agent/rules/codex-browser-first.md      | 23 +++++++++++
+ AGENTS.md                                | 12 ++++++
+ system/scripts/sync_cli_adapters.py      | 15 ++++++++
+ system/tests/test_codex_browser_first.py | 49 ++++++++++++++++++++++++
+ 4 files changed, 99 insertions(+)
+ create mode 100644 .agent/rules/codex-browser-first.md
+ create mode 100644 system/tests/test_codex_browser_first.py
+
+diff --git a/.agent/rules/codex-browser-first.md b/.agent/rules/codex-browser-first.md
+new file mode 100644
+index 0000000..c8dd4fd
+--- /dev/null
++++ b/.agent/rules/codex-browser-first.md
+@@ -0,0 +1,23 @@
++# Codex Browser First
++
++Use this rule whenever Codex needs a browser for local apps, rendered UI checks, localhost demos, screenshots, click-through validation, or web page inspection.
++
++## Default
++
++1. Use the Codex in-app Browser first.
++2. Keep browser work contained in the Codex session unless the user explicitly asks to use an external browser.
++3. For local apps, start the required local server normally, then open and validate the URL in the Codex Browser.
++4. Capture screenshots, DOM state, console warnings/errors, and interaction evidence through the Codex Browser whenever possible.
++5. Do not default to macOS `open`, Chrome, Edge, Safari, Computer Use, or standalone Playwright before trying the Codex Browser.
++
++## External Browser Fallback
++
++Use an external browser only when there is a concrete reason, such as:
++
++- The user explicitly asks for an external browser.
++- The task requires the user's browser profile, cookies, extensions, SSO state, or saved credentials.
++- The issue is browser-specific and needs Chrome, Edge, Safari, or Firefox reproduction.
++- The Codex Browser is unavailable, cannot reach the target, or fails after a reasonable attempt.
++- The workflow requires browser permissions, downloads, or OS integration that the Codex Browser cannot provide.
++
++When using an external browser, state the reason briefly and keep the external action scoped to that need.
+diff --git a/AGENTS.md b/AGENTS.md
+index ed9c999..03680a7 100644
+--- a/AGENTS.md
++++ b/AGENTS.md
+@@ -20,6 +20,18 @@ On a new Codex session:
+ 6. Translate Antigravity-only primitives into Codex equivalents instead of failing.
+ 7. Write durable outputs back into the standard repo folders so runtime switching stays lossless.
+ 
++## Codex Browser First
++
++When a task needs a browser for local apps, rendered UI checks, localhost demos, screenshots, click-through validation, or page inspection:
++
++1. Use the Codex in-app Browser first.
++2. Keep browser work contained in the Codex session whenever possible.
++3. Start local servers with terminal commands when needed, then open and validate the URL in the Codex Browser.
++4. Capture screenshots, DOM state, console warnings/errors, and interaction evidence through the Codex Browser whenever possible.
++5. Do not default to macOS `open`, Chrome, Edge, Safari, Computer Use, or standalone Playwright before trying the Codex Browser.
++
++Use an external browser only when there is a concrete reason: the user explicitly asks for it, the task needs the user's browser profile/cookies/extensions/SSO, the bug is browser-specific, the Codex Browser is unavailable or cannot reach the target after a reasonable attempt, or the workflow needs browser permissions/downloads/OS integration the Codex Browser cannot provide. State the reason briefly before using the external browser.
++
+ ## Agent Bootstrap
+ 
+ When starting from a GitHub URL:
+diff --git a/system/scripts/sync_cli_adapters.py b/system/scripts/sync_cli_adapters.py
+index 7ea1589..8f5dcd2 100644
+--- a/system/scripts/sync_cli_adapters.py
++++ b/system/scripts/sync_cli_adapters.py
+@@ -151,6 +151,18 @@ def render_agents_md() -> str:
+ 6. Translate Antigravity-only primitives into Codex equivalents instead of failing.
+ 7. Write durable outputs back into the standard repo folders so runtime switching stays lossless.
+ 
++## Codex Browser First
++
++When a task needs a browser for local apps, rendered UI checks, localhost demos, screenshots, click-through validation, or page inspection:
++
++1. Use the Codex in-app Browser first.
++2. Keep browser work contained in the Codex session whenever possible.
++3. Start local servers with terminal commands when needed, then open and validate the URL in the Codex Browser.
++4. Capture screenshots, DOM state, console warnings/errors, and interaction evidence through the Codex Browser whenever possible.
++5. Do not default to macOS `open`, Chrome, Edge, Safari, Computer Use, or standalone Playwright before trying the Codex Browser.
++
++Use an external browser only when there is a concrete reason: the user explicitly asks for it, the task needs the user's browser profile/cookies/extensions/SSO, the bug is browser-specific, the Codex Browser is unavailable or cannot reach the target after a reasonable attempt, or the workflow needs browser permissions/downloads/OS integration the Codex Browser cannot provide. State the reason briefly before using the external browser.
++
+ ## Agent Bootstrap
+ 
+ When starting from a GitHub URL:
+@@ -239,6 +251,9 @@ def render_codex_rules() -> str:
+ - Treat `.agent/` as canonical.
+ - Resolve slash commands through root `CODEX_COMMANDS.md`.
+ - Prefer promoted Codex skills when present.
++- Use the Codex in-app Browser first for local apps, rendered UI checks, localhost demos, screenshots, click-through validation, and page inspection.
++- Use an external browser only for a concrete reason: explicit user request, required user profile/cookies/extensions/SSO, browser-specific reproduction, Codex Browser unavailable/unable to reach the target after a reasonable attempt, or permissions/downloads/OS integration the Codex Browser cannot provide.
++- When using an external browser, state the reason briefly and keep the action scoped to that need.
+ - Do not commit generated runtime adapter directories.
+ """
+ 
+diff --git a/system/tests/test_codex_browser_first.py b/system/tests/test_codex_browser_first.py
+new file mode 100644
+index 0000000..9ca1c51
+--- /dev/null
++++ b/system/tests/test_codex_browser_first.py
+@@ -0,0 +1,49 @@
++"""
++Codex browser-first policy tests.
++
++Keeps the Codex runtime adapter aligned with the kit preference that browser
++work should stay inside the Codex in-app Browser unless an external browser is
++needed for a specific reason.
++"""
++
++import sys
++import unittest
++from pathlib import Path
++
++
++ROOT_DIR = Path(__file__).resolve().parent.parent.parent
++SYSTEM_DIR = ROOT_DIR / "system"
++sys.path.insert(0, str(SYSTEM_DIR))
++
++from scripts import sync_cli_adapters
++
++
++class TestCodexBrowserFirstPolicy(unittest.TestCase):
++    """Regression coverage for Codex Browser-first instructions."""
++
++    def test_canonical_rule_exists(self):
++        rule = ROOT_DIR / ".agent" / "rules" / "codex-browser-first.md"
++        content = rule.read_text(encoding="utf-8")
++
++        self.assertIn("Use the Codex in-app Browser first", content)
++        self.assertIn("External Browser Fallback", content)
++        self.assertIn("state the reason briefly", content)
++
++    def test_generated_agents_md_includes_browser_first_policy(self):
++        content = sync_cli_adapters.render_agents_md()
++
++        self.assertIn("## Codex Browser First", content)
++        self.assertIn("Use the Codex in-app Browser first", content)
++        self.assertIn("Do not default to macOS `open`, Chrome, Edge, Safari, Computer Use, or standalone Playwright", content)
++        self.assertIn("State the reason briefly before using the external browser", content)
++
++    def test_generated_codex_rules_include_browser_first_policy(self):
++        content = sync_cli_adapters.render_codex_rules()
++
++        self.assertIn("Use the Codex in-app Browser first", content)
++        self.assertIn("Use an external browser only for a concrete reason", content)
++        self.assertIn("state the reason briefly", content)
++
++
++if __name__ == "__main__":
++    unittest.main()

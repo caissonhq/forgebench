@@ -1,0 +1,15 @@
+{
+  "case_name": "dogfood_effect_refactor_broad_review",
+  "run_checks": false,
+  "expected_posture": "REVIEW",
+  "required_finding_ids": [
+    "dependency_surface_changed",
+    "broad_file_surface"
+  ],
+  "allowed_extra_finding_ids": [],
+  "forbidden_finding_ids": [
+    "deleted_tests"
+  ],
+  "allow_unlisted_findings": true,
+  "rationale": "Real broad Effect refactor; dependency + surface signals should review even if persistence heuristic misfires."
+}

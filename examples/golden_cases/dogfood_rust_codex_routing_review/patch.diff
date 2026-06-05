@@ -1,0 +1,1468 @@
+From 0a469de3aa32836806ae601e957f1ecb8f142e8b Mon Sep 17 00:00:00 2001
+From: cc <cc@ccs-MBP.local>
+Date: Thu, 4 Jun 2026 11:20:02 +0800
+Subject: [PATCH 1/2] Filter unsupported Responses API tools for Codex
+
+---
+ pnpm-workspace.yaml                           |   4 +
+ src-tauri/src/database/dao/proxy.rs           |  10 +-
+ src-tauri/src/database/mod.rs                 |   2 +-
+ src-tauri/src/database/schema.rs              |  26 ++++
+ src-tauri/src/database/tests.rs               |  41 +++++
+ src-tauri/src/proxy/body_filter.rs            | 106 +++++++++++++
+ src-tauri/src/proxy/forwarder.rs              |  87 ++++++++++-
+ src-tauri/src/proxy/handler_context.rs        |   1 +
+ src-tauri/src/proxy/server.rs                 | 141 ++++++++++++++++++
+ src-tauri/src/proxy/types.rs                  |   3 +
+ .../proxy/AutoFailoverConfigPanel.tsx         |   1 +
+ src/components/proxy/ProxyPanel.tsx           |  57 +++++++
+ src/i18n/locales/en.json                      |   9 +-
+ src/i18n/locales/ja.json                      |   9 +-
+ src/i18n/locales/zh-TW.json                   |   9 +-
+ src/i18n/locales/zh.json                      |   9 +-
+ src/types/proxy.ts                            |   1 +
+ 17 files changed, 509 insertions(+), 7 deletions(-)
+
+diff --git a/pnpm-workspace.yaml b/pnpm-workspace.yaml
+index fab9eb3b7b..58a0b0051f 100644
+--- a/pnpm-workspace.yaml
++++ b/pnpm-workspace.yaml
+@@ -1,4 +1,8 @@
+ packages: []
+ 
++allowBuilds:
++  esbuild: true
++  msw: true
++
+ onlyBuiltDependencies:
+   - '@tailwindcss/oxide'
+diff --git a/src-tauri/src/database/dao/proxy.rs b/src-tauri/src/database/dao/proxy.rs
+index c3c31cf7e4..f3c115ad45 100644
+--- a/src-tauri/src/database/dao/proxy.rs
++++ b/src-tauri/src/database/dao/proxy.rs
+@@ -224,7 +224,7 @@ impl Database {
+                 "SELECT app_type, enabled, auto_failover_enabled,
+                         max_retries, streaming_first_byte_timeout, streaming_idle_timeout, non_streaming_timeout,
+                         circuit_failure_threshold, circuit_success_threshold, circuit_timeout_seconds,
+-                        circuit_error_rate_threshold, circuit_min_requests
++                        circuit_error_rate_threshold, circuit_min_requests, filter_unsupported_response_tools
+                  FROM proxy_config WHERE app_type = ?1",
+                 [app_type],
+                 |row| {
+@@ -241,6 +241,7 @@ impl Database {
+                         circuit_timeout_seconds: row.get::<_, i32>(9)? as u32,
+                         circuit_error_rate_threshold: row.get(10)?,
+                         circuit_min_requests: row.get::<_, i32>(11)? as u32,
++                        filter_unsupported_response_tools: row.get::<_, i32>(12)? != 0,
+                     })
+                 },
+             )
+@@ -265,6 +266,7 @@ impl Database {
+                     circuit_timeout_seconds: 60,
+                     circuit_error_rate_threshold: 0.6,
+                     circuit_min_requests: 10,
++                    filter_unsupported_response_tools: true,
+                 })
+             }
+             Err(e) => Err(AppError::Database(e.to_string())),
+@@ -291,6 +293,7 @@ impl Database {
+                 circuit_timeout_seconds = ?10,
+                 circuit_error_rate_threshold = ?11,
+                 circuit_min_requests = ?12,
++                filter_unsupported_response_tools = ?13,
+                 updated_at = datetime('now')
+              WHERE app_type = ?1",
+             rusqlite::params![
+@@ -306,6 +309,11 @@ impl Database {
+                 config.circuit_timeout_seconds as i32,
+                 config.circuit_error_rate_threshold,
+                 config.circuit_min_requests as i32,
++                if config.filter_unsupported_response_tools {
++                    1
++                } else {
++                    0
++                },
+             ],
+         )
+         .map_err(|e| AppError::Database(e.to_string()))?;
+diff --git a/src-tauri/src/database/mod.rs b/src-tauri/src/database/mod.rs
+index 65958fcde9..c033a4c6a2 100644
+--- a/src-tauri/src/database/mod.rs
++++ b/src-tauri/src/database/mod.rs
+@@ -49,7 +49,7 @@ use std::sync::Mutex;
+ 
+ /// 当前 Schema 版本号
+ /// 每次修改表结构时递增，并在 schema.rs 中添加相应的迁移逻辑
+-pub(crate) const SCHEMA_VERSION: i32 = 10;
++pub(crate) const SCHEMA_VERSION: i32 = 11;
+ 
+ /// 安全地序列化 JSON，避免 unwrap panic
+ pub(crate) fn to_json_string<T: Serialize>(value: &T) -> Result<String, AppError> {
+diff --git a/src-tauri/src/database/schema.rs b/src-tauri/src/database/schema.rs
+index 60cf7ca869..5153907d7b 100644
+--- a/src-tauri/src/database/schema.rs
++++ b/src-tauri/src/database/schema.rs
+@@ -131,6 +131,7 @@ impl Database {
+             circuit_failure_threshold INTEGER NOT NULL DEFAULT 4, circuit_success_threshold INTEGER NOT NULL DEFAULT 2,
+             circuit_timeout_seconds INTEGER NOT NULL DEFAULT 60, circuit_error_rate_threshold REAL NOT NULL DEFAULT 0.6,
+             circuit_min_requests INTEGER NOT NULL DEFAULT 10,
++            filter_unsupported_response_tools INTEGER NOT NULL DEFAULT 1,
+             default_cost_multiplier TEXT NOT NULL DEFAULT '1',
+             pricing_model_source TEXT NOT NULL DEFAULT 'response',
+             created_at TEXT NOT NULL DEFAULT (datetime('now')), updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+@@ -324,6 +325,10 @@ impl Database {
+             "ALTER TABLE proxy_config ADD COLUMN non_streaming_timeout INTEGER NOT NULL DEFAULT 600",
+             [],
+         );
++        let _ = conn.execute(
++            "ALTER TABLE proxy_config ADD COLUMN filter_unsupported_response_tools INTEGER NOT NULL DEFAULT 1",
++            [],
++        );
+ 
+         // 兼容：若旧版 proxy_config 仍为单例结构（无 app_type），则在启动时直接转换为三行结构
+         // 说明：user_version=2 时不会再触发 v1->v2 迁移，但新代码查询依赖 app_type 列。
+@@ -431,6 +436,11 @@ impl Database {
+                         Self::migrate_v9_to_v10(conn)?;
+                         Self::set_user_version(conn, 10)?;
+                     }
++                    10 => {
++                        log::info!("迁移数据库从 v10 到 v11（Responses 工具过滤设置）");
++                        Self::migrate_v10_to_v11(conn)?;
++                        Self::set_user_version(conn, 11)?;
++                    }
+                     _ => {
+                         return Err(AppError::Database(format!(
+                             "未知的数据库版本 {version}，无法迁移到 {SCHEMA_VERSION}"
+@@ -757,6 +767,7 @@ impl Database {
+             circuit_failure_threshold INTEGER NOT NULL DEFAULT 4, circuit_success_threshold INTEGER NOT NULL DEFAULT 2,
+             circuit_timeout_seconds INTEGER NOT NULL DEFAULT 60, circuit_error_rate_threshold REAL NOT NULL DEFAULT 0.6,
+             circuit_min_requests INTEGER NOT NULL DEFAULT 10,
++            filter_unsupported_response_tools INTEGER NOT NULL DEFAULT 1,
+             default_cost_multiplier TEXT NOT NULL DEFAULT '1',
+             pricing_model_source TEXT NOT NULL DEFAULT 'response',
+             created_at TEXT NOT NULL DEFAULT (datetime('now')), updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+@@ -1200,6 +1211,21 @@ impl Database {
+         Ok(())
+     }
+ 
++    /// v10 -> v11 迁移：添加 Codex Responses 工具过滤设置
++    fn migrate_v10_to_v11(conn: &Connection) -> Result<(), AppError> {
++        if Self::table_exists(conn, "proxy_config")? {
++            Self::add_column_if_missing(
++                conn,
++                "proxy_config",
++                "filter_unsupported_response_tools",
++                "INTEGER NOT NULL DEFAULT 1",
++            )?;
++        }
++
++        log::info!("v10 -> v11 迁移完成：已添加 Responses 工具过滤设置");
++        Ok(())
++    }
++
+     /// 插入默认模型定价数据
+     /// 格式: (model_id, display_name, input, output, cache_read, cache_creation)
+     /// 注意: model_id 使用短横线格式（如 claude-haiku-4-5），与 API 返回的模型名称标准化后一致
+diff --git a/src-tauri/src/database/tests.rs b/src-tauri/src/database/tests.rs
+index 3695210e54..96c2076395 100644
+--- a/src-tauri/src/database/tests.rs
++++ b/src-tauri/src/database/tests.rs
+@@ -273,6 +273,14 @@ fn schema_create_tables_include_pricing_model_columns() {
+     let conn = Connection::open_in_memory().expect("open memory db");
+     Database::create_tables_on_conn(&conn).expect("create tables");
+ 
++    let tool_filter = get_column_info(&conn, "proxy_config", "filter_unsupported_response_tools");
++    assert_eq!(tool_filter.r#type, "INTEGER");
++    assert_eq!(tool_filter.notnull, 1);
++    assert_eq!(
++        normalize_default(&tool_filter.default).as_deref(),
++        Some("1")
++    );
++
+     let multiplier = get_column_info(&conn, "proxy_config", "default_cost_multiplier");
+     assert_eq!(multiplier.r#type, "TEXT");
+     assert_eq!(multiplier.notnull, 1);
+@@ -345,6 +353,39 @@ fn schema_migration_v4_adds_pricing_model_columns() {
+     );
+ }
+ 
++#[test]
++fn schema_migration_v10_adds_response_tool_filter_column() {
++    let conn = Connection::open_in_memory().expect("open memory db");
++    conn.execute_batch(
++        r#"
++        CREATE TABLE proxy_config (app_type TEXT PRIMARY KEY);
++        CREATE TABLE mcp_servers (
++            id TEXT PRIMARY KEY,
++            name TEXT NOT NULL,
++            server_config TEXT NOT NULL,
++            enabled_hermes BOOLEAN NOT NULL DEFAULT 0
++        );
++        "#,
++    )
++    .expect("seed v10 schema");
++
++    Database::set_user_version(&conn, 10).expect("set user_version=10");
++    Database::apply_schema_migrations_on_conn(&conn).expect("apply migrations");
++
++    let tool_filter = get_column_info(&conn, "proxy_config", "filter_unsupported_response_tools");
++    assert_eq!(tool_filter.r#type, "INTEGER");
++    assert_eq!(tool_filter.notnull, 1);
++    assert_eq!(
++        normalize_default(&tool_filter.default).as_deref(),
++        Some("1")
++    );
++
++    assert_eq!(
++        Database::get_user_version(&conn).expect("version after migration"),
++        SCHEMA_VERSION
++    );
++}
++
+ #[test]
+ fn schema_create_tables_repairs_legacy_proxy_config_singleton_to_per_app() {
+     let conn = Connection::open_in_memory().expect("open memory db");
+diff --git a/src-tauri/src/proxy/body_filter.rs b/src-tauri/src/proxy/body_filter.rs
+index dd5e75456a..6b23fb3937 100644
+--- a/src-tauri/src/proxy/body_filter.rs
++++ b/src-tauri/src/proxy/body_filter.rs
+@@ -18,6 +18,46 @@
+ use serde_json::Value;
+ use std::collections::HashSet;
+ 
++/// 过滤 Responses API 顶层 tools 数组中上游不支持的工具类型。
++///
++/// 只处理顶层 `tools`，避免误改 JSON Schema、MCP namespace 或业务自定义字段。
++pub fn filter_unsupported_response_tools(body: Value, unsupported_tool_types: &[&str]) -> Value {
++    let unsupported: HashSet<&str> = unsupported_tool_types.iter().copied().collect();
++    if unsupported.is_empty() {
++        return body;
++    }
++
++    let mut body = body;
++    let Some(tools) = body.get_mut("tools").and_then(Value::as_array_mut) else {
++        return body;
++    };
++
++    let original_len = tools.len();
++    let mut removed_types = Vec::new();
++    tools.retain(|tool| {
++        let Some(tool_type) = tool.get("type").and_then(Value::as_str) else {
++            return true;
++        };
++        if unsupported.contains(tool_type) {
++            removed_types.push(tool_type.to_string());
++            false
++        } else {
++            true
++        }
++    });
++
++    let removed_count = original_len.saturating_sub(tools.len());
++    if removed_count > 0 {
++        removed_types.sort();
++        removed_types.dedup();
++        log::debug!(
++            "[BodyFilter] filtered unsupported Responses tools: count={removed_count}, types={removed_types:?}"
++        );
++    }
++
++    body
++}
++
+ /// 过滤私有参数（以 `_` 开头的字段）
+ ///
+ /// 递归遍历 JSON 结构，移除所有以下划线开头的字段。
+@@ -336,4 +376,70 @@ mod tests {
+ 
+         assert_eq!(output1, output2);
+     }
++
++    #[test]
++    fn test_filter_unsupported_response_tools_removes_image_generation() {
++        let input = json!({
++            "model": "gpt-5",
++            "tools": [
++                {"type": "function", "name": "read_file"},
++                {"type": "image_generation", "output_format": "png"},
++                {"type": "web_search_preview"}
++            ]
++        });
++
++        let output = filter_unsupported_response_tools(input, &["image_generation"]);
++
++        assert_eq!(
++            output["tools"],
++            json!([
++                {"type": "function", "name": "read_file"},
++                {"type": "web_search_preview"}
++            ])
++        );
++    }
++
++    #[test]
++    fn test_filter_unsupported_response_tools_preserves_non_matching_shapes() {
++        let input = json!({
++            "tools": [
++                {"type": "function", "name": "read_file"},
++                {"name": "missing_type"},
++                "string-tool",
++                {"type": "unknown_native_tool"}
++            ]
++        });
++
++        let output = filter_unsupported_response_tools(input.clone(), &["image_generation"]);
++
++        assert_eq!(output, input);
++    }
++
++    #[test]
++    fn test_filter_unsupported_response_tools_keeps_empty_tools_array() {
++        let input = json!({
++            "tools": [
++                {"type": "image_generation", "output_format": "png"}
++            ]
++        });
++
++        let output = filter_unsupported_response_tools(input, &["image_generation"]);
++
++        assert_eq!(output["tools"], json!([]));
++    }
++
++    #[test]
++    fn test_filter_unsupported_response_tools_ignores_missing_or_non_array_tools() {
++        let without_tools = json!({"model": "gpt-5"});
++        assert_eq!(
++            filter_unsupported_response_tools(without_tools.clone(), &["image_generation"]),
++            without_tools
++        );
++
++        let non_array_tools = json!({"tools": {"type": "image_generation"}});
++        assert_eq!(
++            filter_unsupported_response_tools(non_array_tools.clone(), &["image_generation"]),
++            non_array_tools
++        );
++    }
+ }
+diff --git a/src-tauri/src/proxy/forwarder.rs b/src-tauri/src/proxy/forwarder.rs
+index 981dc17991..118a7ebb87 100644
+--- a/src-tauri/src/proxy/forwarder.rs
++++ b/src-tauri/src/proxy/forwarder.rs
+@@ -4,7 +4,7 @@
+ 
+ use super::hyper_client::ProxyResponse;
+ use super::{
+-    body_filter::filter_private_params_with_whitelist,
++    body_filter::{filter_private_params_with_whitelist, filter_unsupported_response_tools},
+     error::*,
+     failover_switch::FailoverSwitchManager,
+     json_canonical::{canonicalize_value, short_value_hash},
+@@ -119,6 +119,8 @@ pub struct RequestForwarder {
+     /// `max_attempts = max_retries + 1`，所以 max_retries=0 表示仅尝试一家、
+     /// max_retries=3（默认）表示最多 4 家。loop 同时受 providers.len() 自然限制。
+     max_attempts: usize,
++    /// 是否过滤 Codex Responses 请求中上游不支持的原生工具
++    filter_unsupported_response_tools: bool,
+ }
+ 
+ impl RequestForwarder {
+@@ -141,6 +143,7 @@ impl RequestForwarder {
+         optimizer_config: OptimizerConfig,
+         copilot_optimizer_config: CopilotOptimizerConfig,
+         max_retries: u32,
++        filter_unsupported_response_tools: bool,
+     ) -> Self {
+         // max_retries 是「失败后重试次数」语义，attempt 上限 = retries + 1。
+         // saturating_add 防止 u32::MAX + 1 溢出。
+@@ -164,6 +167,7 @@ impl RequestForwarder {
+                 streaming_first_byte_timeout,
+             ),
+             max_attempts,
++            filter_unsupported_response_tools,
+         }
+     }
+ 
+@@ -1195,6 +1199,13 @@ impl RequestForwarder {
+             mapped_body
+         };
+ 
++        let request_body = filter_unsupported_response_tools_for_request(
++            request_body,
++            app_type,
++            endpoint,
++            self.filter_unsupported_response_tools,
++        );
++
+         // 过滤私有参数（以 `_` 开头的字段），防止内部信息泄露到上游
+         // 默认使用空白名单，过滤所有 _ 前缀字段
+         let filtered_body = prepare_upstream_request_body(request_body);
+@@ -2077,6 +2088,21 @@ fn is_claude_messages_path(path: &str) -> bool {
+     matches!(path, "/v1/messages" | "/claude/v1/messages")
+ }
+ 
++fn is_responses_endpoint(endpoint: &str) -> bool {
++    let (path, _) = split_endpoint_and_query(endpoint);
++    matches!(
++        path,
++        "/responses"
++            | "/v1/responses"
++            | "/v1/v1/responses"
++            | "/codex/v1/responses"
++            | "/responses/compact"
++            | "/v1/responses/compact"
++            | "/v1/v1/responses/compact"
++            | "/codex/v1/responses/compact"
++    )
++}
++
+ fn rewrite_codex_responses_endpoint_to_chat(endpoint: &str) -> (String, Option<String>) {
+     let (_path, query) = split_endpoint_and_query(endpoint);
+     let passthrough_query = query.map(ToString::to_string);
+@@ -2319,6 +2345,19 @@ fn prepare_upstream_request_body(request_body: Value) -> Value {
+     canonicalize_value(filter_private_params_with_whitelist(request_body, &[]))
+ }
+ 
++fn filter_unsupported_response_tools_for_request(
++    request_body: Value,
++    app_type: &AppType,
++    endpoint: &str,
++    enabled: bool,
++) -> Value {
++    if enabled && matches!(app_type, AppType::Codex) && is_responses_endpoint(endpoint) {
++        filter_unsupported_response_tools(request_body, &["image_generation"])
++    } else {
++        request_body
++    }
++}
++
+ fn log_prompt_cache_trace(
+     app_type: &AppType,
+     provider: &Provider,
+@@ -2429,6 +2468,7 @@ mod tests {
+             non_streaming_timeout,
+             streaming_first_byte_timeout,
+             max_attempts: 1,
++            filter_unsupported_response_tools: true,
+         }
+     }
+ 
+@@ -2577,6 +2617,51 @@ mod tests {
+         );
+     }
+ 
++    #[test]
++    fn unsupported_response_tool_filter_only_applies_to_enabled_codex_responses() {
++        let body = json!({
++            "tools": [
++                {"type": "function", "name": "read_file"},
++                {"type": "image_generation", "output_format": "png"}
++            ]
++        });
++
++        let filtered = filter_unsupported_response_tools_for_request(
++            body.clone(),
++            &AppType::Codex,
++            "/v1/responses",
++            true,
++        );
++        assert_eq!(filtered["tools"].as_array().unwrap().len(), 1);
++        assert_eq!(filtered["tools"][0]["type"], "function");
++
++        assert_eq!(
++            filter_unsupported_response_tools_for_request(
++                body.clone(),
++                &AppType::Codex,
++                "/v1/responses",
++                false,
++            ),
++            body
++        );
++
++        let non_codex = filter_unsupported_response_tools_for_request(
++            body.clone(),
++            &AppType::Claude,
++            "/v1/responses",
++            true,
++        );
++        assert_eq!(non_codex, body);
++
++        let non_responses = filter_unsupported_response_tools_for_request(
++            body.clone(),
++            &AppType::Codex,
++            "/v1/chat/completions",
++            true,
++        );
++        assert_eq!(non_responses, body);
++    }
++
+     #[tokio::test]
+     async fn non_streaming_success_is_buffered_before_marking_provider_successful() {
+         let forwarder = test_forwarder(Duration::from_secs(1), Duration::from_secs(1));
+diff --git a/src-tauri/src/proxy/handler_context.rs b/src-tauri/src/proxy/handler_context.rs
+index b1662733fd..120d34162d 100644
+--- a/src-tauri/src/proxy/handler_context.rs
++++ b/src-tauri/src/proxy/handler_context.rs
+@@ -235,6 +235,7 @@ impl RequestContext {
+             self.optimizer_config.clone(),
+             self.copilot_optimizer_config.clone(),
+             max_retries,
++            self.app_config.filter_unsupported_response_tools,
+         )
+     }
+ 
+diff --git a/src-tauri/src/proxy/server.rs b/src-tauri/src/proxy/server.rs
+index b4c551e35d..9584deea87 100644
+--- a/src-tauri/src/proxy/server.rs
++++ b/src-tauri/src/proxy/server.rs
+@@ -50,6 +50,147 @@ pub struct ProxyState {
+     pub failover_manager: Arc<FailoverSwitchManager>,
+ }
+ 
++#[cfg(test)]
++mod tests {
++    use super::*;
++    use crate::provider::Provider;
++    use serde_json::{json, Value};
++    use std::sync::Arc;
++    use tokio::{
++        io::{AsyncReadExt, AsyncWriteExt},
++        sync::oneshot,
++    };
++
++    async fn run_single_capture_upstream() -> (String, oneshot::Receiver<Value>) {
++        let listener = tokio::net::TcpListener::bind("127.0.0.1:0")
++            .await
++            .expect("bind mock upstream");
++        let addr = listener.local_addr().expect("mock upstream addr");
++        let (tx, rx) = oneshot::channel();
++
++        tokio::spawn(async move {
++            let (mut stream, _) = listener.accept().await.expect("accept mock request");
++            let mut buffer = Vec::new();
++            let mut chunk = [0_u8; 4096];
++            let header_end;
++            loop {
++                let read = stream.read(&mut chunk).await.expect("read mock request");
++                assert!(read > 0, "mock upstream connection closed before headers");
++                buffer.extend_from_slice(&chunk[..read]);
++                if let Some(pos) = buffer.windows(4).position(|w| w == b"\r\n\r\n") {
++                    header_end = pos + 4;
++                    break;
++                }
++            }
++
++            let headers = String::from_utf8_lossy(&buffer[..header_end]);
++            let content_length = headers
++                .lines()
++                .find_map(|line| {
++                    let (name, value) = line.split_once(':')?;
++                    name.eq_ignore_ascii_case("content-length")
++                        .then(|| value.trim().parse::<usize>().ok())
++                        .flatten()
++                })
++                .unwrap_or(0);
++
++            while buffer.len() < header_end + content_length {
++                let read = stream.read(&mut chunk).await.expect("read mock body");
++                assert!(read > 0, "mock upstream connection closed before body");
++                buffer.extend_from_slice(&chunk[..read]);
++            }
++
++            let body = &buffer[header_end..header_end + content_length];
++            let body_json: Value = serde_json::from_slice(body).expect("parse upstream body");
++            let _ = tx.send(body_json);
++
++            let response = br#"{"id":"resp_mock","object":"response","output":[]}"#;
++            let header = format!(
++                "HTTP/1.1 200 OK\r\ncontent-type: application/json\r\ncontent-length: {}\r\nconnection: close\r\n\r\n",
++                response.len()
++            );
++            stream
++                .write_all(header.as_bytes())
++                .await
++                .expect("write mock response headers");
++            stream
++                .write_all(response)
++                .await
++                .expect("write mock response body");
++        });
++
++        (format!("http://{addr}/v1"), rx)
++    }
++
++    #[tokio::test]
++    async fn codex_responses_route_filters_unsupported_tools_before_upstream() {
++        let (base_url, received_body) = run_single_capture_upstream().await;
++        let proxy_port = {
++            let listener = tokio::net::TcpListener::bind("127.0.0.1:0")
++                .await
++                .expect("reserve proxy port");
++            let port = listener.local_addr().expect("reserved proxy addr").port();
++            drop(listener);
++            port
++        };
++
++        let db = Arc::new(Database::memory().expect("memory db"));
++        let provider = Provider::with_id(
++            "mock-codex".to_string(),
++            "Mock Codex".to_string(),
++            json!({
++                "base_url": base_url,
++                "api_key": "test-key"
++            }),
++            None,
++        );
++        db.save_provider("codex", &provider)
++            .expect("save mock provider");
++        db.set_current_provider("codex", "mock-codex")
++            .expect("select mock provider");
++
++        let proxy_config = ProxyConfig {
++            listen_address: "127.0.0.1".to_string(),
++            listen_port: proxy_port,
++            ..ProxyConfig::default()
++        };
++        let server = ProxyServer::new(proxy_config, db, None);
++        let proxy_info = server.start().await.expect("start proxy");
++
++        let client = reqwest::Client::new();
++        let response = client
++            .post(format!(
++                "http://{}:{}/v1/responses",
++                proxy_info.address, proxy_info.port
++            ))
++            .json(&json!({
++                "model": "gpt-5",
++                "input": "test",
++                "tools": [
++                    {"type": "image_generation", "output_format": "png"},
++                    {"type": "function", "name": "ok", "parameters": {"type": "object", "properties": {}}}
++                ]
++            }))
++            .send()
++            .await
++            .expect("send proxy request");
++        assert_eq!(response.status(), reqwest::StatusCode::OK);
++        let _ = response.bytes().await.expect("read proxy response");
++        server.stop().await.expect("stop proxy");
++
++        let upstream_body = received_body.await.expect("mock received request");
++        let tools = upstream_body["tools"].as_array().expect("tools array");
++        assert_eq!(tools.len(), 1);
++        assert_eq!(tools[0]["type"], "function");
++        assert!(
++            !serde_json::to_string(&upstream_body)
++                .expect("serialize upstream body")
++                .contains("image_generation"),
++            "upstream body must not contain image_generation: {upstream_body}"
++        );
++    }
++}
++
+ /// 代理HTTP服务器
+ pub struct ProxyServer {
+     config: ProxyConfig,
+diff --git a/src-tauri/src/proxy/types.rs b/src-tauri/src/proxy/types.rs
+index 68474400b1..00793ac966 100644
+--- a/src-tauri/src/proxy/types.rs
++++ b/src-tauri/src/proxy/types.rs
+@@ -192,6 +192,9 @@ pub struct AppProxyConfig {
+     pub circuit_error_rate_threshold: f64,
+     /// 计算错误率的最小请求数
+     pub circuit_min_requests: u32,
++    /// 是否过滤 Responses API 中上游不支持的工具
++    #[serde(default = "default_true")]
++    pub filter_unsupported_response_tools: bool,
+ }
+ 
+ /// 整流器配置
+diff --git a/src/components/proxy/AutoFailoverConfigPanel.tsx b/src/components/proxy/AutoFailoverConfigPanel.tsx
+index fe258b8d46..64f7ab5338 100644
+--- a/src/components/proxy/AutoFailoverConfigPanel.tsx
++++ b/src/components/proxy/AutoFailoverConfigPanel.tsx
+@@ -172,6 +172,7 @@ export function AutoFailoverConfigPanel({
+         circuitTimeoutSeconds: raw.circuitTimeoutSeconds,
+         circuitErrorRateThreshold: raw.circuitErrorRateThreshold / 100,
+         circuitMinRequests: raw.circuitMinRequests,
++        filterUnsupportedResponseTools: config.filterUnsupportedResponseTools,
+       });
+       toast.success(
+         t("proxy.autoFailover.configSaved", "自动故障转移配置已保存"),
+diff --git a/src/components/proxy/ProxyPanel.tsx b/src/components/proxy/ProxyPanel.tsx
+index a736c6b8ce..b1668ec80a 100644
+--- a/src/components/proxy/ProxyPanel.tsx
++++ b/src/components/proxy/ProxyPanel.tsx
+@@ -25,6 +25,8 @@ import {
+   useSetProxyTakeoverForApp,
+   useGlobalProxyConfig,
+   useUpdateGlobalProxyConfig,
++  useAppProxyConfig,
++  useUpdateAppProxyConfig,
+ } from "@/lib/query/proxy";
+ import type { ProxyStatus } from "@/types/proxy";
+ import { useTranslation } from "react-i18next";
+@@ -53,6 +55,8 @@ export function ProxyPanel({
+   // 获取全局代理配置
+   const { data: globalConfig } = useGlobalProxyConfig();
+   const updateGlobalConfig = useUpdateGlobalProxyConfig();
++  const { data: codexProxyConfig } = useAppProxyConfig("codex");
++  const updateAppProxyConfig = useUpdateAppProxyConfig();
+ 
+   // 监听地址/端口的本地状态（端口用字符串以支持完全清空）
+   const [listenAddress, setListenAddress] = useState("127.0.0.1");
+@@ -116,6 +120,32 @@ export function ProxyPanel({
+     }
+   };
+ 
++  const handleCodexToolFilterChange = async (enabled: boolean) => {
++    if (!codexProxyConfig) return;
++    try {
++      await updateAppProxyConfig.mutateAsync({
++        ...codexProxyConfig,
++        filterUnsupportedResponseTools: enabled,
++      });
++      toast.success(
++        enabled
++          ? t("proxy.settings.codexToolFilter.enabled", {
++              defaultValue: "Codex Responses 工具过滤已启用",
++            })
++          : t("proxy.settings.codexToolFilter.disabled", {
++              defaultValue: "Codex Responses 工具过滤已关闭",
++            }),
++        { closeButton: true },
++      );
++    } catch (error) {
++      toast.error(
++        t("proxy.settings.codexToolFilter.failed", {
++          defaultValue: "切换 Codex Responses 工具过滤失败",
++        }),
++      );
++    }
++  };
++
+   const handleSaveBasicConfig = async () => {
+     if (!globalConfig) return;
+ 
+@@ -301,6 +331,33 @@ export function ProxyPanel({
+           )}
+         </AnimatePresence>
+ 
++        <div className="rounded-xl border border-border bg-card/50 p-4 transition-colors hover:bg-muted/50">
++          <div className="flex items-center justify-between gap-4">
++            <div className="space-y-1">
++              <Label
++                htmlFor="codex-filter-unsupported-response-tools"
++                className="text-sm font-medium"
++              >
++                {t("proxy.settings.codexToolFilter.title", {
++                  defaultValue: "Codex: 过滤不支持的 Responses 工具",
++                })}
++              </Label>
++              <p className="text-xs text-muted-foreground">
++                {t("proxy.settings.codexToolFilter.description", {
++                  defaultValue:
++                    "本地路由接管 Codex 后，从 Responses 请求中移除上游不支持的工具；默认移除 image_generation，避免 403/unsupported_value。",
++                })}
++              </p>
++            </div>
++            <Switch
++              id="codex-filter-unsupported-response-tools"
++              checked={codexProxyConfig?.filterUnsupportedResponseTools ?? true}
++              onCheckedChange={handleCodexToolFilterChange}
++              disabled={!codexProxyConfig || updateAppProxyConfig.isPending}
++            />
++          </div>
++        </div>
++
+         {/* Running state: service info + stats */}
+         {isRunning && status ? (
+           <div className="space-y-6">
+diff --git a/src/i18n/locales/en.json b/src/i18n/locales/en.json
+index 4eb63d8141..5a8023b92c 100644
+--- a/src/i18n/locales/en.json
++++ b/src/i18n/locales/en.json
+@@ -2285,7 +2285,14 @@
+       "invalidAddress": "Invalid address. Enter an IPv4 (e.g. 127.0.0.1), IPv6 (e.g. ::1), or localhost",
+       "configSaved": "Routing configuration saved",
+       "configSaveFailed": "Failed to save configuration",
+-      "restartRequired": "Restart routing service for address or port changes to take effect"
++      "restartRequired": "Restart routing service for address or port changes to take effect",
++      "codexToolFilter": {
++        "title": "Codex: Filter unsupported Responses tools",
++        "description": "When local routing takes over Codex, remove tools unsupported by the upstream from Responses requests. Defaults to removing image_generation to avoid 403/unsupported_value.",
++        "enabled": "Codex Responses tool filtering enabled",
++        "disabled": "Codex Responses tool filtering disabled",
++        "failed": "Failed to toggle Codex Responses tool filtering"
++      }
+     },
+     "switchFailed": "Switch failed: {{error}}",
+     "takeover": {
+diff --git a/src/i18n/locales/ja.json b/src/i18n/locales/ja.json
+index abe7560c37..0bcbc57695 100644
+--- a/src/i18n/locales/ja.json
++++ b/src/i18n/locales/ja.json
+@@ -2285,7 +2285,14 @@
+       "invalidAddress": "無効なアドレスです。IPv4（例: 127.0.0.1）、IPv6（例: ::1）、または localhost を入力してください",
+       "configSaved": "ルーティング設定を保存しました",
+       "configSaveFailed": "設定の保存に失敗しました",
+-      "restartRequired": "アドレスまたはポートの変更を反映するにはルーティングサービスの再起動が必要です"
++      "restartRequired": "アドレスまたはポートの変更を反映するにはルーティングサービスの再起動が必要です",
++      "codexToolFilter": {
++        "title": "Codex: 未対応の Responses ツールをフィルター",
++        "description": "ローカルルーティングで Codex を接管したとき、上流が対応していないツールを Responses リクエストから削除します。デフォルトでは image_generation を削除し、403/unsupported_value を回避します。",
++        "enabled": "Codex Responses ツールフィルターを有効にしました",
++        "disabled": "Codex Responses ツールフィルターを無効にしました",
++        "failed": "Codex Responses ツールフィルターの切り替えに失敗しました"
++      }
+     },
+     "switchFailed": "切り替えに失敗しました: {{error}}",
+     "takeover": {
+diff --git a/src/i18n/locales/zh-TW.json b/src/i18n/locales/zh-TW.json
+index 38f0cf2eb5..0057bc1685 100644
+--- a/src/i18n/locales/zh-TW.json
++++ b/src/i18n/locales/zh-TW.json
+@@ -2231,7 +2231,14 @@
+       "invalidAddress": "位址無效，請輸入 IPv4（如 127.0.0.1）、IPv6（如 ::1）或 localhost",
+       "configSaved": "路由設定已儲存",
+       "configSaveFailed": "儲存設定失敗",
+-      "restartRequired": "修改位址或連接埠後需要重新啟動路由服務才能生效"
++      "restartRequired": "修改位址或連接埠後需要重新啟動路由服務才能生效",
++      "codexToolFilter": {
++        "title": "Codex: 過濾不支援的 Responses 工具",
++        "description": "本地路由接管 Codex 後，從 Responses 請求中移除上游不支援的工具；預設移除 image_generation，避免 403/unsupported_value。",
++        "enabled": "Codex Responses 工具過濾已啟用",
++        "disabled": "Codex Responses 工具過濾已關閉",
++        "failed": "切換 Codex Responses 工具過濾失敗"
++      }
+     },
+     "switchFailed": "切換失敗：{{error}}",
+     "takeover": {
+diff --git a/src/i18n/locales/zh.json b/src/i18n/locales/zh.json
+index 43439583dd..afb9fa25cc 100644
+--- a/src/i18n/locales/zh.json
++++ b/src/i18n/locales/zh.json
+@@ -2285,7 +2285,14 @@
+       "invalidAddress": "地址无效，请输入 IPv4（如 127.0.0.1）、IPv6（如 ::1）或 localhost",
+       "configSaved": "路由配置已保存",
+       "configSaveFailed": "保存配置失败",
+-      "restartRequired": "修改地址或端口后需要重启路由服务才能生效"
++      "restartRequired": "修改地址或端口后需要重启路由服务才能生效",
++      "codexToolFilter": {
++        "title": "Codex: 过滤不支持的 Responses 工具",
++        "description": "本地路由接管 Codex 后，从 Responses 请求中移除上游不支持的工具；默认移除 image_generation，避免 403/unsupported_value。",
++        "enabled": "Codex Responses 工具过滤已启用",
++        "disabled": "Codex Responses 工具过滤已关闭",
++        "failed": "切换 Codex Responses 工具过滤失败"
++      }
+     },
+     "switchFailed": "切换失败: {{error}}",
+     "takeover": {
+diff --git a/src/types/proxy.ts b/src/types/proxy.ts
+index 75f8c24b4d..ef60d37436 100644
+--- a/src/types/proxy.ts
++++ b/src/types/proxy.ts
+@@ -137,4 +137,5 @@ export interface AppProxyConfig {
+   circuitTimeoutSeconds: number;
+   circuitErrorRateThreshold: number;
+   circuitMinRequests: number;
++  filterUnsupportedResponseTools: boolean;
+ }
+
+From f2d2c576ff9593826144f6b2074a81563e9ffe56 Mon Sep 17 00:00:00 2001
+From: tsumi233 <33922376+tsumi233@users.noreply.github.com>
+Date: Fri, 5 Jun 2026 10:54:21 +0800
+Subject: [PATCH 2/2] Fix Codex chat tool name fallback
+
+Infer missing Chat tool_call names from the original Responses tool schema when upstream providers omit function.name, and buffer streamed tool calls until a usable name is available.
+
+Also keeps safe Codex completion summaries for debugging and disables updater artifact generation for local unsigned builds.
+---
+ src-tauri/src/proxy/handlers.rs               |  18 +-
+ .../proxy/providers/streaming_codex_chat.rs   |  95 ++++++++-
+ .../proxy/providers/transform_codex_chat.rs   | 185 +++++++++++++++++-
+ src-tauri/src/proxy/response_processor.rs     | 107 +++++++++-
+ src-tauri/tauri.conf.json                     |   2 +-
+ 5 files changed, 386 insertions(+), 21 deletions(-)
+
+diff --git a/src-tauri/src/proxy/handlers.rs b/src-tauri/src/proxy/handlers.rs
+index b16bf27156..f40a751cab 100644
+--- a/src-tauri/src/proxy/handlers.rs
++++ b/src-tauri/src/proxy/handlers.rs
+@@ -24,9 +24,9 @@ use super::{
+         transform_codex_chat, transform_gemini, transform_responses,
+     },
+     response_processor::{
+-        create_logged_passthrough_stream, process_response, read_decoded_body,
+-        strip_entity_headers_for_rebuilt_body, strip_hop_by_hop_response_headers,
+-        usage_logging_enabled, SseUsageCollector,
++        create_logged_passthrough_stream, log_codex_stream_completion_summary, process_response,
++        read_decoded_body, strip_entity_headers_for_rebuilt_body,
++        strip_hop_by_hop_response_headers, usage_logging_enabled, SseUsageCollector,
+     },
+     server::ProxyState,
+     sse::{strip_sse_field, take_sse_block},
+@@ -722,15 +722,25 @@ async fn handle_codex_chat_to_responses_transform(
+             let request_model = ctx.request_model.clone();
+             let start_time = ctx.start_time;
+             let session_id = ctx.session_id.clone();
++            let tag = ctx.tag;
+ 
+             Some(SseUsageCollector::new(
+                 start_time,
+                 Some(codex_stream_usage_event_filter),
+                 move |events, first_token_ms| {
++                    let latency_ms = start_time.elapsed().as_millis() as u64;
++                    log_codex_stream_completion_summary(
++                        tag,
++                        &events,
++                        status.as_u16(),
++                        &request_model,
++                        latency_ms,
++                        first_token_ms,
++                    );
++
+                     let usage =
+                         TokenUsage::from_codex_stream_events_auto(&events).unwrap_or_default();
+                     let model = usage.model.clone().unwrap_or_else(|| request_model.clone());
+-                    let latency_ms = start_time.elapsed().as_millis() as u64;
+ 
+                     let state = state.clone();
+                     let provider_id = provider_id.clone();
+diff --git a/src-tauri/src/proxy/providers/streaming_codex_chat.rs b/src-tauri/src/proxy/providers/streaming_codex_chat.rs
+index 1146d095d6..eeee828442 100644
+--- a/src-tauri/src/proxy/providers/streaming_codex_chat.rs
++++ b/src-tauri/src/proxy/providers/streaming_codex_chat.rs
+@@ -400,6 +400,34 @@ impl ChatToResponsesState {
+         (!self.reasoning.text.trim().is_empty()).then(|| self.reasoning.text.trim().to_string())
+     }
+ 
++    fn infer_missing_tool_name(&mut self, chat_index: usize) -> bool {
++        let Some(arguments) = self
++            .tools
++            .get(&chat_index)
++            .filter(|state| state.name.is_empty())
++            .map(|state| state.arguments.clone())
++        else {
++            return false;
++        };
++        let Some(inferred_name) = self.tool_context.infer_chat_name_from_arguments(&arguments)
++        else {
++            return false;
++        };
++
++        let Some(state) = self.tools.get_mut(&chat_index) else {
++            return false;
++        };
++        if !state.name.is_empty() {
++            return false;
++        }
++
++        log::info!(
++            "[Codex] inferred missing Chat tool_call name from argument schema: chat_index={chat_index}, tool={inferred_name}"
++        );
++        state.name = inferred_name;
++        true
++    }
++
+     fn push_tool_call_delta(&mut self, tool_call: &Value, reasoning: Option<&str>) -> Vec<Bytes> {
+         let chat_index = tool_call.get("index").and_then(|v| v.as_u64()).unwrap_or(0) as usize;
+         let id_delta = tool_call
+@@ -410,6 +438,8 @@ impl ChatToResponsesState {
+         let name_delta = function
+             .get("name")
+             .and_then(|v| v.as_str())
++            .map(str::trim)
++            .filter(|v| !v.is_empty())
+             .map(str::to_string);
+         let args_delta = function
+             .get("arguments")
+@@ -429,7 +459,14 @@ impl ChatToResponsesState {
+                 state.call_id = id;
+             }
+             if let Some(name) = name_delta {
+-                state.name = name;
++                if state.name.is_empty() {
++                    state.name = name;
++                } else if state.name != name {
++                    log::warn!(
++                        "[Codex] upstream Chat tool_call name changed after partial stream: chat_index={chat_index}, original={}, new={name}",
++                        state.name
++                    );
++                }
+             }
+             if !args_delta.is_empty() {
+                 state.arguments.push_str(&args_delta);
+@@ -441,7 +478,7 @@ impl ChatToResponsesState {
+                 }
+             }
+ 
+-            if !state.added && (!state.call_id.is_empty() || !state.name.is_empty()) {
++            if !state.added && !state.name.is_empty() {
+                 should_add = true;
+                 pending_arguments = state.arguments.clone();
+             } else if state.added {
+@@ -463,9 +500,6 @@ impl ChatToResponsesState {
+             if state.call_id.is_empty() {
+                 state.call_id = format!("call_{chat_index}");
+             }
+-            if state.name.is_empty() {
+-                state.name = "unknown_tool".to_string();
+-            }
+             state.output_index = Some(assigned);
+             let is_custom_tool = self.tool_context.is_custom_tool_chat_name(&state.name);
+             state.item_id = response_tool_call_item_id_from_chat_name(
+@@ -670,6 +704,8 @@ impl ChatToResponsesState {
+                 continue;
+             }
+ 
++            self.infer_missing_tool_name(key);
++
+             if self
+                 .tools
+                 .get(&key)
+@@ -1076,6 +1112,55 @@ mod tests {
+         assert!(output.contains("\"call_id\":\"call_1\""));
+     }
+ 
++    #[tokio::test]
++    async fn infers_missing_streamed_tool_call_name_from_arguments() {
++        let request = json!({
++            "model": "gpt-5.4",
++            "tools": [
++                {
++                    "type": "function",
++                    "name": "exec_command",
++                    "parameters": {
++                        "type": "object",
++                        "properties": {
++                            "cmd": {"type": "string"},
++                            "workdir": {"type": "string"},
++                            "yield_time_ms": {"type": "integer"},
++                            "max_output_tokens": {"type": "integer"}
++                        },
++                        "required": ["cmd"]
++                    }
++                },
++                {
++                    "type": "function",
++                    "name": "read_file",
++                    "parameters": {
++                        "type": "object",
++                        "properties": {"path": {"type": "string"}},
++                        "required": ["path"]
++                    }
++                }
++            ]
++        });
++        let context =
++            super::super::transform_codex_chat::build_codex_tool_context_from_request(&request);
++        let output = collect_with_context(
++            vec![
++                "data: {\"id\":\"chatcmpl_missing_name\",\"model\":\"gpt-5.4\",\"choices\":[{\"delta\":{\"tool_calls\":[{\"index\":0,\"id\":\"call_shell\",\"type\":\"function\",\"function\":{}}]}}]}\n\n",
++                "data: {\"id\":\"chatcmpl_missing_name\",\"model\":\"gpt-5.4\",\"choices\":[{\"delta\":{\"tool_calls\":[{\"index\":0,\"function\":{\"arguments\":\"{\\\"cmd\\\":\\\"git status --short\\\",\\\"workdir\\\":\\\"/tmp\\\",\\\"yield_time_ms\\\":10000,\\\"max_output_tokens\\\":12000}\"}}]},\"finish_reason\":\"tool_calls\"}]}\n\n",
++                "data: [DONE]\n\n",
++            ],
++            context,
++        )
++        .await;
++
++        assert!(output.contains("\"type\":\"function_call\""));
++        assert!(output.contains("\"call_id\":\"call_shell\""));
++        assert!(output.contains("\"name\":\"exec_command\""));
++        assert!(!output.contains("\"name\":\"\""));
++        assert!(!output.contains("unknown_tool"));
++    }
++
+     #[tokio::test]
+     async fn restores_custom_tool_input_stream_events() {
+         let request = json!({
+diff --git a/src-tauri/src/proxy/providers/transform_codex_chat.rs b/src-tauri/src/proxy/providers/transform_codex_chat.rs
+index a3568dce53..e54262fb12 100644
+--- a/src-tauri/src/proxy/providers/transform_codex_chat.rs
++++ b/src-tauri/src/proxy/providers/transform_codex_chat.rs
+@@ -78,6 +78,95 @@ impl CodexToolContext {
+             .is_some_and(|spec| matches!(&spec.kind, CodexToolKind::Custom))
+     }
+ 
++    pub(crate) fn infer_chat_name_from_arguments(&self, arguments: &str) -> Option<String> {
++        let args = serde_json::from_str::<Value>(arguments).ok()?;
++        let args = args.as_object()?;
++        if args.is_empty() {
++            return None;
++        }
++
++        let arg_keys = args.keys().map(String::as_str).collect::<Vec<_>>();
++        let mut best_match: Option<(String, usize)> = None;
++        let mut has_tie = false;
++
++        for chat_tool in &self.chat_tools {
++            let Some(function) = chat_tool.get("function") else {
++                continue;
++            };
++            let Some(chat_name) = function
++                .get("name")
++                .and_then(|value| value.as_str())
++                .map(str::trim)
++                .filter(|value| !value.is_empty())
++            else {
++                continue;
++            };
++            let parameters = function.get("parameters").unwrap_or(&Value::Null);
++            let properties = parameters
++                .get("properties")
++                .and_then(|value| value.as_object());
++            let required = parameters
++                .get("required")
++                .and_then(|value| value.as_array())
++                .map(|items| {
++                    items
++                        .iter()
++                        .filter_map(|item| item.as_str())
++                        .collect::<Vec<_>>()
++                })
++                .unwrap_or_default();
++
++            if properties.is_none() && required.is_empty() {
++                continue;
++            }
++            if required
++                .iter()
++                .any(|required_key| !arg_keys.iter().any(|key| *key == *required_key))
++            {
++                continue;
++            }
++
++            let property_matches = properties
++                .map(|properties| {
++                    arg_keys
++                        .iter()
++                        .filter(|key| {
++                            properties
++                                .keys()
++                                .any(|property_key| property_key.as_str() == **key)
++                        })
++                        .count()
++                })
++                .unwrap_or(0);
++            if property_matches == 0 {
++                continue;
++            }
++
++            let unknown_args = arg_keys.len().saturating_sub(property_matches);
++            if unknown_args > 0 && !schema_allows_additional_properties(parameters) {
++                continue;
++            }
++
++            let score = (property_matches * 2 + required.len() * 4).saturating_sub(unknown_args);
++            match best_match.as_ref() {
++                Some((_, best_score)) if score < *best_score => {}
++                Some((_, best_score)) if score == *best_score => {
++                    has_tie = true;
++                }
++                _ => {
++                    best_match = Some((chat_name.to_string(), score));
++                    has_tie = false;
++                }
++            }
++        }
++
++        if has_tie {
++            None
++        } else {
++            best_match.map(|(chat_name, _)| chat_name)
++        }
++    }
++
+     fn chat_name_for_response_function(&self, name: &str, namespace: Option<&str>) -> String {
+         if let Some(namespace) = namespace.filter(|value| !value.is_empty()) {
+             if let Some(chat_name) = self
+@@ -1016,6 +1105,14 @@ fn responses_tool_name(tool: &Value) -> Option<String> {
+         .map(ToString::to_string)
+ }
+ 
++fn schema_allows_additional_properties(parameters: &Value) -> bool {
++    match parameters.get("additionalProperties") {
++        Some(Value::Bool(value)) => *value,
++        Some(Value::Object(_)) => true,
++        _ => false,
++    }
++}
++
+ fn responses_function_tool_to_chat_tool(tool: &Value, chat_name: &str) -> Option<Value> {
+     if tool.get("type").and_then(|v| v.as_str()) != Some("function") {
+         return None;
+@@ -1353,15 +1450,22 @@ fn chat_tool_call_to_response_item(
+         .map(ToString::to_string)
+         .unwrap_or_else(|| format!("call_{index}"));
+     let function = tool_call.get("function").unwrap_or(&Value::Null);
+-    let name = function.get("name").and_then(|v| v.as_str()).unwrap_or("");
+     let arguments = canonicalize_tool_arguments(function.get("arguments"));
++    let name = function
++        .get("name")
++        .and_then(|v| v.as_str())
++        .map(str::trim)
++        .filter(|v| !v.is_empty())
++        .map(ToString::to_string)
++        .or_else(|| tool_context.infer_chat_name_from_arguments(&arguments))
++        .unwrap_or_default();
+ 
+-    let item_id = response_tool_call_item_id_from_chat_name(&call_id, name, tool_context);
++    let item_id = response_tool_call_item_id_from_chat_name(&call_id, &name, tool_context);
+     response_tool_call_item_from_chat_name(
+         &item_id,
+         "completed",
+         &call_id,
+-        name,
++        &name,
+         &arguments,
+         reasoning,
+         tool_context,
+@@ -1378,18 +1482,21 @@ fn chat_legacy_function_call_to_response_item(
+         .and_then(|v| v.as_str())
+         .filter(|v| !v.is_empty())
+         .unwrap_or("call_0");
+-    let name = function_call
+-        .get("name")
+-        .and_then(|v| v.as_str())
+-        .unwrap_or("");
++    let name = function_call.get("name").and_then(|v| v.as_str());
+     let arguments = canonicalize_tool_arguments(function_call.get("arguments"));
++    let name = name
++        .map(str::trim)
++        .filter(|v| !v.is_empty())
++        .map(ToString::to_string)
++        .or_else(|| tool_context.infer_chat_name_from_arguments(&arguments))
++        .unwrap_or_default();
+ 
+-    let item_id = response_tool_call_item_id_from_chat_name(call_id, name, tool_context);
++    let item_id = response_tool_call_item_id_from_chat_name(call_id, &name, tool_context);
+     response_tool_call_item_from_chat_name(
+         &item_id,
+         "completed",
+         call_id,
+-        name,
++        &name,
+         &arguments,
+         reasoning,
+         tool_context,
+@@ -2616,6 +2723,66 @@ mod tests {
+         assert_eq!(result["output"][0]["arguments"]["limit"], 10);
+     }
+ 
++    #[test]
++    fn chat_response_to_responses_infers_missing_tool_call_name_from_arguments() {
++        let request = json!({
++            "model": "gpt-5.4",
++            "tools": [
++                {
++                    "type": "function",
++                    "name": "exec_command",
++                    "parameters": {
++                        "type": "object",
++                        "properties": {
++                            "cmd": {"type": "string"},
++                            "workdir": {"type": "string"},
++                            "yield_time_ms": {"type": "integer"},
++                            "max_output_tokens": {"type": "integer"}
++                        },
++                        "required": ["cmd"]
++                    }
++                },
++                {
++                    "type": "function",
++                    "name": "read_file",
++                    "parameters": {
++                        "type": "object",
++                        "properties": {"path": {"type": "string"}},
++                        "required": ["path"]
++                    }
++                }
++            ],
++            "input": "Check git status."
++        });
++        let context = build_codex_tool_context_from_request(&request);
++        let chat = json!({
++            "id": "chatcmpl_missing_name",
++            "object": "chat.completion",
++            "created": 123,
++            "model": "gpt-5.4",
++            "choices": [{
++                "message": {
++                    "role": "assistant",
++                    "tool_calls": [{
++                        "id": "call_shell",
++                        "type": "function",
++                        "function": {
++                            "arguments": "{\"cmd\":\"git status --short\",\"workdir\":\"/tmp\",\"yield_time_ms\":10000,\"max_output_tokens\":12000}"
++                        }
++                    }]
++                },
++                "finish_reason": "tool_calls"
++            }]
++        });
++
++        let result = chat_completion_to_response_with_context(chat, &context).unwrap();
++
++        assert_eq!(result["output"][0]["type"], "function_call");
++        assert_eq!(result["output"][0]["call_id"], "call_shell");
++        assert_eq!(result["output"][0]["name"], "exec_command");
++        assert_ne!(result["output"][0]["name"], "");
++    }
++
+     #[test]
+     fn chat_response_to_responses_restores_custom_tool_call() {
+         let request = json!({
+diff --git a/src-tauri/src/proxy/response_processor.rs b/src-tauri/src/proxy/response_processor.rs
+index 6ac5e80fa0..3fd8b00e70 100644
+--- a/src-tauri/src/proxy/response_processor.rs
++++ b/src-tauri/src/proxy/response_processor.rs
+@@ -19,6 +19,7 @@ use bytes::Bytes;
+ use futures::stream::{Stream, StreamExt};
+ use serde_json::Value;
+ use std::{
++    collections::BTreeMap,
+     io::Read,
+     sync::{
+         atomic::{AtomicBool, Ordering},
+@@ -511,9 +512,20 @@ fn create_usage_collector(
+         start_time,
+         parser_config.stream_event_filter,
+         move |events, first_token_ms| {
++            let latency_ms = start_time.elapsed().as_millis() as u64;
++            if app_type_str == "codex" {
++                log_codex_stream_completion_summary(
++                    tag,
++                    &events,
++                    status_code,
++                    &request_model,
++                    latency_ms,
++                    first_token_ms,
++                );
++            }
++
+             if let Some(usage) = stream_parser(&events) {
+                 let model = model_extractor(&events, &request_model);
+-                let latency_ms = start_time.elapsed().as_millis() as u64;
+ 
+                 let state = state.clone();
+                 let provider_id = provider_id.clone();
+@@ -538,7 +550,6 @@ fn create_usage_collector(
+                 });
+             } else {
+                 let model = model_extractor(&events, &request_model);
+-                let latency_ms = start_time.elapsed().as_millis() as u64;
+                 let state = state.clone();
+                 let provider_id = provider_id.clone();
+                 let session_id = session_id.clone();
+@@ -674,6 +685,98 @@ async fn log_usage_internal(
+     }
+ }
+ 
++pub(crate) fn log_codex_stream_completion_summary(
++    tag: &str,
++    events: &[Value],
++    upstream_status: u16,
++    request_model: &str,
++    latency_ms: u64,
++    first_event_ms: Option<u64>,
++) {
++    let Some(event) = events.iter().find(|event| {
++        event
++            .get("type")
++            .and_then(Value::as_str)
++            .is_some_and(|event_type| event_type == "response.completed")
++    }) else {
++        log::info!(
++            "[{tag}] Codex stream ended without response.completed: request_model={request_model}, upstream_status={upstream_status}, latency_ms={latency_ms}, first_event_ms={first_event_ms:?}, collected_events={}",
++            events.len()
++        );
++        return;
++    };
++
++    let response = event.get("response").unwrap_or(event);
++    let response_model = response
++        .get("model")
++        .and_then(Value::as_str)
++        .unwrap_or("unknown");
++    let response_status = response
++        .get("status")
++        .and_then(Value::as_str)
++        .unwrap_or("unknown");
++    let incomplete_reason = response
++        .pointer("/incomplete_details/reason")
++        .and_then(Value::as_str)
++        .unwrap_or("none");
++    let error_type = response
++        .pointer("/error/type")
++        .and_then(Value::as_str)
++        .unwrap_or("none");
++    let error_code = response
++        .pointer("/error/code")
++        .and_then(Value::as_str)
++        .unwrap_or("none");
++    let usage = response.get("usage");
++    let input_tokens = usage
++        .and_then(|u| u.get("input_tokens"))
++        .and_then(Value::as_u64)
++        .unwrap_or(0);
++    let output_tokens = usage
++        .and_then(|u| u.get("output_tokens"))
++        .and_then(Value::as_u64)
++        .unwrap_or(0);
++    let cached_tokens = usage
++        .and_then(|u| u.pointer("/input_tokens_details/cached_tokens"))
++        .and_then(Value::as_u64)
++        .unwrap_or(0);
++    let reasoning_tokens = usage
++        .and_then(|u| u.pointer("/output_tokens_details/reasoning_tokens"))
++        .and_then(Value::as_u64)
++        .unwrap_or(0);
++    let output_summary = summarize_codex_output_items(response.get("output"));
++
++    log::info!(
++        "[{tag}] Codex response.completed summary: request_model={request_model}, response_model={response_model}, response_status={response_status}, incomplete_reason={incomplete_reason}, error_type={error_type}, error_code={error_code}, output_items={output_summary}, input_tokens={input_tokens}, output_tokens={output_tokens}, cached_tokens={cached_tokens}, reasoning_tokens={reasoning_tokens}, upstream_status={upstream_status}, latency_ms={latency_ms}, first_event_ms={first_event_ms:?}"
++    );
++}
++
++fn summarize_codex_output_items(output: Option<&Value>) -> String {
++    let Some(items) = output.and_then(Value::as_array) else {
++        return "none".to_string();
++    };
++    if items.is_empty() {
++        return "empty".to_string();
++    }
++
++    let mut counts = BTreeMap::<String, usize>::new();
++    for item in items {
++        let item_type = item
++            .get("type")
++            .and_then(Value::as_str)
++            .unwrap_or("unknown");
++        let item_status = item.get("status").and_then(Value::as_str).unwrap_or("none");
++        let key = format!("{item_type}:{item_status}");
++        *counts.entry(key).or_default() += 1;
++    }
++
++    counts
++        .into_iter()
++        .map(|(key, count)| format!("{key}x{count}"))
++        .collect::<Vec<_>>()
++        .join(",")
++}
++
+ /// 创建带日志记录和超时控制的透传流
+ pub fn create_logged_passthrough_stream(
+     stream: impl Stream<Item = Result<Bytes, std::io::Error>> + Send + 'static,
+diff --git a/src-tauri/tauri.conf.json b/src-tauri/tauri.conf.json
+index 2759fa30e9..84fd1e397c 100644
+--- a/src-tauri/tauri.conf.json
++++ b/src-tauri/tauri.conf.json
+@@ -36,7 +36,7 @@
+   "bundle": {
+     "active": true,
+     "targets": "all",
+-    "createUpdaterArtifacts": true,
++    "createUpdaterArtifacts": false,
+     "icon": [
+       "icons/32x32.png",
+       "icons/128x128.png",

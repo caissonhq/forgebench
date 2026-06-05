@@ -721,7 +721,7 @@ python3 scripts/dogfood_summary.py forgebench-output/feedback.jsonl
 
 ForgeBench includes synthetic, human-approved sample reports under [examples/sample_report](examples/sample_report). They are designed to show first-run output shape for a `BLOCK` case and a `LOW_CONCERN` case. They are not real customer reports and do not contain proprietary code.
 
-Real anonymized reports remain a future dogfood and beta requirement.
+Real anonymized reports from EO-002 dogfood are in [examples/real_reports](examples/real_reports). Synthetic first-run examples remain in [examples/sample_report](examples/sample_report).
 
 ## Development Commands
 

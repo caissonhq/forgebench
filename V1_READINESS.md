@@ -87,9 +87,9 @@ Regression Hunter is the first narrow Phase 2 lens. It only checks for potential
 - Optional LLM review is command-provider only and advisory.
 - LLM-assisted lenses are limited to Test Skeptic v2 and optional Regression Hunter refinement when `--llm-review` is configured.
 - The GitHub Action wrapper packages the local CLI for workflows. It is not a hosted GitHub App.
-- Real anonymized sample reports are still required before broader public beta. Sprint 8 includes synthetic sample reports for first-run UX only.
-- Real anonymized PR corpus remains blocked pending approved source material. Sprint 12A implements the Regression Hunter lens and calibration summary only.
-- Current golden corpus count: 37 synthetic or fixture-based cases, 0 real anonymized PR cases.
+- EO-002 (2026-06-05): 10 real agent PRs dogfooded; 3 anonymized reports in `examples/real_reports/`; 10 `dogfood_*` golden cases added (47 total calibration cases).
+- Labeled false-positive rate in generic mode: **63.2%** on EO-002 findings (dominated by `ui_copy_changed` on markdown/agent-policy PRs).
+- Synthetic sample reports remain in `examples/sample_report/` for first-run UX.
 - Generic mode is intentionally less strict for unconfigured repos; teams should still add `forgebench.yml` before relying on strict posture decisions.
 - Feedback is local-only and useful for alpha dogfood, but ForgeBench does not aggregate or upload feedback anywhere. Feedback suggestions do not automatically tune future runs.
 
