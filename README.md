@@ -717,6 +717,18 @@ Generate a Markdown dogfood summary from one or more feedback logs:
 python3 scripts/dogfood_summary.py forgebench-output/feedback.jsonl
 ```
 
+## Cursor and MCP integrations
+
+Project rule: [.cursor/rules/forgebench-review.mdc](.cursor/rules/forgebench-review.mdc)
+
+```bash
+forgebench review --repo . --diff ./patch.diff --task ./task.md
+forgebench repair --out forgebench-output
+forgebench mcp
+```
+
+See [docs/cursor-integration.md](docs/cursor-integration.md) and [docs/mcp-server.md](docs/mcp-server.md).
+
 ## Sample Reports
 
 ForgeBench includes synthetic, human-approved sample reports under [examples/sample_report](examples/sample_report). They are designed to show first-run output shape for a `BLOCK` case and a `LOW_CONCERN` case. They are not real customer reports and do not contain proprietary code.

@@ -8,6 +8,7 @@ from forgebench import __version__
 from forgebench.calibration import format_calibration_result, run_calibration
 from forgebench.doctor import format_doctor_report, run_doctor
 from forgebench.feedback import FeedbackError, append_feedback, format_feedback_summary, suggest_guardrails, summarize_feedback
+from forgebench.mcp_server import run_mcp_server
 from forgebench.github_pr import GitHubPRError, GitHubPRReviewResult, run_github_pr_review
 from forgebench.init import InitError, write_starter_guardrails
 from forgebench.models import ForgeBenchReport
@@ -33,6 +34,12 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.command == "validate":
         return _run_validate(args)
+
+    if args.command == "repair":
+        return _run_repair(args)
+
+    if args.command == "mcp":
+        return _run_mcp(args)
 
     if args.command == "review-pr":
         return _run_review_pr(args)
@@ -89,6 +96,30 @@ def _run_review(args: argparse.Namespace) -> int:
         _fail(str(exc))
 
     _print_summary(result.report, result.written_paths, guardrails_explicit=bool(args.guardrails))
+    print()
+    print(f"Paste repair prompt: forgebench repair --out {result.output_dir}")
+    return 0
+
+
+def _run_repair(args: argparse.Namespace) -> int:
+    repair_path = Path(args.out) / "repair-prompt.md"
+    if not repair_path.exists():
+        _fail(
+            f"repair prompt not found at {repair_path}. "
+            "Run forgebench review or forgebench review-pr first."
+        )
+    text = repair_path.read_text(encoding="utf-8", errors="replace")
+    if args.copy_hint:
+        print(f"Repair prompt: {repair_path}")
+        print("Paste the content below into your coding agent (Cursor, Codex, or Claude Code).")
+        print()
+    print(text)
+    return 0
+
+
+def _run_mcp(args: argparse.Namespace) -> int:
+    del args
+    run_mcp_server()
     return 0
 
 
@@ -286,6 +317,14 @@ def _build_parser() -> argparse.ArgumentParser:
     feedback.add_argument("--summarize", action="store_true", help="Summarize a local feedback JSONL log.")
     feedback.add_argument("--suggest-guardrails", action="store_true", help="Suggest forgebench.yml tuning from local feedback.")
     feedback.add_argument("--out", required=False, help="Optional path to write guardrail suggestions Markdown.")
+
+    repair = subparsers.add_parser("repair", help="Print repair-prompt.md for pasting into a coding agent.")
+    repair.add_argument("--out", required=False, default="forgebench-output", help="ForgeBench output directory.")
+    repair.add_argument("--copy-hint", action="store_true", default=True, help="Print paste instructions before the prompt.")
+    repair.add_argument("--no-copy-hint", dest="copy_hint", action="store_false", help="Print only the repair prompt body.")
+
+    mcp = subparsers.add_parser("mcp", help="Start the ForgeBench MCP server over stdio.")
+    mcp.add_argument("--transport", choices=["stdio"], default="stdio", help="Transport for MCP. Only stdio is supported.")
 
     calibrate = subparsers.add_parser("calibrate", help="Run the golden corpus calibration suite.")
     calibrate.add_argument("--cases", required=True, help="Path to the golden cases directory.")

@@ -1,0 +1,70 @@
+---
+description: Run ForgeBench merge-risk review and paste the repair prompt back into the coding agent
+globs:
+alwaysApply: false
+---
+
+# ForgeBench review → repair workflow
+
+Use ForgeBench before merging AI-generated diffs. ForgeBench does not prove code is safe; it highlights merge risk.
+
+## When to run
+
+Run ForgeBench when:
+- An agent produced a patch diff and task prompt
+- You need a sober `BLOCK` / `REVIEW` / `LOW_CONCERN` posture before merge
+- Deterministic checks or guardrails may apply
+
+## Run review
+
+Minimum local review:
+
+```bash
+forgebench review --repo . --diff ./patch.diff --task ./task.md
+```
+
+With repo guardrails:
+
+```bash
+forgebench review --repo . --diff ./patch.diff --task ./task.md --guardrails forgebench.yml
+```
+
+GitHub PR review:
+
+```bash
+forgebench review-pr https://github.com/ORG/REPO/pull/NUMBER
+```
+
+## Paste repair prompt
+
+After review, read the repair prompt and paste it into the active coding agent (Cursor, Codex, or Claude Code):
+
+```bash
+forgebench repair --out forgebench-output
+```
+
+Or open `forgebench-output/repair-prompt.md` directly.
+
+## Agent instructions after paste
+
+When the user pastes a ForgeBench repair prompt:
+1. Fix only the issues listed in the prompt.
+2. Do not broaden scope or add unrelated refactors.
+3. Add or update tests where ForgeBench flagged missing coverage.
+4. Summarize exactly what changed and why.
+5. Re-run ForgeBench if the user asks for a second pass.
+
+## MCP integration (optional)
+
+If the ForgeBench MCP server is configured, call `forgebench_review` with `repo`, `diff`, and `task`, then paste the returned `repair_prompt` field.
+
+## Beta feedback
+
+After review, record structured local feedback for noisy or useful findings:
+
+```bash
+forgebench feedback FINDING_UID --status dismissed --kind FINDING_KIND --agent cursor --posture REVIEW
+forgebench feedback export --out forgebench-output/beta-feedback.json
+```
+
+Feedback stays local unless the user chooses to share the export file.

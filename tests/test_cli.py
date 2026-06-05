@@ -228,6 +228,18 @@ class CliTests(unittest.TestCase):
             self.assertIn("tests_failed", {finding["id"] for finding in payload["findings"]})
 
 
+    def test_repair_prints_existing_prompt(self) -> None:
+        with TemporaryDirectory() as tmp:
+            out_dir = Path(tmp) / "out"
+            out_dir.mkdir()
+            (out_dir / "repair-prompt.md").write_text("Repair this patch.\n", encoding="utf-8")
+            stdout = StringIO()
+            with redirect_stdout(stdout):
+                result = main(["repair", "--out", str(out_dir), "--no-copy-hint"])
+
+            self.assertEqual(result, 0)
+            self.assertIn("Repair this patch.", stdout.getvalue())
+
     def test_review_pr_run_checks_requires_checkout_pr(self) -> None:
         stderr = StringIO()
 
