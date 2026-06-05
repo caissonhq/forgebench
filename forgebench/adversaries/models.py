@@ -19,6 +19,7 @@ TEST_SKEPTIC = "test_skeptic"
 CONTRACT_KEEPER = "contract_keeper"
 PRODUCT_GUARDRAIL_REVIEWER = "product_guardrail_reviewer"
 REGRESSION_HUNTER = "regression_hunter"
+SECURITY_REVIEWER = "security_reviewer"
 
 
 @dataclass(frozen=True)
@@ -37,6 +38,7 @@ __all__ = [
     "CONTRACT_KEEPER",
     "PRODUCT_GUARDRAIL_REVIEWER",
     "REGRESSION_HUNTER",
+    "SECURITY_REVIEWER",
     "ReviewerContext",
     "SCOPE_AUDITOR",
     "TEST_SKEPTIC",

@@ -8,8 +8,9 @@
   ],
   "allowed_extra_finding_ids": [],
   "forbidden_finding_ids": [
-    "deleted_tests"
+    "deleted_tests",
+    "persistence_schema_changed"
   ],
   "allow_unlisted_findings": true,
-  "rationale": "Real broad Effect refactor; dependency + surface signals should review even if persistence heuristic misfires."
+  "rationale": "Real broad Effect refactor; dependency + surface signals should review without package/tsconfig persistence noise."
 }

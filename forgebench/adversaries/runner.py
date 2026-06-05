@@ -7,6 +7,7 @@ from forgebench.adversaries.lenses import regression_hunter, test_skeptic_v2
 from forgebench.adversaries.models import ReviewerContext
 from forgebench.adversaries.product_guardrail_reviewer import review as product_guardrail_review
 from forgebench.adversaries.scope_auditor import review as scope_auditor_review
+from forgebench.adversaries.security_reviewer import review as security_reviewer_review
 from forgebench.adversaries.test_skeptic import review as test_skeptic_review
 from forgebench.models import (
     LLMReviewerConfig,
@@ -24,6 +25,7 @@ REVIEWERS: tuple[Reviewer, ...] = (
     test_skeptic_review,
     contract_keeper_review,
     product_guardrail_review,
+    security_reviewer_review,
 )
 
 

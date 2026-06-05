@@ -38,6 +38,7 @@ PR_URL="$(read_input PR_URL PR-URL)"
 GUARDRAILS_PATH="$(read_input GUARDRAILS_PATH GUARDRAILS-PATH)"
 RUN_CHECKS="$(read_input RUN_CHECKS RUN-CHECKS)"
 POST_COMMENT="$(read_input POST_COMMENT POST-COMMENT)"
+POST_CHECK_RUN="$(read_input POST_CHECK_RUN POST-CHECK-RUN)"
 LLM_REVIEW="$(read_input LLM_REVIEW LLM-REVIEW)"
 LLM_COMMAND="$(read_input LLM_COMMAND LLM-COMMAND)"
 
@@ -87,6 +88,10 @@ else
   command+=(--dry-run)
 fi
 
+if is_true "${POST_CHECK_RUN}"; then
+  command+=(--check-run)
+fi
+
 if is_true "${LLM_REVIEW}"; then
   command+=(--llm-review)
   if [ -n "${LLM_COMMAND}" ]; then
@@ -99,6 +104,7 @@ echo "Running: ${command[*]}"
 
 REPORT_JSON="${OUT_DIR}/forgebench-report.json"
 REPORT_MD="${OUT_DIR}/forgebench-report.md"
+REPORT_SARIF="${OUT_DIR}/forgebench-report.sarif.json"
 PR_COMMENT="${OUT_DIR}/pr-comment.md"
 POSTURE="$(json_value "${REPORT_JSON}")"
 
@@ -107,5 +113,6 @@ if [ -n "${GITHUB_OUTPUT:-}" ]; then
     echo "posture=${POSTURE}"
     echo "report-path=${REPORT_MD}"
     echo "pr-comment-path=${PR_COMMENT}"
+    echo "sarif-path=${REPORT_SARIF}"
   } >> "${GITHUB_OUTPUT}"
 fi

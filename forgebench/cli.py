@@ -12,6 +12,7 @@ from forgebench.github_pr import GitHubPRError, GitHubPRReviewResult, run_github
 from forgebench.init import InitError, write_starter_guardrails
 from forgebench.models import ForgeBenchReport
 from forgebench.review import ReviewInputError, run_review
+from forgebench.validate import format_validation_report, validate_guardrails_file
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -29,6 +30,9 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.command == "feedback":
         return _run_feedback(args)
+
+    if args.command == "validate":
+        return _run_validate(args)
 
     if args.command == "review-pr":
         return _run_review_pr(args)
@@ -107,6 +111,7 @@ def _run_review_pr(args: argparse.Namespace) -> int:
             output_dir=args.out,
             run_checks=args.run_checks,
             post_comment=args.post_comment,
+            post_check_run=args.check_run,
             comment_file=args.comment_file,
             dry_run=args.dry_run or not args.post_comment,
             llm_review=args.llm_review,
@@ -125,7 +130,22 @@ def _run_review_pr(args: argparse.Namespace) -> int:
     _print_pr_summary(result, guardrails_explicit=bool(args.guardrails))
     if result.comment_posted:
         print("PR comment posted.")
+    if result.check_run_posted:
+        print("GitHub Check Run posted.")
+    elif result.check_run_error:
+        print(f"GitHub Check Run failed: {result.check_run_error}")
     return 0
+
+
+def _run_validate(args: argparse.Namespace) -> int:
+    path = Path(args.file)
+    if not path.is_absolute():
+        candidate = Path(args.repo) / path
+        if candidate.exists():
+            path = candidate
+    report = validate_guardrails_file(path, strict=args.strict)
+    print(format_validation_report(report))
+    return report.exit_code
 
 
 def _run_calibrate(args: argparse.Namespace) -> int:
@@ -224,6 +244,11 @@ def _build_parser() -> argparse.ArgumentParser:
     review_pr.add_argument("--keep-worktree", action="store_true", help="Do not delete the temporary PR worktree after review. Prints the path in the report.")
     review_pr.add_argument("--worktree-dir", required=False, help="Optional parent directory for temporary PR worktrees.")
     review_pr.add_argument("--post-comment", action="store_true", help="Post the ForgeBench Markdown report as a GitHub PR comment.")
+    review_pr.add_argument(
+        "--check-run",
+        action="store_true",
+        help="Post a GitHub Check Run with inline annotations for findings on the PR head commit.",
+    )
     review_pr.add_argument("--comment-file", required=False, help="Path to write the PR comment Markdown. Defaults to pr-comment.md in the output directory.")
     review_pr.add_argument("--dry-run", action="store_true", help="Write local artifacts but do not post a PR comment.")
     review_pr.add_argument("--llm-review", action="store_true", help="Run an optional advisory LLM reviewer after deterministic/static review.")
@@ -248,6 +273,11 @@ def _build_parser() -> argparse.ArgumentParser:
     calibrate.add_argument("--cases", required=True, help="Path to the golden cases directory.")
     calibrate.add_argument("--out", required=False, default="forgebench-calibration-output", help="Output directory for calibration reports.")
     calibrate.add_argument("--repo", required=False, default=".", help="Repo root used when running configured checks. Defaults to current directory.")
+
+    validate = subparsers.add_parser("validate", help="Lint forgebench.yml against the documented schema.")
+    validate.add_argument("--repo", required=False, default=".", help="Repository path. Defaults to current directory.")
+    validate.add_argument("--file", required=False, default="forgebench.yml", help="Guardrails file to validate.")
+    validate.add_argument("--strict", action="store_true", help="Treat unknown top-level keys as errors.")
 
     return parser
 
@@ -280,6 +310,8 @@ def _print_summary(report: ForgeBenchReport, written: dict[str, Path], guardrail
     print("Reports written:")
     print(f"- {written['markdown']}")
     print(f"- {written['json']}")
+    if "sarif" in written:
+        print(f"- {written['sarif']}")
     print(f"- {written['repair_prompt']}")
 
 

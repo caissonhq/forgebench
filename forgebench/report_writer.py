@@ -5,10 +5,12 @@ from pathlib import Path
 
 from forgebench.models import CheckResult, CheckStatus, Confidence, ForgeBenchReport, Guardrails
 from forgebench.repair_prompt import build_repair_prompt
+from forgebench.sarif_writer import REPORT_SARIF, write_sarif_report
 
 
 REPORT_MD = "forgebench-report.md"
 REPORT_JSON = "forgebench-report.json"
+REPORT_SARIF_NAME = REPORT_SARIF
 REPAIR_PROMPT = "repair-prompt.md"
 
 
@@ -25,6 +27,7 @@ def write_reports(
     markdown_path = output_dir / REPORT_MD
     json_path = output_dir / REPORT_JSON
     repair_prompt_path = output_dir / REPAIR_PROMPT
+    sarif_path = write_sarif_report(output_dir, report)
 
     markdown_path.write_text(build_markdown_report(report, guardrails, inputs), encoding="utf-8")
     json_path.write_text(json.dumps(report.to_dict(), indent=2) + "\n", encoding="utf-8")
@@ -33,6 +36,7 @@ def write_reports(
     return {
         "markdown": markdown_path,
         "json": json_path,
+        "sarif": sarif_path,
         "repair_prompt": repair_prompt_path,
     }
 

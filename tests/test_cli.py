@@ -35,6 +35,7 @@ class CliTests(unittest.TestCase):
             self.assertIn("ForgeBench review complete.", stdout.getvalue())
             self.assertTrue((out_dir / "forgebench-report.md").exists())
             self.assertTrue((out_dir / "forgebench-report.json").exists())
+            self.assertTrue((out_dir / "forgebench-report.sarif.json").exists())
             self.assertTrue((out_dir / "repair-prompt.md").exists())
 
     def test_cli_handles_missing_diff_path_cleanly(self) -> None:

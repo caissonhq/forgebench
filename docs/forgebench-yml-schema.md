@@ -73,9 +73,17 @@ Supported policy children:
 - `suppress_findings`
 - `posture_overrides`
 
+## Validation
+
+Run `forgebench validate --repo . --file forgebench.yml` to lint a guardrails file against this schema.
+
+- Exit `0`: valid (warnings allowed)
+- Exit `1`: valid with warnings
+- Exit `2`: errors (malformed YAML or `--strict` unknown keys)
+
 ## Unknown Keys
 
-Unknown top-level keys are non-fatal. ForgeBench records a warning and ignores them.
+Unknown top-level keys are non-fatal. ForgeBench records a warning and ignores them. Use `--strict` with `forgebench validate` to treat unknown keys as errors.
 
 ## `forgebench init` Presets
 

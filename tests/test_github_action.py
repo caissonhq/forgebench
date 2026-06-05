@@ -20,12 +20,20 @@ class GitHubActionTests(unittest.TestCase):
 
         self.assertEqual(payload["runs"]["using"], "docker")
         self.assertEqual(payload["runs"]["image"], "Dockerfile")
-        for input_name in ["pr-url", "guardrails-path", "run-checks", "post-comment", "llm-review", "llm-command"]:
+        for input_name in [
+            "pr-url",
+            "guardrails-path",
+            "run-checks",
+            "post-comment",
+            "post-check-run",
+            "llm-review",
+            "llm-command",
+        ]:
             self.assertIn(input_name, payload["inputs"])
         self.assertEqual(payload["inputs"]["post-comment"]["default"], "false")
         self.assertEqual(payload["inputs"]["run-checks"]["default"], "false")
         self.assertEqual(payload["inputs"]["llm-review"]["default"], "false")
-        for output_name in ["posture", "report-path", "pr-comment-path"]:
+        for output_name in ["posture", "report-path", "pr-comment-path", "sarif-path"]:
             self.assertIn(output_name, payload["outputs"])
 
     def test_entrypoint_does_not_post_comment_by_default(self) -> None:
@@ -48,6 +56,17 @@ class GitHubActionTests(unittest.TestCase):
         args = result.args
         self.assertIn("--post-comment", args)
         self.assertNotIn("--dry-run", args)
+
+    def test_entrypoint_maps_post_check_run_flag(self) -> None:
+        result = _run_entrypoint(
+            {
+                "INPUT_PR_URL": "https://github.com/owner/repo/pull/1",
+                "INPUT_POST_CHECK_RUN": "true",
+            }
+        )
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("--check-run", result.args)
 
     def test_entrypoint_maps_run_checks_flag(self) -> None:
         result = _run_entrypoint(
@@ -85,6 +104,7 @@ class GitHubActionTests(unittest.TestCase):
         self.assertIn("posture=REVIEW", result.github_output)
         self.assertIn("report-path=", result.github_output)
         self.assertIn("pr-comment-path=", result.github_output)
+        self.assertIn("sarif-path=", result.github_output)
 
     def test_entrypoint_fails_when_pr_url_missing(self) -> None:
         result = _run_entrypoint({})

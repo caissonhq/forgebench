@@ -40,6 +40,18 @@ ForgeBench should not run `git reset`, `git clean`, `git checkout`, `git merge`,
 
 `forgebench feedback` writes local JSONL. No feedback telemetry, analytics, or reports are uploaded anywhere.
 
+## Security Reviewer v0
+
+ForgeBench includes a deterministic Security Reviewer lens that scans added diff lines for likely secrets and dangerous imports or dynamic execution patterns. It is pattern-based, local-only, and advisory. It does not replace dedicated secret scanners or SAST.
+
+## CI Artifacts
+
+Reviews can write SARIF (`forgebench-report.sarif.json`) for code scanning workflows and post GitHub Check Run annotations when `review-pr --check-run` is explicitly passed. Neither feature runs by default.
+
+## Trust Model
+
+See [docs/trust-model.md](docs/trust-model.md) for fork PR guidance, guardrails trust, check execution boundaries, and CI operator checklist.
+
 ## Secrets
 
 Do not put secrets, API keys, or credentials in ForgeBench fixtures, guardrails, reports, or calibration cases.

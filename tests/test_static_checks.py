@@ -163,6 +163,42 @@ index 1111111..2222222 100644
         self.assertNotIn("persistence_schema_changed", {finding.id for finding in findings})
         self.assertEqual(signals["persistence_or_schema_files_changed"], [])
 
+    def test_package_json_and_tsconfig_are_not_persistence(self) -> None:
+        diff = parse_unified_diff(
+            """
+diff --git a/package.json b/package.json
+index 1111111..2222222 100644
+--- a/package.json
++++ b/package.json
+@@ -1,3 +1,4 @@
+ {
+   "name": "app",
++  "scripts": { "test": "vitest" }
+ }
+diff --git a/tsconfig.json b/tsconfig.json
+index 1111111..2222222 100644
+--- a/tsconfig.json
++++ b/tsconfig.json
+@@ -1,3 +1,4 @@
+ {
+   "compilerOptions": {
++    "strict": true
+   }
+ }
+"""
+        )
+        findings, signals = run_static_checks(diff)
+
+        self.assertNotIn("persistence_schema_changed", {finding.id for finding in findings})
+        self.assertEqual(signals["persistence_or_schema_files_changed"], [])
+
+    def test_markdown_agent_policy_paths_are_detected_for_generic_suppression(self) -> None:
+        from forgebench.static_checks import is_docs_or_agent_policy_path
+
+        self.assertTrue(is_docs_or_agent_policy_path("AGENTS.md"))
+        self.assertTrue(is_docs_or_agent_policy_path(".agent/rules/browser-first.md"))
+        self.assertFalse(is_docs_or_agent_policy_path("apps/web/Home.tsx"))
+
     def test_migration_and_schema_files_still_trigger_persistence(self) -> None:
         diff = parse_unified_diff(
             """

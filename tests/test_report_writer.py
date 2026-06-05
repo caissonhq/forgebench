@@ -30,6 +30,7 @@ class ReportWriterTests(unittest.TestCase):
 
             self.assertTrue(written["markdown"].exists())
             self.assertTrue(written["json"].exists())
+            self.assertTrue(written["sarif"].exists())
             self.assertTrue(written["repair_prompt"].exists())
 
     def test_repair_prompt_includes_original_task_and_findings(self) -> None:

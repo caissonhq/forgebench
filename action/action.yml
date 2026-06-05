@@ -18,6 +18,10 @@ inputs:
     description: Post the generated PR comment. Defaults to false.
     required: false
     default: "false"
+  post-check-run:
+    description: Post a GitHub Check Run with inline annotations for findings. Defaults to false.
+    required: false
+    default: "false"
   llm-review:
     description: Run optional advisory LLM review.
     required: false
@@ -34,6 +38,8 @@ outputs:
     description: Path to forgebench-report.md.
   pr-comment-path:
     description: Path to pr-comment.md.
+  sarif-path:
+    description: Path to forgebench-report.sarif.json.
 
 runs:
   using: docker

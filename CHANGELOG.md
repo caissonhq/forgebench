@@ -10,6 +10,7 @@
 
 ## Unreleased
 
+- EO-003: Production hardening and CI polish — SARIF output, GitHub Check Run annotations (`review-pr --check-run`), `forgebench validate`, Security Reviewer v0, trust model docs, and EO-002 generic-mode noise fixes.
 - EO-002: Dogfooded 10 real agent PRs; added `dogfood_runs/eo002-2026-06-05/`, 10 golden cases, and `examples/real_reports/` anonymized artifacts.
 - Sprint 12A: Bumped package version to `0.8.0`, added the narrow Regression Hunter lens for potentially load-bearing assertion removal, added synthetic Regression Hunter golden cases, and added calibration posture/finding/lens summaries. Real anonymized PR corpus work remains blocked pending approved source material.
 - Sprint 11: Bumped package version to `0.7.0`, added a safe-default GitHub Action wrapper, simplified install docs, and hardened security/trust-boundary documentation.

@@ -47,6 +47,30 @@ DEPENDENCY_FILES = {
     "cargo.lock",
 }
 
+NON_PERSISTENCE_CONFIG_FILES = {
+    "package.json",
+    "package-lock.json",
+    "pnpm-lock.yaml",
+    "yarn.lock",
+    "cargo.toml",
+    "cargo.lock",
+    "pyproject.toml",
+    "poetry.lock",
+    "requirements.txt",
+    "package.resolved",
+    "gemfile.lock",
+}
+
+AGENT_POLICY_MARKERS = (
+    ".agent/",
+    ".agents/",
+    ".codex/",
+    ".cursor/",
+    "agents.md",
+    "claude.md",
+    "copilot-instructions",
+)
+
 CONFIG_MARKERS = (
     ".github/",
     "dockerfile",
@@ -365,6 +389,10 @@ def _is_persistence_file(path: str) -> bool:
     if lower.startswith("examples/golden_cases/") or lower.startswith("tests/fixtures/"):
         return False
     basename = parsed.name
+    if basename in NON_PERSISTENCE_CONFIG_FILES:
+        return False
+    if basename.startswith("tsconfig") and parsed.suffix == ".json":
+        return False
     non_persistence_model_markers = (
         "read_model",
         "view_model",
@@ -378,15 +406,39 @@ def _is_persistence_file(path: str) -> bool:
     )
     if any(marker in lower for marker in non_persistence_model_markers):
         return False
-    if parsed.suffix not in PERSISTENCE_EXTENSIONS and "schema" not in basename and "migration" not in basename:
-        return False
 
-    long_markers = {
+    persistence_native_suffixes = {
+        ".gql",
+        ".graphql",
+        ".prisma",
+        ".sql",
+        ".xcdatamodel",
+        ".xcdatamodeld",
+    }
+    if parsed.suffix in persistence_native_suffixes:
+        return True
+
+    return _has_explicit_persistence_markers(lower, basename, parsed.suffix)
+
+
+def _has_explicit_persistence_markers(lower: str, basename: str, suffix: str) -> bool:
+    if "schema" in basename or "migration" in basename:
+        return True
+
+    segments = [segment for segment in lower.split("/") if segment]
+    segment_markers = {
+        "db",
+        "database",
+        "databases",
         "schema",
+        "schemas",
         "migration",
         "migrations",
-        "database",
         "persistence",
+        "entities",
+        "entity",
+        "store",
+        "stores",
         "swiftdata",
         "coredata",
         "prisma",
@@ -394,13 +446,14 @@ def _is_persistence_file(path: str) -> bool:
         "sequelize",
         "alembic",
     }
-    if any(marker in lower for marker in long_markers):
+    if any(segment in segment_markers for segment in segments):
         return True
 
-    tokens = [token for token in re.split(r"[^a-z0-9]+", lower) if token]
-    if "db" in tokens or "entity" in tokens or "entities" in tokens or "store" in tokens:
+    tokens = [token for token in re.split(r"[^a-z0-9]+", basename) if token]
+    if any(token in {"db", "entity", "entities", "schema", "migration", "store"} for token in tokens):
         return True
-    return basename.endswith("entity" + parsed.suffix) or basename.endswith("store" + parsed.suffix)
+
+    return False
 
 
 def _test_change_removes_coverage_signal(changed_file: ChangedFile) -> bool:
@@ -439,6 +492,16 @@ def _count_test_case_lines(lines: list[str]) -> int:
 def _is_generated_file(path: str) -> bool:
     lower = path.replace("\\", "/").lower()
     return lower.endswith(".pyc") or any(marker in lower for marker in GENERATED_MARKERS)
+
+
+def is_docs_or_agent_policy_path(path: str) -> bool:
+    lower = path.replace("\\", "/").lower()
+    basename = PurePosixPath(lower).name
+    if basename in {"readme.md", "changelog.md", "contributing.md", "security.md", "agents.md", "claude.md"}:
+        return True
+    if lower.startswith(("docs/", "doc/", ".changeset/", ".github/")):
+        return True
+    return any(marker in lower for marker in AGENT_POLICY_MARKERS)
 
 
 def _is_ui_or_copy_file(path: str) -> bool:

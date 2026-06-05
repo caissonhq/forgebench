@@ -10,6 +10,13 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from urllib.parse import urlparse
 
+from forgebench.github_checks import (
+    CheckRunResult,
+    GitHubCheckRunError,
+    build_check_run_payload,
+    fetch_pr_head_sha,
+    post_check_run,
+)
 from forgebench.models import CheckStatus, Confidence, ForgeBenchReport, PRCheckoutInfo
 from forgebench.report_writer import write_reports
 from forgebench.review import ReviewInputError, ReviewResult, run_review
@@ -80,6 +87,10 @@ class GitHubPRReviewResult:
     comment_posted: bool = False
     comment_error: str | None = None
     comment_requested: bool = False
+    check_run_posted: bool = False
+    check_run_error: str | None = None
+    check_run_requested: bool = False
+    check_run: CheckRunResult | None = None
     dry_run: bool = True
 
 
@@ -430,6 +441,7 @@ def run_github_pr_review(
     output_dir: str | Path | None = None,
     run_checks: bool = False,
     post_comment: bool = False,
+    post_check_run: bool = False,
     comment_file: str | Path | None = None,
     dry_run: bool = False,
     llm_review: bool = False,
@@ -550,6 +562,28 @@ def run_github_pr_review(
         except GitHubPRError as exc:
             comment_error = str(exc)
 
+    check_run_posted = False
+    check_run_error: str | None = None
+    check_run_result: CheckRunResult | None = None
+    if post_check_run:
+        try:
+            head_sha = fetch_pr_head_sha(ref.owner, ref.repo, ref.number, cwd=repo)
+            check_run_payload_path = out_dir / "github-check-run.json"
+            check_run_payload_path.write_text(
+                json.dumps(build_check_run_payload(review_result.report, head_sha=head_sha), indent=2) + "\n",
+                encoding="utf-8",
+            )
+            check_run_result = post_check_run(
+                owner=ref.owner,
+                repo=ref.repo,
+                head_sha=head_sha,
+                report=review_result.report,
+                cwd=repo,
+            )
+            check_run_posted = check_run_result.posted
+        except GitHubCheckRunError as exc:
+            check_run_error = str(exc)
+
     return GitHubPRReviewResult(
         review_result=review_result,
         intake=GitHubPRIntakeResult(ref=ref, metadata=metadata, patch_path=patch_path, task_path=task_path),
@@ -558,6 +592,10 @@ def run_github_pr_review(
         comment_posted=comment_posted,
         comment_error=comment_error,
         comment_requested=post_comment,
+        check_run_posted=check_run_posted,
+        check_run_error=check_run_error,
+        check_run_requested=post_check_run,
+        check_run=check_run_result,
         dry_run=not should_post,
     )
 

@@ -5,10 +5,12 @@
   "required_finding_ids": [
     "broad_file_surface"
   ],
-  "allowed_extra_finding_ids": [],
+  "allowed_extra_finding_ids": [
+    "persistence_schema_changed"
+  ],
   "forbidden_finding_ids": [
     "deleted_tests"
   ],
   "allow_unlisted_findings": true,
-  "rationale": "Real Codex chat tool-name fallback in Rust; broad surface REVIEW, persistence heuristic may misfire."
+  "rationale": "Real Codex chat tool-name fallback in Rust; broad surface REVIEW. Database/schema paths may legitimately trigger persistence."
 }

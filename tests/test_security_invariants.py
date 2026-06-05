@@ -58,6 +58,13 @@ checks:
         self.assertIn("Checks run only when `--run-checks` is explicitly passed", text)
         self.assertIn("PR comments are never posted by default", text)
         self.assertIn("No feedback telemetry", text)
+        self.assertIn("docs/trust-model.md", text)
+
+    def test_check_run_default_is_false(self) -> None:
+        parser = _build_parser()
+        args = parser.parse_args(["review-pr", "https://github.com/owner/repo/pull/1"])
+
+        self.assertFalse(args.check_run)
 
 
 if __name__ == "__main__":

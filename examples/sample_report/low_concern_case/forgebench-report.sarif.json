@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json.schemastore.org/sarif-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "ForgeBench",
+          "version": "0.9.0",
+          "informationUri": "https://forgebench.dev",
+          "rules": []
+        }
+      },
+      "results": [
+        {
+          "ruleId": "forgebench.posture",
+          "level": "note",
+          "message": {
+            "text": "Low concern. Deterministic checks were not run. ForgeBench found no high-confidence merge blockers, but this is not a substitute for human review."
+          },
+          "properties": {
+            "posture": "LOW_CONCERN"
+          }
+        }
+      ],
+      "properties": {
+        "posture": "LOW_CONCERN",
+        "config_mode": "configured",
+        "finding_count": 0
+      }
+    }
+  ]
+}

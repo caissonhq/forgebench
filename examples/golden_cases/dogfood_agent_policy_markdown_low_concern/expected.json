@@ -2,14 +2,13 @@
   "case_name": "dogfood_agent_policy_markdown_low_concern",
   "run_checks": false,
   "expected_posture": "LOW_CONCERN",
-  "required_finding_ids": [
-    "ui_copy_changed"
-  ],
+  "required_finding_ids": [],
   "allowed_extra_finding_ids": [],
   "forbidden_finding_ids": [
     "implementation_without_tests",
-    "deleted_tests"
+    "deleted_tests",
+    "ui_copy_changed"
   ],
   "allow_unlisted_findings": true,
-  "rationale": "Real Codex browser-first policy docs with tests in PR body; posture should stay low."
+  "rationale": "Real Codex browser-first policy docs with tests in PR; markdown/agent-policy copy noise suppressed in generic mode."
 }

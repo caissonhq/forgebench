@@ -16,7 +16,7 @@ from forgebench.models import Finding, ForgeBenchReport, Guardrails, LLMReviewer
 from forgebench.policy import apply_guardrails_policy
 from forgebench.posture import determine_posture
 from forgebench.report_writer import write_reports
-from forgebench.static_checks import run_static_checks
+from forgebench.static_checks import is_docs_or_agent_policy_path, run_static_checks
 
 
 class ReviewInputError(ValueError):
@@ -211,6 +211,8 @@ def _apply_generic_mode_calibration(findings: list[Finding], diff_summary) -> li
     for finding in findings:
         if finding.id == "broad_file_surface" and _all_generic_low_noise_paths(diff_summary.changed_files):
             continue
+        if finding.id == "ui_copy_changed" and _all_generic_docs_or_agent_policy_paths(finding.files):
+            continue
         if finding.id == "implementation_without_tests":
             calibrated.append(
                 replace(
@@ -239,6 +241,12 @@ def _apply_generic_mode_calibration(findings: list[Finding], diff_summary) -> li
 
 def _all_generic_low_noise_paths(paths: list[str]) -> bool:
     return bool(paths) and all(_is_generic_low_noise_path(path) for path in paths)
+
+
+def _all_generic_docs_or_agent_policy_paths(paths: list[str]) -> bool:
+    if not paths:
+        return False
+    return all(is_docs_or_agent_policy_path(path) for path in paths)
 
 
 def _is_generic_low_noise_path(path: str) -> bool:
