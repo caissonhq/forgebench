@@ -465,6 +465,9 @@ class LLMReviewerConfig:
     max_task_chars: int = 4000
     max_report_chars: int = 8000
     mock_response: dict[str, Any] | None = None
+    openai_api_key: str | None = None
+    openai_base_url: str | None = None
+    openai_model: str | None = None
 
 
 @dataclass(frozen=True)

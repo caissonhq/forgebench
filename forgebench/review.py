@@ -11,6 +11,7 @@ from forgebench.adversaries.models import ReviewerContext
 from forgebench.check_runner import checks_not_run, findings_from_check_results, run_configured_checks
 from forgebench.diff_parser import parse_diff_file
 from forgebench.guardrails import GuardrailsParseError, evaluate_guardrails, load_guardrails
+from forgebench.llm_config import resolve_llm_config
 from forgebench.llm_review import apply_llm_posture, build_review_bundle, llm_review_not_run, llm_review_skipped, run_llm_review
 from forgebench.models import Finding, ForgeBenchReport, Guardrails, LLMReviewerConfig, PRCheckoutInfo
 from forgebench.policy import apply_guardrails_policy
@@ -76,7 +77,7 @@ def run_review(
     static_signals["config_mode"] = config_mode
     findings = _apply_generic_mode_calibration(findings, diff_summary) if config_mode == "generic" else findings
 
-    llm_config = LLMReviewerConfig(
+    llm_config = resolve_llm_config(
         enabled=llm_review,
         provider=llm_provider,
         command=llm_command,
@@ -114,7 +115,7 @@ def run_review(
     if llm_review and specialized_reviewers.metadata.get("llm_call_used"):
         llm_result = llm_review_skipped(
             "LLM call was used by a trigger-gated review lens; general LLM review was skipped to keep one LLM call per review.",
-            provider=llm_provider or ("command" if llm_command else None),
+            provider=llm_config.provider,
         )
     elif llm_review:
         bundle = build_review_bundle(

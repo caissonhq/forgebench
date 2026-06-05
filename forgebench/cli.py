@@ -227,8 +227,17 @@ def _build_parser() -> argparse.ArgumentParser:
     review.add_argument("--run-checks", action="store_true", help="Execute configured local deterministic checks from forgebench.yml.")
     review.add_argument("--no-reviewers", action="store_true", help="Skip Phase 1 heuristic review lenses.")
     review.add_argument("--llm-review", action="store_true", help="Run an optional advisory LLM reviewer after deterministic/static review.")
-    review.add_argument("--llm-provider", choices=["mock", "command"], required=False, help="LLM provider to use when --llm-review is passed.")
-    review.add_argument("--llm-command", required=False, help="Command provider shell command. Receives the review bundle on stdin and returns JSON on stdout.")
+    review.add_argument(
+        "--llm-provider",
+        choices=["mock", "command", "openai"],
+        required=False,
+        help="LLM provider when --llm-review is passed. Defaults to openai when FORGEBENCH_LLM_API_KEY is set, else command when FORGEBENCH_LLM_COMMAND is set.",
+    )
+    review.add_argument(
+        "--llm-command",
+        required=False,
+        help="Command provider shell command. Defaults to FORGEBENCH_LLM_COMMAND. Receives the review bundle on stdin and returns JSON on stdout.",
+    )
     review.add_argument("--llm-timeout", type=int, default=60, help="LLM command timeout in seconds. Defaults to 60.")
     review.add_argument("--llm-max-diff-chars", type=int, default=20000, help="Maximum diff characters included in the LLM bundle.")
 
@@ -252,8 +261,17 @@ def _build_parser() -> argparse.ArgumentParser:
     review_pr.add_argument("--comment-file", required=False, help="Path to write the PR comment Markdown. Defaults to pr-comment.md in the output directory.")
     review_pr.add_argument("--dry-run", action="store_true", help="Write local artifacts but do not post a PR comment.")
     review_pr.add_argument("--llm-review", action="store_true", help="Run an optional advisory LLM reviewer after deterministic/static review.")
-    review_pr.add_argument("--llm-provider", choices=["mock", "command"], required=False, help="LLM provider to use when --llm-review is passed.")
-    review_pr.add_argument("--llm-command", required=False, help="Command provider shell command. Receives the review bundle on stdin and returns JSON on stdout.")
+    review_pr.add_argument(
+        "--llm-provider",
+        choices=["mock", "command", "openai"],
+        required=False,
+        help="LLM provider when --llm-review is passed. Defaults to openai when FORGEBENCH_LLM_API_KEY is set, else command when FORGEBENCH_LLM_COMMAND is set.",
+    )
+    review_pr.add_argument(
+        "--llm-command",
+        required=False,
+        help="Command provider shell command. Defaults to FORGEBENCH_LLM_COMMAND. Receives the review bundle on stdin and returns JSON on stdout.",
+    )
     review_pr.add_argument("--llm-timeout", type=int, default=60, help="LLM command timeout in seconds. Defaults to 60.")
     review_pr.add_argument("--llm-max-diff-chars", type=int, default=20000, help="Maximum diff characters included in the LLM bundle.")
 

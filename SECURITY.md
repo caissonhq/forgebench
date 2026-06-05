@@ -24,9 +24,13 @@ Only run `--run-checks` against trusted repositories and trusted `forgebench.yml
 
 PR comments are never posted by default. ForgeBench posts to GitHub only when `--post-comment` is explicitly passed.
 
-### `--llm-command`
+### `--llm-command` / `FORGEBENCH_LLM_COMMAND`
 
-`--llm-review --llm-provider command` executes a user-supplied local command. This can be dangerous if pointed at untrusted scripts or PR-provided files. Only use command providers you trust.
+`--llm-review --llm-provider command` executes a user-supplied local command. When `--llm-command` is omitted, ForgeBench uses `FORGEBENCH_LLM_COMMAND` if set. This can be dangerous if pointed at untrusted scripts or PR-provided files. Only use command providers you trust.
+
+### `--llm-provider openai`
+
+`--llm-review --llm-provider openai` sends the review bundle to an OpenAI-compatible HTTP API using `FORGEBENCH_LLM_API_KEY`. Optional: `FORGEBENCH_LLM_BASE_URL`, `FORGEBENCH_LLM_MODEL`. This is network egress with your API key; do not run against untrusted endpoints.
 
 See [docs/llm-threat-model.md](docs/llm-threat-model.md) for the LLM threat model and mitigations.
 

@@ -138,7 +138,10 @@ def run_llm_json(config: LLMReviewerConfig, bundle: str) -> LLMJSONResult:
             enabled=True,
             provider=None,
             status=LLMReviewStatus.SKIPPED,
-            error_message="LLM review was requested but no provider was configured. Use --llm-provider command with --llm-command.",
+            error_message=(
+                "LLM review was requested but no provider was configured. "
+                "Set FORGEBENCH_LLM_API_KEY, FORGEBENCH_LLM_COMMAND, or pass --llm-provider."
+            ),
         )
     if provider_name == "mock":
         payload = config.mock_response or {
@@ -149,6 +152,10 @@ def run_llm_json(config: LLMReviewerConfig, bundle: str) -> LLMJSONResult:
         return LLMJSONResult(enabled=True, provider="mock", status=LLMReviewStatus.COMPLETED, payload=payload)
     if provider_name == "command":
         return _run_command_json(config.command, config.timeout_seconds, bundle)
+    if provider_name == "openai":
+        from forgebench.llm_openai import run_openai_json
+
+        return run_openai_json(config, bundle)
     return LLMJSONResult(
         enabled=True,
         provider=provider_name,
