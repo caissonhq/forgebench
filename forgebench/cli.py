@@ -7,6 +7,7 @@ from pathlib import Path
 from forgebench import __version__
 from forgebench.calibration import format_calibration_result, run_calibration
 from forgebench.doctor import format_doctor_report, run_doctor
+from forgebench.benchmark import build_benchmark_snapshot, format_benchmark_markdown
 from forgebench.feedback import FeedbackError, append_feedback, format_feedback_summary, suggest_guardrails, summarize_feedback
 from forgebench.mcp_server import run_mcp_server
 from forgebench.github_pr import GitHubPRError, GitHubPRReviewResult, run_github_pr_review
@@ -34,6 +35,9 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.command == "validate":
         return _run_validate(args)
+
+    if args.command == "benchmark":
+        return _run_benchmark(args)
 
     if args.command == "repair":
         return _run_repair(args)
@@ -99,6 +103,22 @@ def _run_review(args: argparse.Namespace) -> int:
     print()
     print(f"Paste repair prompt: forgebench repair --out {result.output_dir}")
     return 0
+
+
+def _run_benchmark(args: argparse.Namespace) -> int:
+    try:
+        snapshot = build_benchmark_snapshot(args.cases, repo_path=args.repo, output_dir=args.out)
+    except (FileNotFoundError, ValueError, OSError) as exc:
+        _fail(str(exc))
+    markdown = format_benchmark_markdown(snapshot, cases_dir=args.cases)
+    if args.out_markdown:
+        output = Path(args.out_markdown)
+        output.parent.mkdir(parents=True, exist_ok=True)
+        output.write_text(markdown, encoding="utf-8")
+        print(f"Merge Risk Benchmark written to {output}.")
+    else:
+        print(markdown)
+    return 1 if snapshot.failed_count else 0
 
 
 def _run_repair(args: argparse.Namespace) -> int:
@@ -317,6 +337,12 @@ def _build_parser() -> argparse.ArgumentParser:
     feedback.add_argument("--summarize", action="store_true", help="Summarize a local feedback JSONL log.")
     feedback.add_argument("--suggest-guardrails", action="store_true", help="Suggest forgebench.yml tuning from local feedback.")
     feedback.add_argument("--out", required=False, help="Optional path to write guardrail suggestions Markdown.")
+
+    benchmark = subparsers.add_parser("benchmark", help="Run the Merge Risk Benchmark and print publishable summary Markdown.")
+    benchmark.add_argument("--cases", required=False, default="examples/golden_cases", help="Golden cases directory.")
+    benchmark.add_argument("--repo", required=False, default=".", help="Repo root for configured checks.")
+    benchmark.add_argument("--out", required=False, default="forgebench-benchmark-output", help="Calibration output directory.")
+    benchmark.add_argument("--out-markdown", required=False, help="Optional path to write benchmark Markdown.")
 
     repair = subparsers.add_parser("repair", help="Print repair-prompt.md for pasting into a coding agent.")
     repair.add_argument("--out", required=False, default="forgebench-output", help="ForgeBench output directory.")

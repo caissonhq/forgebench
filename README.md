@@ -729,6 +729,14 @@ forgebench mcp
 
 See [docs/cursor-integration.md](docs/cursor-integration.md) and [docs/mcp-server.md](docs/mcp-server.md).
 
+## Merge Risk Benchmark
+
+Publishable benchmark content: [docs/merge-risk-benchmark.md](docs/merge-risk-benchmark.md)
+
+```bash
+forgebench benchmark --cases examples/golden_cases
+```
+
 ## Sample Reports
 
 ForgeBench includes synthetic, human-approved sample reports under [examples/sample_report](examples/sample_report). They are designed to show first-run output shape for a `BLOCK` case and a `LOW_CONCERN` case. They are not real customer reports and do not contain proprietary code.
