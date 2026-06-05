@@ -1,0 +1,14 @@
+{
+  "additions": 2,
+  "author": "Hortyhort",
+  "base_ref": "main",
+  "body": "This PR is a deliberately tiny README-only change used to smoke test ForgeBench Sprint 5 PR intake. It should remain low-risk and should not require a posted ForgeBench comment by default.",
+  "changed_files": 1,
+  "deletions": 0,
+  "head_ref": "sprint5-pr-smoke",
+  "number": 1,
+  "owner": "caissonhq",
+  "repo": "forgebench",
+  "title": "Docs-only ForgeBench PR intake smoke test",
+  "url": "https://github.com/caissonhq/forgebench/pull/1"
+}

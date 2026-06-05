@@ -14,7 +14,9 @@ dist/
 
 forgebench-output/
 forgebench-calibration-output/
-dogfood_runs/
+dogfood_runs/*
+!dogfood_runs/eo002-2026-06-05/
+!dogfood_runs/eo002-2026-06-05/**
 *.tmp
 tmp/
 

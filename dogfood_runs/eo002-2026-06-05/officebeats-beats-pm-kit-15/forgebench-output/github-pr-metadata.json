@@ -1,0 +1,14 @@
+{
+  "additions": 99,
+  "author": "officebeats",
+  "base_ref": "main",
+  "body": "## Summary\n\nAdds a Codex Browser-first policy for browser-dependent work in the kit.\n\n## Changes\n\n- Adds a canonical `.agent/rules/codex-browser-first.md` rule.\n- Updates the generated root `AGENTS.md` adapter guidance so Codex users default to the in-app Browser for local apps, rendered UI checks, localhost demos, screenshots, click-through validation, and page inspection.\n- Updates `sync_cli_adapters.py` so future adapter regeneration preserves the policy in `AGENTS.md` and `.codex/rules.md`.\n- Adds regression tests for the canonical rule and generated Codex adapter text.\n\n## Validation\n\n- `python3 -m unittest system.tests.test_codex_browser_first`\n- `python3 -m unittest system.tests.test_codex_skill_adapters`\n- Commit hook passed adapter sync, command integrity, command surface audit, py_compile, adapter tests, and privacy guard.\n\n## Notes\n\nThe worktree had unrelated pre-existing dirty files. This PR stages and commits only the browser-policy change set.",
+  "changed_files": 4,
+  "deletions": 0,
+  "head_ref": "codex/codex-browser-first",
+  "number": 15,
+  "owner": "officebeats",
+  "repo": "beats-pm-kit",
+  "title": "[codex] Add Codex browser-first policy",
+  "url": "https://github.com/officebeats/beats-pm-kit/pull/15"
+}

@@ -1,0 +1,1266 @@
+From 957ecf66c3b30fbcd44870635a0fdd2891090d95 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Pablo=20S=C3=A1ez?= <pablosaez1995@gmail.com>
+Date: Thu, 4 Jun 2026 14:43:03 -0400
+Subject: [PATCH 1/5] Fix Codex workspace skill autocomplete
+
+---
+ .../src/provider/Drivers/ClaudeDriver.ts      |  2 +-
+ .../src/provider/Drivers/CodexDriver.ts       | 15 ++-
+ .../src/provider/Drivers/CursorDriver.ts      |  2 +-
+ .../src/provider/Drivers/OpenCodeDriver.ts    |  2 +-
+ .../src/provider/Layers/CodexProvider.ts      |  3 +-
+ .../Layers/ProviderAdapterRegistry.test.ts    |  2 +-
+ .../provider/Layers/ProviderRegistry.test.ts  | 99 ++++++++++++++++++-
+ .../src/provider/Layers/ProviderRegistry.ts   | 40 +++++---
+ .../src/provider/Services/ProviderRegistry.ts |  7 +-
+ .../src/provider/Services/ServerProvider.ts   |  6 +-
+ .../makeManagedServerProvider.test.ts         | 67 +++++++++----
+ .../src/provider/makeManagedServerProvider.ts | 46 +++++++--
+ apps/server/src/ws.ts                         | 12 ++-
+ apps/web/src/components/ChatView.tsx          | 30 ++++++
+ apps/web/src/localApi.test.ts                 | 13 ++-
+ apps/web/src/localApi.ts                      |  4 +-
+ packages/contracts/src/ipc.ts                 |  1 +
+ packages/contracts/src/rpc.ts                 |  5 +
+ 18 files changed, 292 insertions(+), 64 deletions(-)
+
+diff --git a/apps/server/src/provider/Drivers/ClaudeDriver.ts b/apps/server/src/provider/Drivers/ClaudeDriver.ts
+index b126028f813..5269dc121c9 100644
+--- a/apps/server/src/provider/Drivers/ClaudeDriver.ts
++++ b/apps/server/src/provider/Drivers/ClaudeDriver.ts
+@@ -170,7 +170,7 @@ export const ClaudeDriver: ProviderDriver<ClaudeSettings, ClaudeDriverEnv> = {
+         haveSettingsChanged: () => false,
+         initialSnapshot: (settings) =>
+           makePendingClaudeProvider(settings).pipe(Effect.map(stampIdentity)),
+-        checkProvider,
++        checkProvider: () => checkProvider,
+         enrichSnapshot: ({ snapshot, publishSnapshot }) =>
+           enrichProviderSnapshotWithVersionAdvisory(snapshot, maintenanceCapabilities).pipe(
+             Effect.provideService(HttpClient.HttpClient, httpClient),
+diff --git a/apps/server/src/provider/Drivers/CodexDriver.ts b/apps/server/src/provider/Drivers/CodexDriver.ts
+index 441edda479f..33eadd48e35 100644
+--- a/apps/server/src/provider/Drivers/CodexDriver.ts
++++ b/apps/server/src/provider/Drivers/CodexDriver.ts
+@@ -112,6 +112,7 @@ export const CodexDriver: ProviderDriver<CodexSettings, CodexDriverEnv> = {
+       const spawner = yield* ChildProcessSpawner.ChildProcessSpawner;
+       const httpClient = yield* HttpClient.HttpClient;
+       const eventLoggers = yield* ProviderEventLoggers;
++      const serverConfig = yield* ServerConfig;
+       const processEnv = mergeProviderInstanceEnvironment(environment);
+       const homeLayout = yield* resolveCodexHomeLayout(config);
+       const continuationIdentity = codexContinuationIdentity(homeLayout);
+@@ -159,10 +160,16 @@ export const CodexDriver: ProviderDriver<CodexSettings, CodexDriverEnv> = {
+       // in as instance rebuilds from the registry rather than in-place
+       // updates. Pre-provide `ChildProcessSpawner` so the check fits
+       // `makeManagedServerProvider.checkProvider`'s `R = never`.
+-      const checkProvider = checkCodexProviderStatus(effectiveConfig, undefined, processEnv).pipe(
+-        Effect.map(stampIdentity),
+-        Effect.provideService(ChildProcessSpawner.ChildProcessSpawner, spawner),
+-      );
++      const checkProvider = (refreshInput?: { readonly cwd?: string | undefined }) =>
++        checkCodexProviderStatus(
++          effectiveConfig,
++          undefined,
++          processEnv,
++          refreshInput?.cwd ?? serverConfig.cwd,
++        ).pipe(
++          Effect.map(stampIdentity),
++          Effect.provideService(ChildProcessSpawner.ChildProcessSpawner, spawner),
++        );
+       const snapshot = yield* makeManagedServerProvider<CodexSettings>({
+         maintenanceCapabilities,
+         getSettings: Effect.succeed(effectiveConfig),
+diff --git a/apps/server/src/provider/Drivers/CursorDriver.ts b/apps/server/src/provider/Drivers/CursorDriver.ts
+index ba532864c45..d3681288888 100644
+--- a/apps/server/src/provider/Drivers/CursorDriver.ts
++++ b/apps/server/src/provider/Drivers/CursorDriver.ts
+@@ -137,7 +137,7 @@ export const CursorDriver: ProviderDriver<CursorSettings, CursorDriverEnv> = {
+         haveSettingsChanged: () => false,
+         initialSnapshot: (settings) =>
+           buildInitialCursorProviderSnapshot(settings).pipe(Effect.map(stampIdentity)),
+-        checkProvider,
++        checkProvider: () => checkProvider,
+         // Model catalog and capabilities come exclusively from Cursor's
+         // list_available_models extension method during provider checks.
+         enrichSnapshot: ({ settings, snapshot: currentSnapshot, publishSnapshot }) =>
+diff --git a/apps/server/src/provider/Drivers/OpenCodeDriver.ts b/apps/server/src/provider/Drivers/OpenCodeDriver.ts
+index e7216f83366..39c61a6abb1 100644
+--- a/apps/server/src/provider/Drivers/OpenCodeDriver.ts
++++ b/apps/server/src/provider/Drivers/OpenCodeDriver.ts
+@@ -149,7 +149,7 @@ export const OpenCodeDriver: ProviderDriver<OpenCodeSettings, OpenCodeDriverEnv>
+         haveSettingsChanged: () => false,
+         initialSnapshot: (settings) =>
+           makePendingOpenCodeProvider(settings).pipe(Effect.map(stampIdentity)),
+-        checkProvider,
++        checkProvider: () => checkProvider,
+         enrichSnapshot: ({ snapshot, publishSnapshot }) =>
+           enrichProviderSnapshotWithVersionAdvisory(snapshot, maintenanceCapabilities).pipe(
+             Effect.provideService(HttpClient.HttpClient, httpClient),
+diff --git a/apps/server/src/provider/Layers/CodexProvider.ts b/apps/server/src/provider/Layers/CodexProvider.ts
+index 4d793194c1d..2faaee91b9f 100644
+--- a/apps/server/src/provider/Layers/CodexProvider.ts
++++ b/apps/server/src/provider/Layers/CodexProvider.ts
+@@ -418,6 +418,7 @@ export const checkCodexProviderStatus = Effect.fn("checkCodexProviderStatus")(fu
+     ChildProcessSpawner.ChildProcessSpawner | Scope.Scope
+   > = probeCodexAppServerProvider,
+   environment: NodeJS.ProcessEnv = process.env,
++  cwd: string = process.cwd(),
+ ): Effect.fn.Return<
+   ServerProviderDraft,
+   ServerSettingsError,
+@@ -446,7 +447,7 @@ export const checkCodexProviderStatus = Effect.fn("checkCodexProviderStatus")(fu
+   const probeResult = yield* probe({
+     binaryPath: codexSettings.binaryPath,
+     homePath: codexSettings.homePath,
+-    cwd: process.cwd(),
++    cwd,
+     customModels: codexSettings.customModels,
+     environment,
+   }).pipe(
+diff --git a/apps/server/src/provider/Layers/ProviderAdapterRegistry.test.ts b/apps/server/src/provider/Layers/ProviderAdapterRegistry.test.ts
+index 7fb545b2bed..d0a975bf29e 100644
+--- a/apps/server/src/provider/Layers/ProviderAdapterRegistry.test.ts
++++ b/apps/server/src/provider/Layers/ProviderAdapterRegistry.test.ts
+@@ -120,7 +120,7 @@ const makeFakeInstance = (
+         packageName: null,
+       }),
+       getSnapshot: Effect.succeed({} as unknown as ServerProvider),
+-      refresh: Effect.succeed({} as unknown as ServerProvider),
++      refresh: () => Effect.succeed({} as unknown as ServerProvider),
+       streamChanges: Stream.empty,
+     },
+     adapter,
+diff --git a/apps/server/src/provider/Layers/ProviderRegistry.test.ts b/apps/server/src/provider/Layers/ProviderRegistry.test.ts
+index 8b564dceaa6..c9ce60460d4 100644
+--- a/apps/server/src/provider/Layers/ProviderRegistry.test.ts
++++ b/apps/server/src/provider/Layers/ProviderRegistry.test.ts
+@@ -48,6 +48,7 @@ import { readProviderStatusCache, resolveProviderStatusCachePath } from "../prov
+ import type { ProviderInstance } from "../ProviderDriver.ts";
+ import { ProviderInstanceRegistry } from "../Services/ProviderInstanceRegistry.ts";
+ import { ProviderRegistry } from "../Services/ProviderRegistry.ts";
++import type { ProviderSnapshotRefreshInput } from "../Services/ServerProvider.ts";
+ import { makeManualOnlyProviderMaintenanceCapabilities } from "../providerMaintenance.ts";
+ const decodeServerSettings = Schema.decodeSync(ServerSettings);
+ const encodeServerSettings = Schema.encodeSync(ServerSettings);
+@@ -368,6 +369,23 @@ it.layer(Layer.mergeAll(NodeServices.layer, ServerSettingsService.layerTest(), T
+         }),
+       );
+ 
++      it.effect("passes the supplied cwd to the app-server probe", () =>
++        Effect.gen(function* () {
++          let capturedCwd: string | null = null;
++          yield* checkCodexProviderStatus(
++            defaultCodexSettings,
++            (input) => {
++              capturedCwd = input.cwd;
++              return Effect.succeed(makeCodexProbeSnapshot());
++            },
++            process.env,
++            "/workspace/project",
++          );
++
++          assert.strictEqual(capturedCwd, "/workspace/project");
++        }),
++      );
++
+       it.effect(
+         "returns ready with unknown auth when app-server does not require OpenAI auth",
+         () =>
+@@ -709,7 +727,7 @@ it.layer(Layer.mergeAll(NodeServices.layer, ServerSettingsService.layerTest(), T
+                 packageName: null,
+               }),
+               getSnapshot: Effect.succeed(initialProvider),
+-              refresh: Effect.succeed(refreshedProvider),
++              refresh: () => Effect.succeed(refreshedProvider),
+               streamChanges: Stream.fromPubSub(changes),
+             },
+             adapter: {} as ProviderInstance["adapter"],
+@@ -803,7 +821,7 @@ it.layer(Layer.mergeAll(NodeServices.layer, ServerSettingsService.layerTest(), T
+                 packageName: null,
+               }),
+               getSnapshot: Effect.succeed(cachedProvider),
+-              refresh: Effect.die(new Error("simulated refresh failure")),
++              refresh: () => Effect.die(new Error("simulated refresh failure")),
+               streamChanges: Stream.empty,
+             },
+             adapter: {} as ProviderInstance["adapter"],
+@@ -845,6 +863,81 @@ it.layer(Layer.mergeAll(NodeServices.layer, ServerSettingsService.layerTest(), T
+         }),
+       );
+ 
++      it.effect("forwards manual refresh input to the targeted provider instance", () =>
++        Effect.gen(function* () {
++          const codexDriver = ProviderDriverKind.make("codex");
++          const codexInstanceId = ProviderInstanceId.make("codex");
++          const refreshInputs = yield* Ref.make<Array<string | undefined>>([]);
++          const provider = {
++            instanceId: codexInstanceId,
++            driver: codexDriver,
++            status: "ready",
++            enabled: true,
++            installed: true,
++            auth: { status: "authenticated" },
++            checkedAt: "2026-04-29T10:00:00.000Z",
++            version: "1.0.0",
++            models: [],
++            slashCommands: [],
++            skills: [],
++          } as const satisfies ServerProvider;
++          const instance = {
++            instanceId: codexInstanceId,
++            driverKind: codexDriver,
++            continuationIdentity: {
++              driverKind: codexDriver,
++              continuationKey: "codex:instance:codex",
++            },
++            displayName: undefined,
++            enabled: true,
++            snapshot: {
++              maintenanceCapabilities: makeManualOnlyProviderMaintenanceCapabilities({
++                provider: codexDriver,
++                packageName: null,
++              }),
++              getSnapshot: Effect.succeed(provider),
++              refresh: (input?: ProviderSnapshotRefreshInput) =>
++                Ref.update(refreshInputs, (inputs) => [...inputs, input?.cwd]).pipe(
++                  Effect.as(provider),
++                ),
++              streamChanges: Stream.empty,
++            },
++            adapter: {} as ProviderInstance["adapter"],
++            textGeneration: {} as ProviderInstance["textGeneration"],
++          } satisfies ProviderInstance;
++          const instanceRegistryLayer = Layer.succeed(ProviderInstanceRegistry, {
++            getInstance: (instanceId) =>
++              Effect.succeed(instanceId === codexInstanceId ? instance : undefined),
++            listInstances: Effect.succeed([instance]),
++            listUnavailable: Effect.succeed([]),
++            streamChanges: Stream.empty,
++            subscribeChanges: Effect.flatMap(PubSub.unbounded<void>(), (pubsub) =>
++              PubSub.subscribe(pubsub),
++            ),
++          });
++          const scope = yield* Scope.make();
++          yield* Effect.addFinalizer(() => Scope.close(scope, Exit.void));
++          const runtimeServices = yield* Layer.build(
++            ProviderRegistryLive.pipe(
++              Layer.provideMerge(instanceRegistryLayer),
++              Layer.provideMerge(
++                ServerConfig.layerTest(process.cwd(), {
++                  prefix: "t3-provider-registry-refresh-input-",
++                }),
++              ),
++              Layer.provideMerge(NodeServices.layer),
++            ),
++          ).pipe(Scope.provide(scope));
++
++          yield* Effect.gen(function* () {
++            const registry = yield* ProviderRegistry;
++            yield* registry.refreshInstance(codexInstanceId, { cwd: "/workspace/project" });
++
++            assert.strictEqual((yield* Ref.get(refreshInputs)).at(-1), "/workspace/project");
++          }).pipe(Effect.provide(runtimeServices));
++        }),
++      );
++
+       it.effect("keeps consuming registry changes after one sync fails", () =>
+         Effect.gen(function* () {
+           const codexDriver = ProviderDriverKind.make("codex");
+@@ -892,7 +985,7 @@ it.layer(Layer.mergeAll(NodeServices.layer, ServerSettingsService.layerTest(), T
+                 packageName: null,
+               }),
+               getSnapshot: Effect.succeed(provider),
+-              refresh: Effect.succeed(provider),
++              refresh: () => Effect.succeed(provider),
+               streamChanges: Stream.empty,
+             },
+             adapter: {} as ProviderInstance["adapter"],
+diff --git a/apps/server/src/provider/Layers/ProviderRegistry.ts b/apps/server/src/provider/Layers/ProviderRegistry.ts
+index 22a120f0a52..1283cafcdd9 100644
+--- a/apps/server/src/provider/Layers/ProviderRegistry.ts
++++ b/apps/server/src/provider/Layers/ProviderRegistry.ts
+@@ -43,6 +43,7 @@ import * as Semaphore from "effect/Semaphore";
+ import { ServerConfig } from "../../config.ts";
+ import { ProviderInstanceRegistry } from "../Services/ProviderInstanceRegistry.ts";
+ import { ProviderRegistry, type ProviderRegistryShape } from "../Services/ProviderRegistry.ts";
++import type { ProviderSnapshotRefreshInput } from "../Services/ServerProvider.ts";
+ import {
+   hydrateCachedProvider,
+   isCachedProviderCorrelated,
+@@ -429,27 +430,33 @@ export const ProviderRegistryLive = Layer.effect(
+ 
+     const refreshOneSource = Effect.fn("refreshOneSource")(function* (
+       providerSource: ProviderSnapshotSource,
++      input?: ProviderSnapshotRefreshInput,
+     ) {
+-      return yield* providerSource.refresh.pipe(
+-        Effect.flatMap((nextProvider) =>
+-          correlateSnapshotWithSource(providerSource, nextProvider).pipe(
+-            Effect.flatMap(syncProvider),
++      return yield* providerSource
++        .refresh(input)
++        .pipe(
++          Effect.flatMap((nextProvider) =>
++            correlateSnapshotWithSource(providerSource, nextProvider).pipe(
++              Effect.flatMap(syncProvider),
++            ),
+           ),
+-        ),
+-      );
++        );
+     });
+ 
+-    const refreshAll = Effect.fn("refreshAll")(function* () {
++    const refreshAll = Effect.fn("refreshAll")(function* (input?: ProviderSnapshotRefreshInput) {
+       const sources = yield* getLiveSources;
+-      return yield* Effect.forEach(sources, (source) => refreshOneSource(source), {
++      return yield* Effect.forEach(sources, (source) => refreshOneSource(source, input), {
+         concurrency: "unbounded",
+         discard: true,
+       }).pipe(Effect.andThen(Ref.get(providersRef)));
+     });
+ 
+-    const refresh = Effect.fn("refresh")(function* (provider?: ProviderDriverKind) {
++    const refresh = Effect.fn("refresh")(function* (
++      provider?: ProviderDriverKind,
++      input?: ProviderSnapshotRefreshInput,
++    ) {
+       if (provider === undefined) {
+-        return yield* refreshAll();
++        return yield* refreshAll(input);
+       }
+       // Kind-scoped refreshes target the default instance for that driver.
+       const defaultInstanceId = defaultInstanceIdForDriver(provider);
+@@ -460,18 +467,19 @@ export const ProviderRegistryLive = Layer.effect(
+       if (!providerSource) {
+         return yield* Ref.get(providersRef);
+       }
+-      return yield* refreshOneSource(providerSource);
++      return yield* refreshOneSource(providerSource, input);
+     });
+ 
+     const refreshInstance = Effect.fn("refreshInstance")(function* (
+       instanceId: ProviderInstanceId,
++      input?: ProviderSnapshotRefreshInput,
+     ) {
+       const sources = yield* getLiveSources;
+       const providerSource = sources.find((candidate) => candidate.instanceId === instanceId);
+       if (!providerSource) {
+         return yield* Ref.get(providersRef);
+       }
+-      return yield* refreshOneSource(providerSource);
++      return yield* refreshOneSource(providerSource, input);
+     });
+ 
+     const getProviderMaintenanceCapabilitiesForInstance = Effect.fn(
+@@ -681,10 +689,10 @@ export const ProviderRegistryLive = Layer.effect(
+ 
+     return {
+       getProviders: Ref.get(providersRef),
+-      refresh: (provider?: ProviderDriverKind) =>
+-        refresh(provider).pipe(Effect.catchCause(recoverRefreshFailure)),
+-      refreshInstance: (instanceId: ProviderInstanceId) =>
+-        refreshInstance(instanceId).pipe(Effect.catchCause(recoverRefreshFailure)),
++      refresh: (provider?: ProviderDriverKind, input?: ProviderSnapshotRefreshInput) =>
++        refresh(provider, input).pipe(Effect.catchCause(recoverRefreshFailure)),
++      refreshInstance: (instanceId: ProviderInstanceId, input?: ProviderSnapshotRefreshInput) =>
++        refreshInstance(instanceId, input).pipe(Effect.catchCause(recoverRefreshFailure)),
+       getProviderMaintenanceCapabilitiesForInstance,
+       setProviderMaintenanceActionState,
+       get streamChanges() {
+diff --git a/apps/server/src/provider/Services/ProviderRegistry.ts b/apps/server/src/provider/Services/ProviderRegistry.ts
+index b7426b30338..af37f341334 100644
+--- a/apps/server/src/provider/Services/ProviderRegistry.ts
++++ b/apps/server/src/provider/Services/ProviderRegistry.ts
+@@ -16,6 +16,7 @@ import * as Context from "effect/Context";
+ import type * as Effect from "effect/Effect";
+ import type * as Stream from "effect/Stream";
+ import type { ProviderMaintenanceCapabilities } from "../providerMaintenance.ts";
++import type { ProviderSnapshotRefreshInput } from "./ServerProvider.ts";
+ 
+ export type ProviderMaintenanceActionKind = "update";
+ 
+@@ -36,7 +37,10 @@ export interface ProviderRegistryShape {
+    *
+    * @deprecated prefer `refreshInstance` for new call sites.
+    */
+-  readonly refresh: (provider?: ProviderDriverKind) => Effect.Effect<ReadonlyArray<ServerProvider>>;
++  readonly refresh: (
++    provider?: ProviderDriverKind,
++    input?: ProviderSnapshotRefreshInput,
++  ) => Effect.Effect<ReadonlyArray<ServerProvider>>;
+ 
+   /**
+    * Refresh the specific configured instance. Returns the updated snapshot
+@@ -46,6 +50,7 @@ export interface ProviderRegistryShape {
+    */
+   readonly refreshInstance: (
+     instanceId: ProviderInstanceId,
++    input?: ProviderSnapshotRefreshInput,
+   ) => Effect.Effect<ReadonlyArray<ServerProvider>>;
+ 
+   /**
+diff --git a/apps/server/src/provider/Services/ServerProvider.ts b/apps/server/src/provider/Services/ServerProvider.ts
+index 12162512927..9f66e416968 100644
+--- a/apps/server/src/provider/Services/ServerProvider.ts
++++ b/apps/server/src/provider/Services/ServerProvider.ts
+@@ -3,9 +3,13 @@ import type * as Effect from "effect/Effect";
+ import type * as Stream from "effect/Stream";
+ import type { ProviderMaintenanceCapabilities } from "../providerMaintenance.ts";
+ 
++export interface ProviderSnapshotRefreshInput {
++  readonly cwd?: string | undefined;
++}
++
+ export interface ServerProviderShape {
+   readonly maintenanceCapabilities: ProviderMaintenanceCapabilities;
+   readonly getSnapshot: Effect.Effect<ServerProvider>;
+-  readonly refresh: Effect.Effect<ServerProvider>;
++  readonly refresh: (input?: ProviderSnapshotRefreshInput) => Effect.Effect<ServerProvider>;
+   readonly streamChanges: Stream.Stream<ServerProvider>;
+ }
+diff --git a/apps/server/src/provider/makeManagedServerProvider.test.ts b/apps/server/src/provider/makeManagedServerProvider.test.ts
+index 1f3ebeab089..f7d94d944d7 100644
+--- a/apps/server/src/provider/makeManagedServerProvider.test.ts
++++ b/apps/server/src/provider/makeManagedServerProvider.test.ts
+@@ -114,10 +114,11 @@ describe("makeManagedServerProvider", () => {
+             streamSettings: Stream.empty,
+             haveSettingsChanged: (previous, next) => previous.enabled !== next.enabled,
+             initialSnapshot: () => Effect.succeed(initialSnapshot),
+-            checkProvider: Ref.update(checkCalls, (count) => count + 1).pipe(
+-              Effect.flatMap(() => Deferred.await(releaseCheck)),
+-              Effect.as(refreshedSnapshot),
+-            ),
++            checkProvider: () =>
++              Ref.update(checkCalls, (count) => count + 1).pipe(
++                Effect.flatMap(() => Deferred.await(releaseCheck)),
++                Effect.as(refreshedSnapshot),
++              ),
+             refreshInterval: "1 hour",
+           });
+ 
+@@ -156,13 +157,14 @@ describe("makeManagedServerProvider", () => {
+           streamSettings: Stream.fromPubSub(settingsChanges),
+           haveSettingsChanged: (previous, next) => previous.enabled !== next.enabled,
+           initialSnapshot: () => Effect.succeed(initialSnapshot),
+-          checkProvider: Ref.updateAndGet(checkCalls, (count) => count + 1).pipe(
+-            Effect.flatMap((count) =>
+-              count === 1
+-                ? Deferred.await(releaseInitialCheck).pipe(Effect.as(refreshedSnapshot))
+-                : Deferred.await(releaseSettingsCheck).pipe(Effect.as(refreshedSnapshotSecond)),
++          checkProvider: () =>
++            Ref.updateAndGet(checkCalls, (count) => count + 1).pipe(
++              Effect.flatMap((count) =>
++                count === 1
++                  ? Deferred.await(releaseInitialCheck).pipe(Effect.as(refreshedSnapshot))
++                  : Deferred.await(releaseSettingsCheck).pipe(Effect.as(refreshedSnapshotSecond)),
++              ),
+             ),
+-          ),
+           refreshInterval: "1 hour",
+         });
+ 
+@@ -198,7 +200,7 @@ describe("makeManagedServerProvider", () => {
+           streamSettings: Stream.empty,
+           haveSettingsChanged: (previous, next) => previous.enabled !== next.enabled,
+           initialSnapshot: () => Effect.succeed(initialSnapshot),
+-          checkProvider: Deferred.await(releaseCheck).pipe(Effect.as(refreshedSnapshot)),
++          checkProvider: () => Deferred.await(releaseCheck).pipe(Effect.as(refreshedSnapshot)),
+           enrichSnapshot: ({ publishSnapshot }) =>
+             Deferred.await(releaseEnrichment).pipe(
+               Effect.flatMap(() => publishSnapshot(enrichedSnapshot)),
+@@ -239,13 +241,14 @@ describe("makeManagedServerProvider", () => {
+           streamSettings: Stream.empty,
+           haveSettingsChanged: (previous, next) => previous.enabled !== next.enabled,
+           initialSnapshot: () => Effect.succeed(initialSnapshot),
+-          checkProvider: Ref.updateAndGet(refreshCount, (count) => count + 1).pipe(
+-            Effect.flatMap((count) =>
+-              count === 1
+-                ? Deferred.await(allowFirstRefresh).pipe(Effect.as(refreshedSnapshot))
+-                : Effect.succeed(refreshedSnapshotSecond),
++          checkProvider: () =>
++            Ref.updateAndGet(refreshCount, (count) => count + 1).pipe(
++              Effect.flatMap((count) =>
++                count === 1
++                  ? Deferred.await(allowFirstRefresh).pipe(Effect.as(refreshedSnapshot))
++                  : Effect.succeed(refreshedSnapshotSecond),
++              ),
+             ),
+-          ),
+           enrichSnapshot: ({ publishSnapshot }) =>
+             Effect.gen(function* () {
+               publishCallbacks.push(publishSnapshot);
+@@ -267,7 +270,7 @@ describe("makeManagedServerProvider", () => {
+         yield* Deferred.succeed(allowFirstRefresh, undefined);
+         yield* Deferred.await(firstCallbackReady);
+ 
+-        yield* provider.refresh;
++        yield* provider.refresh();
+         yield* Deferred.await(secondCallbackReady);
+ 
+         yield* publishCallbacks[0]!(enrichedSnapshot);
+@@ -285,4 +288,32 @@ describe("makeManagedServerProvider", () => {
+       }),
+     ),
+   );
++
++  it.effect("remembers explicit refresh input for later background checks", () =>
++    Effect.scoped(
++      Effect.gen(function* () {
++        const refreshInputs = yield* Ref.make<Array<string | undefined>>([]);
++        const provider = yield* makeManagedServerProvider<TestSettings>({
++          maintenanceCapabilities,
++          getSettings: Effect.succeed({ enabled: true }),
++          streamSettings: Stream.empty,
++          haveSettingsChanged: (previous, next) => previous.enabled !== next.enabled,
++          initialSnapshot: () => Effect.succeed(initialSnapshot),
++          checkProvider: (input) =>
++            Ref.update(refreshInputs, (inputs) => [...inputs, input?.cwd]).pipe(
++              Effect.as(refreshedSnapshot),
++            ),
++          refreshInterval: "1 hour",
++        });
++
++        yield* provider.refresh({ cwd: "/workspace/project" });
++        yield* provider.refresh();
++
++        assert.deepStrictEqual((yield* Ref.get(refreshInputs)).slice(-2), [
++          "/workspace/project",
++          "/workspace/project",
++        ]);
++      }),
++    ),
++  );
+ });
+diff --git a/apps/server/src/provider/makeManagedServerProvider.ts b/apps/server/src/provider/makeManagedServerProvider.ts
+index 2f07c5d508c..65c8e4a5591 100644
+--- a/apps/server/src/provider/makeManagedServerProvider.ts
++++ b/apps/server/src/provider/makeManagedServerProvider.ts
+@@ -9,7 +9,10 @@ import * as Scope from "effect/Scope";
+ import * as Stream from "effect/Stream";
+ import * as Semaphore from "effect/Semaphore";
+ 
+-import type { ServerProviderShape } from "./Services/ServerProvider.ts";
++import type {
++  ProviderSnapshotRefreshInput,
++  ServerProviderShape,
++} from "./Services/ServerProvider.ts";
+ import { ServerSettingsError } from "@t3tools/contracts";
+ 
+ interface ProviderSnapshotState {
+@@ -25,7 +28,9 @@ export const makeManagedServerProvider = Effect.fn("makeManagedServerProvider")(
+   readonly streamSettings: Stream.Stream<Settings>;
+   readonly haveSettingsChanged: (previous: Settings, next: Settings) => boolean;
+   readonly initialSnapshot: (settings: Settings) => Effect.Effect<ServerProvider>;
+-  readonly checkProvider: Effect.Effect<ServerProvider, ServerSettingsError>;
++  readonly checkProvider: (
++    input?: ProviderSnapshotRefreshInput,
++  ) => Effect.Effect<ServerProvider, ServerSettingsError>;
+   readonly enrichSnapshot?: (input: {
+     readonly settings: Settings;
+     readonly snapshot: ServerProvider;
+@@ -46,6 +51,7 @@ export const makeManagedServerProvider = Effect.fn("makeManagedServerProvider")(
+     enrichmentGeneration: 0,
+   });
+   const settingsRef = yield* Ref.make(initialSettings);
++  const refreshInputRef = yield* Ref.make<ProviderSnapshotRefreshInput | undefined>(undefined);
+   const enrichmentFiberRef = yield* Ref.make<Fiber.Fiber<void, unknown> | null>(null);
+   const scope = yield* Effect.scope;
+ 
+@@ -97,9 +103,22 @@ export const makeManagedServerProvider = Effect.fn("makeManagedServerProvider")(
+     yield* Ref.set(enrichmentFiberRef, fiber);
+   });
+ 
++  const resolveRefreshInput = Effect.fn("resolveRefreshInput")(function* (
++    nextInput: ProviderSnapshotRefreshInput | undefined,
++  ) {
++    if (nextInput !== undefined) {
++      yield* Ref.set(refreshInputRef, nextInput);
++      return nextInput;
++    }
++    return yield* Ref.get(refreshInputRef);
++  });
++
+   const applySnapshotBase = Effect.fn("applySnapshot")(function* (
+     nextSettings: Settings,
+-    options?: { readonly forceRefresh?: boolean },
++    options?: {
++      readonly forceRefresh?: boolean;
++      readonly refreshInput?: ProviderSnapshotRefreshInput | undefined;
++    },
+   ) {
+     const forceRefresh = options?.forceRefresh === true;
+     const previousSettings = yield* Ref.get(settingsRef);
+@@ -108,7 +127,8 @@ export const makeManagedServerProvider = Effect.fn("makeManagedServerProvider")(
+       return yield* Ref.get(snapshotStateRef).pipe(Effect.map((state) => state.snapshot));
+     }
+ 
+-    const nextSnapshot = yield* input.checkProvider;
++    const refreshInput = yield* resolveRefreshInput(options?.refreshInput);
++    const nextSnapshot = yield* input.checkProvider(refreshInput);
+     const nextGeneration = yield* Ref.modify(snapshotStateRef, (state) => {
+       const generation = input.enrichSnapshot
+         ? state.enrichmentGeneration + 1
+@@ -126,12 +146,19 @@ export const makeManagedServerProvider = Effect.fn("makeManagedServerProvider")(
+     yield* restartSnapshotEnrichment(nextSettings, nextSnapshot, nextGeneration);
+     return nextSnapshot;
+   });
+-  const applySnapshot = (nextSettings: Settings, options?: { readonly forceRefresh?: boolean }) =>
+-    refreshSemaphore.withPermits(1)(applySnapshotBase(nextSettings, options));
++  const applySnapshot = (
++    nextSettings: Settings,
++    options?: {
++      readonly forceRefresh?: boolean;
++      readonly refreshInput?: ProviderSnapshotRefreshInput | undefined;
++    },
++  ) => refreshSemaphore.withPermits(1)(applySnapshotBase(nextSettings, options));
+ 
+-  const refreshSnapshot = Effect.fn("refreshSnapshot")(function* () {
++  const refreshSnapshot = Effect.fn("refreshSnapshot")(function* (
++    refreshInput?: ProviderSnapshotRefreshInput,
++  ) {
+     const nextSettings = yield* input.getSettings;
+-    return yield* applySnapshot(nextSettings, { forceRefresh: true });
++    return yield* applySnapshot(nextSettings, { forceRefresh: true, refreshInput });
+   });
+ 
+   yield* Stream.runForEach(input.streamSettings, (nextSettings) =>
+@@ -157,7 +184,8 @@ export const makeManagedServerProvider = Effect.fn("makeManagedServerProvider")(
+       Effect.tapError(Effect.logError),
+       Effect.orDie,
+     ),
+-    refresh: refreshSnapshot().pipe(Effect.tapError(Effect.logError), Effect.orDie),
++    refresh: (refreshInput) =>
++      refreshSnapshot(refreshInput).pipe(Effect.tapError(Effect.logError), Effect.orDie),
+     get streamChanges() {
+       return Stream.fromPubSub(changesPubSub);
+     },
+diff --git a/apps/server/src/ws.ts b/apps/server/src/ws.ts
+index da8e3f694db..3f14c876586 100644
+--- a/apps/server/src/ws.ts
++++ b/apps/server/src/ws.ts
+@@ -987,10 +987,14 @@ const makeWsRpcLayer = (currentSession: AuthenticatedSession) =>
+         [WS_METHODS.serverRefreshProviders]: (input) =>
+           observeRpcEffect(
+             WS_METHODS.serverRefreshProviders,
+-            (input.instanceId !== undefined
+-              ? providerRegistry.refreshInstance(input.instanceId)
+-              : providerRegistry.refresh()
+-            ).pipe(Effect.map((providers) => ({ providers }))),
++            Effect.gen(function* () {
++              const refreshInput = input.cwd !== undefined ? { cwd: input.cwd } : undefined;
++              const providers =
++                input.instanceId !== undefined
++                  ? yield* providerRegistry.refreshInstance(input.instanceId, refreshInput)
++                  : yield* providerRegistry.refresh(undefined, refreshInput);
++              return { providers };
++            }),
+             { "rpc.aggregate": "server" },
+           ),
+         [WS_METHODS.serverUpdateProvider]: (input) =>
+diff --git a/apps/web/src/components/ChatView.tsx b/apps/web/src/components/ChatView.tsx
+index 7fc7669fe60..7429f807e00 100644
+--- a/apps/web/src/components/ChatView.tsx
++++ b/apps/web/src/components/ChatView.tsx
+@@ -202,6 +202,7 @@ const EMPTY_PROPOSED_PLANS: Thread["proposedPlans"] = [];
+ const EMPTY_PROVIDERS: ServerProvider[] = [];
+ const EMPTY_PROVIDER_SKILLS: ServerProvider["skills"] = [];
+ const EMPTY_PENDING_USER_INPUT_ANSWERS: Record<string, PendingUserInputDraftAnswer> = {};
++const CODEX_PROVIDER_DRIVER = ProviderDriverKind.make("codex");
+ type EnvironmentUnavailableState = {
+   readonly environmentId: EnvironmentId;
+   readonly label: string;
+@@ -844,6 +845,7 @@ export default function ChatView(props: ChatViewProps) {
+   const composerImagesRef = useRef<ComposerImageAttachment[]>([]);
+   const composerTerminalContextsRef = useRef<TerminalContextDraft[]>([]);
+   const localComposerRef = useRef<ChatComposerHandle | null>(null);
++  const codexWorkspaceProviderRefreshKeyRef = useRef<string | null>(null);
+   const composerRef = useComposerHandleContext() ?? localComposerRef;
+   const [showScrollToBottom, setShowScrollToBottom] = useState(false);
+   const [expandedImage, setExpandedImage] = useState<ExpandedImagePreview | null>(null);
+@@ -1859,6 +1861,34 @@ export default function ChatView(props: ChatViewProps) {
+   const activeProjectCwd = activeProject?.cwd ?? null;
+   const activeThreadWorktreePath = activeThread?.worktreePath ?? null;
+   const activeWorkspaceRoot = activeThreadWorktreePath ?? activeProjectCwd ?? undefined;
++  useEffect(() => {
++    if (!activeWorkspaceRoot) return;
++    const refreshProviderInstanceId =
++      activeProviderInstanceId ?? defaultInstanceIdForDriver(selectedProvider);
++    const refreshProviderDriver = activeProviderStatus?.driver ?? selectedProvider;
++    if (refreshProviderDriver !== CODEX_PROVIDER_DRIVER) return;
++
++    const refreshKey = `${environmentId}\u0000${refreshProviderInstanceId}\u0000${activeWorkspaceRoot}`;
++    if (codexWorkspaceProviderRefreshKeyRef.current === refreshKey) return;
++
++    const api = readLocalApi();
++    if (!api) return;
++    codexWorkspaceProviderRefreshKeyRef.current = refreshKey;
++    void api.server
++      .refreshProviders({
++        instanceId: refreshProviderInstanceId,
++        cwd: activeWorkspaceRoot,
++      })
++      .catch((error: unknown) => {
++        console.warn("Failed to refresh Codex provider for active workspace", error);
++      });
++  }, [
++    activeProviderInstanceId,
++    activeProviderStatus?.driver,
++    activeWorkspaceRoot,
++    environmentId,
++    selectedProvider,
++  ]);
+   const activeTerminalLaunchContext =
+     terminalUiLaunchContext?.threadId === activeThreadId ? terminalUiLaunchContext : null;
+   // Default true while loading to avoid toolbar flicker.
+diff --git a/apps/web/src/localApi.test.ts b/apps/web/src/localApi.test.ts
+index 161d6a9ef44..f718459e96e 100644
+--- a/apps/web/src/localApi.test.ts
++++ b/apps/web/src/localApi.test.ts
+@@ -542,7 +542,18 @@ describe("wsApi", () => {
+     const api = createLocalApi(rpcClientMock as never);
+ 
+     await expect(api.server.refreshProviders()).resolves.toEqual({ providers: nextProviders });
+-    expect(rpcClientMock.server.refreshProviders).toHaveBeenCalledWith();
++    expect(rpcClientMock.server.refreshProviders).toHaveBeenCalledWith(undefined);
++
++    await expect(
++      api.server.refreshProviders({
++        instanceId: defaultProviders[0]!.instanceId,
++        cwd: "/workspace/project",
++      }),
++    ).resolves.toEqual({ providers: nextProviders });
++    expect(rpcClientMock.server.refreshProviders).toHaveBeenLastCalledWith({
++      instanceId: defaultProviders[0]!.instanceId,
++      cwd: "/workspace/project",
++    });
+   });
+ 
+   it("forwards provider updates directly to the RPC client", async () => {
+diff --git a/apps/web/src/localApi.ts b/apps/web/src/localApi.ts
+index c5ee3f277ca..36947a29e87 100644
+--- a/apps/web/src/localApi.ts
++++ b/apps/web/src/localApi.ts
+@@ -121,9 +121,9 @@ function createBrowserLocalApi(rpcClient?: WsRpcClient): LocalApi {
+     server: {
+       getConfig: () =>
+         rpcClient ? rpcClient.server.getConfig() : Promise.reject(unavailableLocalBackendError()),
+-      refreshProviders: () =>
++      refreshProviders: (input) =>
+         rpcClient
+-          ? rpcClient.server.refreshProviders()
++          ? rpcClient.server.refreshProviders(input)
+           : Promise.reject(unavailableLocalBackendError()),
+       updateProvider: (input) =>
+         rpcClient
+diff --git a/packages/contracts/src/ipc.ts b/packages/contracts/src/ipc.ts
+index 684974fcac5..813919ed87c 100644
+--- a/packages/contracts/src/ipc.ts
++++ b/packages/contracts/src/ipc.ts
+@@ -471,6 +471,7 @@ export interface LocalApi {
+      */
+     refreshProviders: (input?: {
+       readonly instanceId?: ProviderInstanceId;
++      readonly cwd?: string;
+     }) => Promise<ServerProviderUpdatedPayload>;
+     updateProvider: (input: ServerProviderUpdateInput) => Promise<ServerProviderUpdatedPayload>;
+     upsertKeybinding: (input: ServerUpsertKeybindingInput) => Promise<ServerUpsertKeybindingResult>;
+diff --git a/packages/contracts/src/rpc.ts b/packages/contracts/src/rpc.ts
+index 814e403b64c..56f5fc41ca6 100644
+--- a/packages/contracts/src/rpc.ts
++++ b/packages/contracts/src/rpc.ts
+@@ -207,6 +207,11 @@ export const WsServerRefreshProvidersRpc = Rpc.make(WS_METHODS.serverRefreshProv
+      * refreshes.
+      */
+     instanceId: Schema.optional(ProviderInstanceId),
++    /**
++     * Workspace directory to use for provider probes that expose project-local
++     * metadata, such as Codex skills.
++     */
++    cwd: Schema.optional(Schema.String),
+   }),
+   success: ServerProviderUpdatedPayload,
+   error: EnvironmentAuthorizationError,
+
+From a0bd08ff9bc44d37b1fdb0601774c24a90df9b0e Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Pablo=20S=C3=A1ez?= <pablosaez1995@gmail.com>
+Date: Thu, 4 Jun 2026 14:46:52 -0400
+Subject: [PATCH 2/5] Honor refresh cwd for OpenCode provider
+
+---
+ apps/server/src/provider/Drivers/OpenCodeDriver.ts | 13 +++++++------
+ 1 file changed, 7 insertions(+), 6 deletions(-)
+
+diff --git a/apps/server/src/provider/Drivers/OpenCodeDriver.ts b/apps/server/src/provider/Drivers/OpenCodeDriver.ts
+index 39c61a6abb1..d537bb60c2a 100644
+--- a/apps/server/src/provider/Drivers/OpenCodeDriver.ts
++++ b/apps/server/src/provider/Drivers/OpenCodeDriver.ts
+@@ -136,11 +136,12 @@ export const OpenCodeDriver: ProviderDriver<OpenCodeSettings, OpenCodeDriverEnv>
+       });
+       const textGeneration = yield* makeOpenCodeTextGeneration(effectiveConfig, processEnv);
+ 
+-      const checkProvider = checkOpenCodeProviderStatus(
+-        effectiveConfig,
+-        serverConfig.cwd,
+-        processEnv,
+-      ).pipe(Effect.map(stampIdentity), Effect.provideService(OpenCodeRuntime, openCodeRuntime));
++      const checkProvider = (refreshInput?: { readonly cwd?: string | undefined }) =>
++        checkOpenCodeProviderStatus(
++          effectiveConfig,
++          refreshInput?.cwd ?? serverConfig.cwd,
++          processEnv,
++        ).pipe(Effect.map(stampIdentity), Effect.provideService(OpenCodeRuntime, openCodeRuntime));
+ 
+       const snapshot = yield* makeManagedServerProvider<OpenCodeSettings>({
+         maintenanceCapabilities,
+@@ -149,7 +150,7 @@ export const OpenCodeDriver: ProviderDriver<OpenCodeSettings, OpenCodeDriverEnv>
+         haveSettingsChanged: () => false,
+         initialSnapshot: (settings) =>
+           makePendingOpenCodeProvider(settings).pipe(Effect.map(stampIdentity)),
+-        checkProvider: () => checkProvider,
++        checkProvider,
+         enrichSnapshot: ({ snapshot, publishSnapshot }) =>
+           enrichProviderSnapshotWithVersionAdvisory(snapshot, maintenanceCapabilities).pipe(
+             Effect.provideService(HttpClient.HttpClient, httpClient),
+
+From 6c5935d5d525ae2a5660842ab6ed7e1a6110dd42 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Pablo=20S=C3=A1ez?= <pablosaez1995@gmail.com>
+Date: Thu, 4 Jun 2026 14:49:53 -0400
+Subject: [PATCH 3/5] Address Codex workspace refresh edge cases
+
+---
+ .../web/src/components/ChatView.logic.test.ts | 44 +++++++++++++++++++
+ apps/web/src/components/ChatView.logic.ts     | 18 ++++++++
+ apps/web/src/components/ChatView.tsx          | 20 ++++++---
+ 3 files changed, 75 insertions(+), 7 deletions(-)
+
+diff --git a/apps/web/src/components/ChatView.logic.test.ts b/apps/web/src/components/ChatView.logic.test.ts
+index 19c800ef139..ceb1245b3ff 100644
+--- a/apps/web/src/components/ChatView.logic.test.ts
++++ b/apps/web/src/components/ChatView.logic.test.ts
+@@ -18,12 +18,15 @@ import {
+   deriveComposerSendState,
+   hasServerAcknowledgedLocalDispatch,
+   reconcileMountedTerminalThreadIds,
++  resolveProviderRefreshTarget,
+   resolveSendEnvMode,
+   shouldWriteThreadErrorToCurrentServerThread,
+   waitForStartedServerThread,
+ } from "./ChatView.logic";
+ 
+ const localEnvironmentId = EnvironmentId.make("environment-local");
++const codexDriver = ProviderDriverKind.make("codex");
++const claudeDriver = ProviderDriverKind.make("claudeAgent");
+ 
+ describe("deriveComposerSendState", () => {
+   it("treats expired terminal pills as non-sendable content", () => {
+@@ -74,6 +77,47 @@ describe("deriveComposerSendState", () => {
+   });
+ });
+ 
++describe("resolveProviderRefreshTarget", () => {
++  it("uses the active provider instance when it matches the target driver", () => {
++    expect(
++      resolveProviderRefreshTarget({
++        activeProviderStatus: {
++          driver: codexDriver,
++          instanceId: ProviderInstanceId.make("codex_work"),
++        },
++        selectedProvider: codexDriver,
++        targetDriver: codexDriver,
++      }),
++    ).toEqual({
++      driver: codexDriver,
++      instanceId: ProviderInstanceId.make("codex_work"),
++    });
++  });
++
++  it("falls back to the selected provider default instance when active status is stale", () => {
++    expect(
++      resolveProviderRefreshTarget({
++        activeProviderStatus: null,
++        selectedProvider: codexDriver,
++        targetDriver: codexDriver,
++      }),
++    ).toEqual({
++      driver: codexDriver,
++      instanceId: ProviderInstanceId.make("codex"),
++    });
++  });
++
++  it("does not target non-matching providers", () => {
++    expect(
++      resolveProviderRefreshTarget({
++        activeProviderStatus: null,
++        selectedProvider: claudeDriver,
++        targetDriver: codexDriver,
++      }),
++    ).toBeNull();
++  });
++});
++
+ describe("buildExpiredTerminalContextToastCopy", () => {
+   it("formats clear empty-state guidance", () => {
+     expect(buildExpiredTerminalContextToastCopy(1, "empty")).toEqual({
+diff --git a/apps/web/src/components/ChatView.logic.ts b/apps/web/src/components/ChatView.logic.ts
+index bf87add28d9..7abd4278e05 100644
+--- a/apps/web/src/components/ChatView.logic.ts
++++ b/apps/web/src/components/ChatView.logic.ts
+@@ -1,10 +1,13 @@
+ import {
++  defaultInstanceIdForDriver,
+   type EnvironmentId,
+   isProviderDriverKind,
+   ProjectId,
+   type ModelSelection,
+   type ProviderDriverKind,
++  type ProviderInstanceId,
+   type ScopedThreadRef,
++  type ServerProvider,
+   type ThreadId,
+   type TurnId,
+ } from "@t3tools/contracts";
+@@ -72,6 +75,21 @@ export function shouldWriteThreadErrorToCurrentServerThread(input: {
+   );
+ }
+ 
++export function resolveProviderRefreshTarget(input: {
++  activeProviderStatus: Pick<ServerProvider, "driver" | "instanceId"> | null | undefined;
++  selectedProvider: ProviderDriverKind;
++  targetDriver: ProviderDriverKind;
++}): { readonly instanceId: ProviderInstanceId; readonly driver: ProviderDriverKind } | null {
++  const driver = input.activeProviderStatus?.driver ?? input.selectedProvider;
++  if (driver !== input.targetDriver) {
++    return null;
++  }
++  return {
++    driver,
++    instanceId: input.activeProviderStatus?.instanceId ?? defaultInstanceIdForDriver(driver),
++  };
++}
++
+ export function reconcileMountedTerminalThreadIds(input: {
+   currentThreadIds: ReadonlyArray<string>;
+   openThreadIds: ReadonlyArray<string>;
+diff --git a/apps/web/src/components/ChatView.tsx b/apps/web/src/components/ChatView.tsx
+index 7429f807e00..913b18313f2 100644
+--- a/apps/web/src/components/ChatView.tsx
++++ b/apps/web/src/components/ChatView.tsx
+@@ -171,6 +171,7 @@ import {
+   deriveLockedProvider,
+   readFileAsDataUrl,
+   reconcileMountedTerminalThreadIds,
++  resolveProviderRefreshTarget,
+   resolveSendEnvMode,
+   revokeBlobPreviewUrl,
+   revokeUserMessagePreviewUrls,
+@@ -1863,12 +1864,14 @@ export default function ChatView(props: ChatViewProps) {
+   const activeWorkspaceRoot = activeThreadWorktreePath ?? activeProjectCwd ?? undefined;
+   useEffect(() => {
+     if (!activeWorkspaceRoot) return;
+-    const refreshProviderInstanceId =
+-      activeProviderInstanceId ?? defaultInstanceIdForDriver(selectedProvider);
+-    const refreshProviderDriver = activeProviderStatus?.driver ?? selectedProvider;
+-    if (refreshProviderDriver !== CODEX_PROVIDER_DRIVER) return;
++    const refreshTarget = resolveProviderRefreshTarget({
++      activeProviderStatus,
++      selectedProvider,
++      targetDriver: CODEX_PROVIDER_DRIVER,
++    });
++    if (!refreshTarget) return;
+ 
+-    const refreshKey = `${environmentId}\u0000${refreshProviderInstanceId}\u0000${activeWorkspaceRoot}`;
++    const refreshKey = `${environmentId}\u0000${refreshTarget.instanceId}\u0000${activeWorkspaceRoot}`;
+     if (codexWorkspaceProviderRefreshKeyRef.current === refreshKey) return;
+ 
+     const api = readLocalApi();
+@@ -1876,15 +1879,18 @@ export default function ChatView(props: ChatViewProps) {
+     codexWorkspaceProviderRefreshKeyRef.current = refreshKey;
+     void api.server
+       .refreshProviders({
+-        instanceId: refreshProviderInstanceId,
++        instanceId: refreshTarget.instanceId,
+         cwd: activeWorkspaceRoot,
+       })
+       .catch((error: unknown) => {
++        if (codexWorkspaceProviderRefreshKeyRef.current === refreshKey) {
++          codexWorkspaceProviderRefreshKeyRef.current = null;
++        }
+         console.warn("Failed to refresh Codex provider for active workspace", error);
+       });
+   }, [
+-    activeProviderInstanceId,
+     activeProviderStatus?.driver,
++    activeProviderStatus?.instanceId,
+     activeWorkspaceRoot,
+     environmentId,
+     selectedProvider,
+
+From 419efd0be123cd1bd1c79ad2c5f4fe5a94a2a6e9 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Pablo=20S=C3=A1ez?= <pablosaez1995@gmail.com>
+Date: Thu, 4 Jun 2026 14:57:16 -0400
+Subject: [PATCH 4/5] Handle Codex custom instance refresh
+
+---
+ .../web/src/components/ChatView.logic.test.ts | 20 +++++++++-
+ apps/web/src/components/ChatView.logic.ts     | 27 +++++++++++++-
+ apps/web/src/components/ChatView.tsx          | 37 +++++++++++++++----
+ 3 files changed, 74 insertions(+), 10 deletions(-)
+
+diff --git a/apps/web/src/components/ChatView.logic.test.ts b/apps/web/src/components/ChatView.logic.test.ts
+index ceb1245b3ff..d86e23cc149 100644
+--- a/apps/web/src/components/ChatView.logic.test.ts
++++ b/apps/web/src/components/ChatView.logic.test.ts
+@@ -81,6 +81,7 @@ describe("resolveProviderRefreshTarget", () => {
+   it("uses the active provider instance when it matches the target driver", () => {
+     expect(
+       resolveProviderRefreshTarget({
++        activeProviderInstanceId: ProviderInstanceId.make("codex_work"),
+         activeProviderStatus: {
+           driver: codexDriver,
+           instanceId: ProviderInstanceId.make("codex_work"),
+@@ -94,9 +95,25 @@ describe("resolveProviderRefreshTarget", () => {
+     });
+   });
+ 
+-  it("falls back to the selected provider default instance when active status is stale", () => {
++  it("uses the active instance with a default fallback when active status is stale", () => {
+     expect(
+       resolveProviderRefreshTarget({
++        activeProviderInstanceId: ProviderInstanceId.make("codex_deleted"),
++        activeProviderStatus: null,
++        selectedProvider: codexDriver,
++        targetDriver: codexDriver,
++      }),
++    ).toEqual({
++      driver: codexDriver,
++      fallbackInstanceId: ProviderInstanceId.make("codex"),
++      instanceId: ProviderInstanceId.make("codex_deleted"),
++    });
++  });
++
++  it("uses the selected provider default instance when no active instance is known", () => {
++    expect(
++      resolveProviderRefreshTarget({
++        activeProviderInstanceId: null,
+         activeProviderStatus: null,
+         selectedProvider: codexDriver,
+         targetDriver: codexDriver,
+@@ -110,6 +127,7 @@ describe("resolveProviderRefreshTarget", () => {
+   it("does not target non-matching providers", () => {
+     expect(
+       resolveProviderRefreshTarget({
++        activeProviderInstanceId: null,
+         activeProviderStatus: null,
+         selectedProvider: claudeDriver,
+         targetDriver: codexDriver,
+diff --git a/apps/web/src/components/ChatView.logic.ts b/apps/web/src/components/ChatView.logic.ts
+index 7abd4278e05..8a762d0fdd9 100644
+--- a/apps/web/src/components/ChatView.logic.ts
++++ b/apps/web/src/components/ChatView.logic.ts
+@@ -75,18 +75,41 @@ export function shouldWriteThreadErrorToCurrentServerThread(input: {
+   );
+ }
+ 
++export type ProviderRefreshTarget = {
++  readonly instanceId: ProviderInstanceId;
++  readonly driver: ProviderDriverKind;
++  readonly fallbackInstanceId?: ProviderInstanceId;
++};
++
+ export function resolveProviderRefreshTarget(input: {
++  activeProviderInstanceId: ProviderInstanceId | null | undefined;
+   activeProviderStatus: Pick<ServerProvider, "driver" | "instanceId"> | null | undefined;
+   selectedProvider: ProviderDriverKind;
+   targetDriver: ProviderDriverKind;
+-}): { readonly instanceId: ProviderInstanceId; readonly driver: ProviderDriverKind } | null {
++}): ProviderRefreshTarget | null {
+   const driver = input.activeProviderStatus?.driver ?? input.selectedProvider;
+   if (driver !== input.targetDriver) {
+     return null;
+   }
++  const defaultInstanceId = defaultInstanceIdForDriver(driver);
++  if (input.activeProviderStatus) {
++    return {
++      driver,
++      instanceId: input.activeProviderStatus.instanceId,
++    };
++  }
++  if (input.activeProviderInstanceId) {
++    return {
++      driver,
++      instanceId: input.activeProviderInstanceId,
++      ...(input.activeProviderInstanceId !== defaultInstanceId
++        ? { fallbackInstanceId: defaultInstanceId }
++        : {}),
++    };
++  }
+   return {
+     driver,
+-    instanceId: input.activeProviderStatus?.instanceId ?? defaultInstanceIdForDriver(driver),
++    instanceId: defaultInstanceId,
+   };
+ }
+ 
+diff --git a/apps/web/src/components/ChatView.tsx b/apps/web/src/components/ChatView.tsx
+index 913b18313f2..1fd723506ef 100644
+--- a/apps/web/src/components/ChatView.tsx
++++ b/apps/web/src/components/ChatView.tsx
+@@ -1865,6 +1865,7 @@ export default function ChatView(props: ChatViewProps) {
+   useEffect(() => {
+     if (!activeWorkspaceRoot) return;
+     const refreshTarget = resolveProviderRefreshTarget({
++      activeProviderInstanceId,
+       activeProviderStatus,
+       selectedProvider,
+       targetDriver: CODEX_PROVIDER_DRIVER,
+@@ -1877,18 +1878,40 @@ export default function ChatView(props: ChatViewProps) {
+     const api = readLocalApi();
+     if (!api) return;
+     codexWorkspaceProviderRefreshKeyRef.current = refreshKey;
+-    void api.server
+-      .refreshProviders({
+-        instanceId: refreshTarget.instanceId,
+-        cwd: activeWorkspaceRoot,
+-      })
+-      .catch((error: unknown) => {
++    void (async () => {
++      try {
++        const result = await api.server.refreshProviders({
++          instanceId: refreshTarget.instanceId,
++          cwd: activeWorkspaceRoot,
++        });
++        if (!refreshTarget.fallbackInstanceId) return;
++        if (result.providers.some((provider) => provider.instanceId === refreshTarget.instanceId)) {
++          return;
++        }
++        if (codexWorkspaceProviderRefreshKeyRef.current !== refreshKey) return;
++
++        const fallbackRefreshKey = `${environmentId}\u0000${refreshTarget.fallbackInstanceId}\u0000${activeWorkspaceRoot}`;
++        codexWorkspaceProviderRefreshKeyRef.current = fallbackRefreshKey;
++        try {
++          await api.server.refreshProviders({
++            instanceId: refreshTarget.fallbackInstanceId,
++            cwd: activeWorkspaceRoot,
++          });
++        } catch (fallbackError: unknown) {
++          if (codexWorkspaceProviderRefreshKeyRef.current === fallbackRefreshKey) {
++            codexWorkspaceProviderRefreshKeyRef.current = null;
++          }
++          console.warn("Failed to refresh Codex provider for active workspace", fallbackError);
++        }
++      } catch (error: unknown) {
+         if (codexWorkspaceProviderRefreshKeyRef.current === refreshKey) {
+           codexWorkspaceProviderRefreshKeyRef.current = null;
+         }
+         console.warn("Failed to refresh Codex provider for active workspace", error);
+-      });
++      }
++    })();
+   }, [
++    activeProviderInstanceId,
+     activeProviderStatus?.driver,
+     activeProviderStatus?.instanceId,
+     activeWorkspaceRoot,
+
+From 97cd5a8cab71a3366948fc384fe522988af6f4b8 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Pablo=20S=C3=A1ez?= <pablosaez1995@gmail.com>
+Date: Thu, 4 Jun 2026 15:22:52 -0400
+Subject: [PATCH 5/5] Refresh Codex providers through environment API
+
+---
+ apps/web/src/components/ChatView.browser.tsx |  5 +++++
+ apps/web/src/components/ChatView.tsx         |  2 +-
+ apps/web/src/environmentApi.ts               |  3 +++
+ apps/web/src/localApi.test.ts                | 14 ++++++++++++++
+ packages/contracts/src/ipc.ts                |  9 +++++++++
+ 5 files changed, 32 insertions(+), 1 deletion(-)
+
+diff --git a/apps/web/src/components/ChatView.browser.tsx b/apps/web/src/components/ChatView.browser.tsx
+index 69e0e514061..2a38f2f6d0b 100644
+--- a/apps/web/src/components/ChatView.browser.tsx
++++ b/apps/web/src/components/ChatView.browser.tsx
+@@ -244,6 +244,11 @@ function createMockEnvironmentApi(input: {
+   dispatchCommand: EnvironmentApi["orchestration"]["dispatchCommand"];
+ }): EnvironmentApi {
+   return {
++    server: {
++      refreshProviders: (() => {
++        throw new Error("Not implemented in browser test.");
++      }) as EnvironmentApi["server"]["refreshProviders"],
++    },
+     terminal: {} as EnvironmentApi["terminal"],
+     projects: {} as EnvironmentApi["projects"],
+     filesystem: {
+diff --git a/apps/web/src/components/ChatView.tsx b/apps/web/src/components/ChatView.tsx
+index 1fd723506ef..2322804fd23 100644
+--- a/apps/web/src/components/ChatView.tsx
++++ b/apps/web/src/components/ChatView.tsx
+@@ -1875,7 +1875,7 @@ export default function ChatView(props: ChatViewProps) {
+     const refreshKey = `${environmentId}\u0000${refreshTarget.instanceId}\u0000${activeWorkspaceRoot}`;
+     if (codexWorkspaceProviderRefreshKeyRef.current === refreshKey) return;
+ 
+-    const api = readLocalApi();
++    const api = readEnvironmentApi(environmentId);
+     if (!api) return;
+     codexWorkspaceProviderRefreshKeyRef.current = refreshKey;
+     void (async () => {
+diff --git a/apps/web/src/environmentApi.ts b/apps/web/src/environmentApi.ts
+index bdb2e793069..a1192a81e63 100644
+--- a/apps/web/src/environmentApi.ts
++++ b/apps/web/src/environmentApi.ts
+@@ -7,6 +7,9 @@ const environmentApiOverridesForTests = new Map<EnvironmentId, EnvironmentApi>()
+ 
+ export function createEnvironmentApi(rpcClient: WsRpcClient): EnvironmentApi {
+   return {
++    server: {
++      refreshProviders: rpcClient.server.refreshProviders,
++    },
+     terminal: {
+       open: (input) => rpcClient.terminal.open(input as never),
+       attach: (input, callback, options) =>
+diff --git a/apps/web/src/localApi.test.ts b/apps/web/src/localApi.test.ts
+index f718459e96e..ed8a1ffc00e 100644
+--- a/apps/web/src/localApi.test.ts
++++ b/apps/web/src/localApi.test.ts
+@@ -554,6 +554,20 @@ describe("wsApi", () => {
+       instanceId: defaultProviders[0]!.instanceId,
+       cwd: "/workspace/project",
+     });
++
++    const { createEnvironmentApi } = await import("./environmentApi");
++    const environmentApi = createEnvironmentApi(rpcClientMock as never);
++
++    await expect(
++      environmentApi.server.refreshProviders({
++        instanceId: defaultProviders[0]!.instanceId,
++        cwd: "/remote/workspace/project",
++      }),
++    ).resolves.toEqual({ providers: nextProviders });
++    expect(rpcClientMock.server.refreshProviders).toHaveBeenLastCalledWith({
++      instanceId: defaultProviders[0]!.instanceId,
++      cwd: "/remote/workspace/project",
++    });
+   });
+ 
+   it("forwards provider updates directly to the RPC client", async () => {
+diff --git a/packages/contracts/src/ipc.ts b/packages/contracts/src/ipc.ts
+index 813919ed87c..5675aac6028 100644
+--- a/packages/contracts/src/ipc.ts
++++ b/packages/contracts/src/ipc.ts
+@@ -498,6 +498,15 @@ export interface LocalApi {
+  * `environmentId` rather than reaching through the local desktop bridge.
+  */
+ export interface EnvironmentApi {
++  server: {
++    /**
++     * Refresh provider snapshots for this backend environment.
++     */
++    refreshProviders: (input?: {
++      readonly instanceId?: ProviderInstanceId;
++      readonly cwd?: string;
++    }) => Promise<ServerProviderUpdatedPayload>;
++  };
+   terminal: {
+     open: (input: typeof TerminalOpenInput.Encoded) => Promise<TerminalSessionSnapshot>;
+     attach: (

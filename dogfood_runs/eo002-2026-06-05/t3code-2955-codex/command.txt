@@ -1,0 +1,1 @@
+/Library/Frameworks/Python.framework/Versions/3.10/bin/python3 -m forgebench review-pr https://github.com/pingdotgg/t3code/pull/2955 --repo /tmp/forgebench-eo002-clones/pingdotgg-t3code --out /Users/davidhorton/Developer/caissonhq/projects/forgebench/dogfood_runs/eo002-2026-06-05/t3code-2955-codex/forgebench-output

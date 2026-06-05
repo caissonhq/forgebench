@@ -1,0 +1,35 @@
+ForgeBench GitHub PR review complete.
+
+PR: https://github.com/tsumi233/cc-switch/pull/1
+Title: [codex] Fix Codex chat tool name fallback
+
+ForgeBench review complete.
+
+Posture: REVIEW
+
+No forgebench.yml found.
+Configuration mode: generic
+Run `forgebench init --repo . --out forgebench.yml`
+to create starter guardrails.
+
+Findings:
+- HIGH: Persistence or schema behavior may have changed [fnd_e3046b7a523b]
+- MEDIUM: Patch touches a broad file surface [fnd_1f8d591373be]
+- ADVISORY: User-facing copy or UI surface changed [fnd_2f6bf3bbbda7]
+
+Deterministic checks: not run
+Heuristic review lenses: completed, no additional findings
+LLM review: not run
+
+Reports written:
+- /Users/davidhorton/Developer/caissonhq/projects/forgebench/dogfood_runs/eo002-2026-06-05/tsumi233-cc-switch-1/forgebench-output/forgebench-report.md
+- /Users/davidhorton/Developer/caissonhq/projects/forgebench/dogfood_runs/eo002-2026-06-05/tsumi233-cc-switch-1/forgebench-output/forgebench-report.json
+- /Users/davidhorton/Developer/caissonhq/projects/forgebench/dogfood_runs/eo002-2026-06-05/tsumi233-cc-switch-1/forgebench-output/repair-prompt.md
+- /Users/davidhorton/Developer/caissonhq/projects/forgebench/dogfood_runs/eo002-2026-06-05/tsumi233-cc-switch-1/forgebench-output/pr-comment.md
+
+PR checkout:
+- status: not_requested
+- checks target: not_run
+
+GitHub comment:
+- not requested

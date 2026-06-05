@@ -1,0 +1,446 @@
+[
+  {
+    "slug": "caissonhq-forgebench-1",
+    "repo": "caissonhq/forgebench",
+    "number": 1,
+    "url": "https://github.com/caissonhq/forgebench/pull/1",
+    "ok": true,
+    "exit_code": 0,
+    "clone_dir": "/tmp/forgebench-eo002-clones/caissonhq-forgebench",
+    "output_dir": "/Users/davidhorton/Developer/caissonhq/projects/forgebench/dogfood_runs/eo002-2026-06-05/caissonhq-forgebench-1/forgebench-output",
+    "ran_at": "2026-06-05T22:15:44.713824+00:00",
+    "pr_metadata": {
+      "additions": 2,
+      "author": "Hortyhort",
+      "base_ref": "main",
+      "body": "This PR is a deliberately tiny README-only change used to smoke test ForgeBench Sprint 5 PR intake. It should remain low-risk and should not require a posted ForgeBench comment by default.",
+      "changed_files": 1,
+      "deletions": 0,
+      "head_ref": "sprint5-pr-smoke",
+      "number": 1,
+      "owner": "caissonhq",
+      "repo": "forgebench",
+      "title": "Docs-only ForgeBench PR intake smoke test",
+      "url": "https://github.com/caissonhq/forgebench/pull/1"
+    },
+    "posture": "LOW_CONCERN",
+    "config_mode": "generic",
+    "finding_ids": [
+      "ui_copy_changed"
+    ],
+    "finding_kinds": [
+      "ui_copy_changed"
+    ],
+    "finding_count": 1,
+    "reviewer_findings": {
+      "scope_auditor": 0,
+      "test_skeptic": 0,
+      "contract_keeper": 0,
+      "product_guardrail_reviewer": 0,
+      "test_skeptic_v2": 0,
+      "regression_hunter": 0
+    },
+    "summary": "Low concern. Deterministic checks were not run. ForgeBench found no high-confidence merge blockers, but this is not a substitute for human review."
+  },
+  {
+    "slug": "caissonhq-24hragent-1",
+    "repo": "caissonhq/24hragent",
+    "number": 1,
+    "url": "https://github.com/caissonhq/24hragent/pull/1",
+    "ok": true,
+    "exit_code": 0,
+    "clone_dir": "/tmp/forgebench-eo002-clones/caissonhq-24hragent",
+    "output_dir": "/Users/davidhorton/Developer/caissonhq/projects/forgebench/dogfood_runs/eo002-2026-06-05/caissonhq-24hragent-1/forgebench-output",
+    "ran_at": "2026-06-05T22:15:46.951641+00:00",
+    "pr_metadata": {
+      "additions": 71,
+      "author": "Hortyhort",
+      "base_ref": "main",
+      "body": "## Summary\n\nRemoves the hardcoded Gemini API key pattern from local 24hragent code and makes runtime configuration depend on `GEMINI_API_KEY`.\n\n## Changes\n\n- Refactors `agent.py` so chat startup is behind `main()` and the Gemini client reads `GEMINI_API_KEY` from the environment.\n- Replaces the live Gemini smoke test with local unit tests for env-var behavior.\n- Adds `.env.example` with an empty `GEMINI_API_KEY` placeholder.\n- Updates `.gitignore` so `.env.*` files stay local while `.env.example` can be committed.\n\n## Validation\n\n- `python3 -m unittest test_agent.py` passed.\n- A no-print working-tree scan found no Google API key pattern after the patch.\n- No live Gemini API call was made.\n\n## Security Notes\n\n- David stated the leaked key was already deleted/revoked.\n- This PR does not rewrite git history or force-push. History-scrub posture remains a separate decision.\n",
+      "changed_files": 4,
+      "deletions": 0,
+      "head_ref": "codex/24hragent-security-cleanup",
+      "number": 1,
+      "owner": "caissonhq",
+      "repo": "24hragent",
+      "title": "[codex] load 24hragent Gemini key from environment",
+      "url": "https://github.com/caissonhq/24hragent/pull/1"
+    },
+    "posture": "LOW_CONCERN",
+    "config_mode": "generic",
+    "finding_ids": [],
+    "finding_kinds": [],
+    "finding_count": 0,
+    "reviewer_findings": {
+      "scope_auditor": 0,
+      "test_skeptic": 0,
+      "contract_keeper": 0,
+      "product_guardrail_reviewer": 0,
+      "test_skeptic_v2": 0,
+      "regression_hunter": 0
+    },
+    "summary": "Low concern. Deterministic checks were not run. ForgeBench found no high-confidence merge blockers, but this is not a substitute for human review."
+  },
+  {
+    "slug": "vercel-workflow-2238",
+    "repo": "vercel/workflow",
+    "number": 2238,
+    "url": "https://github.com/vercel/workflow/pull/2238",
+    "ok": true,
+    "exit_code": 0,
+    "clone_dir": "/tmp/forgebench-eo002-clones/vercel-workflow",
+    "output_dir": "/Users/davidhorton/Developer/caissonhq/projects/forgebench/dogfood_runs/eo002-2026-06-05/vercel-workflow-2238/forgebench-output",
+    "ran_at": "2026-06-05T22:15:50.107815+00:00",
+    "pr_metadata": {
+      "additions": 10,
+      "author": "pranaygp",
+      "base_ref": "main",
+      "body": "### Description\n\nAdd a checked-in Codex environment descriptor so Codex tasks bootstrap the workspace with `pnpm install --frozen-lockfile`.\n\nThis keeps environment setup deterministic from the committed lockfile and avoids coupling the bootstrap step to app credentials or target-specific builds. An empty changeset is included because this is internal configuration and does not change a published package.\n\n### How did you test your changes?\n\n- Parsed `.codex/environments/environment.toml` with Python `tomllib`.\n- Ran `git diff --check origin/main...HEAD`.\n- Verified the signed, signed-off commit is reported as valid by GitHub.\n",
+      "changed_files": 2,
+      "deletions": 0,
+      "head_ref": "pranaygp/codex/add-codex-environment",
+      "number": 2238,
+      "owner": "vercel",
+      "repo": "workflow",
+      "title": "[codex] Add Codex environment setup",
+      "url": "https://github.com/vercel/workflow/pull/2238"
+    },
+    "posture": "LOW_CONCERN",
+    "config_mode": "generic",
+    "finding_ids": [
+      "ui_copy_changed"
+    ],
+    "finding_kinds": [
+      "ui_copy_changed"
+    ],
+    "finding_count": 1,
+    "reviewer_findings": {
+      "scope_auditor": 0,
+      "test_skeptic": 0,
+      "contract_keeper": 0,
+      "product_guardrail_reviewer": 0,
+      "test_skeptic_v2": 0,
+      "regression_hunter": 0
+    },
+    "summary": "Low concern. Deterministic checks were not run. ForgeBench found no high-confidence merge blockers, but this is not a substitute for human review."
+  },
+  {
+    "slug": "officebeats-beats-pm-kit-15",
+    "repo": "officebeats/beats-pm-kit",
+    "number": 15,
+    "url": "https://github.com/officebeats/beats-pm-kit/pull/15",
+    "ok": true,
+    "exit_code": 0,
+    "clone_dir": "/tmp/forgebench-eo002-clones/officebeats-beats-pm-kit",
+    "output_dir": "/Users/davidhorton/Developer/caissonhq/projects/forgebench/dogfood_runs/eo002-2026-06-05/officebeats-beats-pm-kit-15/forgebench-output",
+    "ran_at": "2026-06-05T22:15:53.004551+00:00",
+    "pr_metadata": {
+      "additions": 99,
+      "author": "officebeats",
+      "base_ref": "main",
+      "body": "## Summary\n\nAdds a Codex Browser-first policy for browser-dependent work in the kit.\n\n## Changes\n\n- Adds a canonical `.agent/rules/codex-browser-first.md` rule.\n- Updates the generated root `AGENTS.md` adapter guidance so Codex users default to the in-app Browser for local apps, rendered UI checks, localhost demos, screenshots, click-through validation, and page inspection.\n- Updates `sync_cli_adapters.py` so future adapter regeneration preserves the policy in `AGENTS.md` and `.codex/rules.md`.\n- Adds regression tests for the canonical rule and generated Codex adapter text.\n\n## Validation\n\n- `python3 -m unittest system.tests.test_codex_browser_first`\n- `python3 -m unittest system.tests.test_codex_skill_adapters`\n- Commit hook passed adapter sync, command integrity, command surface audit, py_compile, adapter tests, and privacy guard.\n\n## Notes\n\nThe worktree had unrelated pre-existing dirty files. This PR stages and commits only the browser-policy change set.",
+      "changed_files": 4,
+      "deletions": 0,
+      "head_ref": "codex/codex-browser-first",
+      "number": 15,
+      "owner": "officebeats",
+      "repo": "beats-pm-kit",
+      "title": "[codex] Add Codex browser-first policy",
+      "url": "https://github.com/officebeats/beats-pm-kit/pull/15"
+    },
+    "posture": "LOW_CONCERN",
+    "config_mode": "generic",
+    "finding_ids": [
+      "ui_copy_changed"
+    ],
+    "finding_kinds": [
+      "ui_copy_changed"
+    ],
+    "finding_count": 1,
+    "reviewer_findings": {
+      "scope_auditor": 0,
+      "test_skeptic": 0,
+      "contract_keeper": 0,
+      "product_guardrail_reviewer": 0,
+      "test_skeptic_v2": 0,
+      "regression_hunter": 0
+    },
+    "summary": "Low concern. Deterministic checks were not run. ForgeBench found no high-confidence merge blockers, but this is not a substitute for human review."
+  },
+  {
+    "slug": "hyperflow-5",
+    "repo": "Mohammed-Abdelhady/hyperflow",
+    "number": 5,
+    "url": "https://github.com/Mohammed-Abdelhady/hyperflow/pull/5",
+    "ok": true,
+    "exit_code": 0,
+    "clone_dir": "/tmp/forgebench-eo002-clones/mohammed-abdelhady-hyperflow",
+    "output_dir": "/Users/davidhorton/Developer/caissonhq/projects/forgebench/dogfood_runs/eo002-2026-06-05/hyperflow-5/forgebench-output",
+    "ran_at": "2026-06-05T22:15:55.597835+00:00",
+    "pr_metadata": {
+      "additions": 15,
+      "author": "Mohammed-Abdelhady",
+      "base_ref": "main",
+      "body": "## Summary\n\n- Clarifies that Codex App/CLI does not expose a bare `/hyperflow` root slash command.\n- Moves Codex quick-start examples to the portable `hyperflow <skill>` form while keeping `/hyperflow:<skill>` as an alias form.\n- Resolves hook validation commands relative to the plugin root so validation works from any current working directory.\n\n## Validation\n\n- `python3 scripts/validate-plugin.py`\n- `python3 /Users/mohammedabdelhady/Documents/coding/projects/hyperflow/scripts/validate-plugin.py` from `/Users/mohammedabdelhady/Documents/coding/projects/forgepath`\n- `git diff --check`\n",
+      "changed_files": 4,
+      "deletions": 13,
+      "head_ref": "codex/fix-codex-hyperflow-command-docs",
+      "number": 5,
+      "owner": "Mohammed-Abdelhady",
+      "repo": "hyperflow",
+      "title": "[codex] clarify Codex Hyperflow invocation",
+      "url": "https://github.com/Mohammed-Abdelhady/hyperflow/pull/5"
+    },
+    "posture": "REVIEW",
+    "config_mode": "generic",
+    "finding_ids": [
+      "implementation_without_tests",
+      "ui_copy_changed",
+      "scope_auditor_task_scope_expansion",
+      "test_skeptic_missing_behavior_coverage"
+    ],
+    "finding_kinds": [
+      "implementation_without_tests",
+      "ui_copy_changed",
+      "scope_auditor_task_scope_expansion",
+      "test_skeptic_missing_behavior_coverage"
+    ],
+    "finding_count": 4,
+    "reviewer_findings": {
+      "scope_auditor": 1,
+      "test_skeptic": 1,
+      "contract_keeper": 0,
+      "product_guardrail_reviewer": 0,
+      "test_skeptic_v2": 0,
+      "regression_hunter": 0
+    },
+    "summary": "Review before merge. Multiple static signals indicate risk even though ForgeBench did not find a deterministic blocker. Deterministic checks were not run."
+  },
+  {
+    "slug": "bourdon-113",
+    "repo": "getbourdon/bourdon",
+    "number": 113,
+    "url": "https://github.com/getbourdon/bourdon/pull/113",
+    "ok": true,
+    "exit_code": 0,
+    "clone_dir": "/tmp/forgebench-eo002-clones/getbourdon-bourdon",
+    "output_dir": "/Users/davidhorton/Developer/caissonhq/projects/forgebench/dogfood_runs/eo002-2026-06-05/bourdon-113/forgebench-output",
+    "ran_at": "2026-06-05T22:15:58.062592+00:00",
+    "pr_metadata": {
+      "additions": 81,
+      "author": "ryandavispro1-cmyk",
+      "base_ref": "main",
+      "body": "## Summary\n- expose Codex L5 staleness as shared derived snapshot data instead of HTML-only state\n- rename the dashboard blocker to 'Codex L5 publisher not recently run' so it does not imply the publisher code is broken\n- split Codex L5 publisher and manifest cards, and include the publisher command in evidence drawers\n- add regression coverage for snapshot staleness fields and dashboard copy\n\n## Local automation\nCreated active Codex automation `codex-l5-publisher` to run the Codex L5 export every 24 hours and refresh the metrics dashboard afterward. This automation writes only `/Users/radman/agent-library/agents/codex.l5.yaml` plus metrics/report artifacts; it does not inspect `~/.codex/auth.json` or mutate Codex SQLite.\n\n## Validation\n- `./.venv/bin/ruff check scripts/codex_memory_metrics.py tests/test_codex_memory_metrics.py`\n- `./.venv/bin/pytest -q -p no:cacheprovider tests/test_codex_memory_metrics.py` run 3x\n- `./.venv/bin/pytest -q -p no:cacheprovider tests/test_cli.py tests/test_codex_adapter.py tests/test_codex_memory_metrics.py` -> 123 passed\n- `./.venv/bin/pytest -q -p no:cacheprovider tests` -> 771 passed, 1 skipped\n- live Codex L5 publish + dashboard refresh: latest snapshot now reports `codex_l5_stale: false`, `518` entities, `81` sessions\n\n## Notes\nThe native-memory heartbeat remains read-only. Publication freshness is now handled by the separate publisher automation and reported as a distinct signal.",
+      "changed_files": 2,
+      "deletions": 13,
+      "head_ref": "codex/l5-publisher-freshness",
+      "number": 113,
+      "owner": "getbourdon",
+      "repo": "bourdon",
+      "title": "[codex] separate Codex L5 publisher freshness",
+      "url": "https://github.com/getbourdon/bourdon/pull/113"
+    },
+    "posture": "LOW_CONCERN",
+    "config_mode": "generic",
+    "finding_ids": [],
+    "finding_kinds": [],
+    "finding_count": 0,
+    "reviewer_findings": {
+      "scope_auditor": 0,
+      "test_skeptic": 0,
+      "contract_keeper": 0,
+      "product_guardrail_reviewer": 0,
+      "test_skeptic_v2": 0,
+      "regression_hunter": 0
+    },
+    "summary": "Low concern. Deterministic checks were not run. ForgeBench found no high-confidence merge blockers, but this is not a substitute for human review."
+  },
+  {
+    "slug": "t3code-2973-cursor",
+    "repo": "pingdotgg/t3code",
+    "number": 2973,
+    "url": "https://github.com/pingdotgg/t3code/pull/2973",
+    "ok": true,
+    "exit_code": 0,
+    "clone_dir": "/tmp/forgebench-eo002-clones/pingdotgg-t3code",
+    "output_dir": "/Users/davidhorton/Developer/caissonhq/projects/forgebench/dogfood_runs/eo002-2026-06-05/t3code-2973-cursor/forgebench-output",
+    "ran_at": "2026-06-05T22:16:04.134195+00:00",
+    "pr_metadata": {
+      "additions": 100,
+      "author": "juliusmarminge",
+      "base_ref": "main",
+      "body": "Fixes #2970\r\n\r\n## Summary\r\n- Swaps the desktop waitlist form from direct Clerk client calls to `useWaitlist` so it uses the provider-managed resource.\r\n- Adds Clerk CAPTCHA mount support for the custom desktop waitlist flow.\r\n- Improves submit handling with trimmed emails, provider field error display, and disabled submit state while fetching.\r\n- Adds browser coverage for the CAPTCHA mount point and waitlist submission path.\r\n\r\n## Testing\r\n- `Not run`\r\n- Added browser tests in `apps/web/src/components/clerk/DesktopClerkWaitlist.browser.tsx` for the CAPTCHA mount and waitlist submission behavior.\r\n- Per repo requirements, `vp check` and `vp run typecheck` should be run before merge.\r\n\r\n\n<!-- CURSOR_SUMMARY -->\n---\n\n> [!NOTE]\n> **Medium Risk**\n> Changes how authenticated Clerk API traffic is executed in the desktop main process; host allowlisting is unchanged but network behavior and error paths differ from the prior HttpClient default.\n> \n> **Overview**\n> Routes desktop **Clerk Frontend API** IPC fetches through Electron\u2019s network stack by wiring **`electronNetFetchLayer`**: it resolves **`electron.net.fetch`** when present, logs and falls back to **`globalThis.fetch`**, and supplies that to Effect\u2019s **`FetchHttpClient`**.\n> \n> The **`fetchCloudAuth`** handler delegates to a new **`executeCloudAuthFetch`** helper that builds the HTTP request (including optional body with the caller\u2019s content-type), runs it, and maps failures to **`DesktopCloudAuthFetchError`**.\n> \n> Tests no longer mock Effect\u2019s **`HttpClient`** layer; they stub **`globalThis.fetch`** with a **`recordedFetch`** helper and assert forwarded URL, method, headers, and body\u2014matching the fallback path the layer uses in non-Electron test runs.\n> \n> <sup>Reviewed by [Cursor Bugbot](https://cursor.com/bugbot) for commit 25542d7deacb6092667eacd163f443338c8fcb91. Bugbot is set up for automated code reviews on this repo. Configure [here](https://www.cursor.com/dashboard/bugbot).</sup>\n<!-- /CURSOR_SUMMARY -->\n\n\r\n\r\n<!-- Macroscope's pull request summary starts here -->\n<!-- Macroscope will only edit the content between these invisible markers, and the markers themselves will not be visible in the GitHub rendered markdown. -->\n<!-- If you delete either of the start / end markers from your PR's description, Macroscope will append its summary at the bottom of the description. -->\n> [!NOTE]\n> ### Use Electron's `net.fetch` for proxying Clerk IPC requests in the desktop app\n> - Introduces `electronNetFetchLayer` in [cloudAuth.ts](https://github.com/pingdotgg/t3code/pull/2973/files#diff-e5ff3c14598dc28813f4a3eb9b753939eeccfb39445c9950dae9fafa9db7f0e8) that provides `electron.net.fetch` as the HTTP client when running in Electron, falling back to `globalThis.fetch` with a warning if unavailable.\n> - Adds `executeCloudAuthFetch` to centralize request construction and error mapping, replacing inline request handling in the `fetchCloudAuth` IPC handler.\n> - Rewrites tests in [cloudAuth.test.ts](https://github.com/pingdotgg/t3code/pull/2973/files#diff-c4b52563d999054f74b466fe8ecdf8fa67237e79f1e9ce3bd393273bc74dd60f) to record calls against `globalThis.fetch` directly instead of mocking the Effect `HttpClient` layer.\n> - Behavioral Change: execution failures now carry the reason `'Desktop cloud auth fetch failed to execute.'` instead of previous error messages.\n>\n> <!-- Macroscope's review summary starts here -->\n>\n> <sup><a href=\"https://app.macroscope.com\">Macroscope</a> summarized 25542d7.</sup>\n> <!-- Macroscope's review summary ends here -->\n>\n<!-- macroscope-ui-refresh -->\n<!-- Macroscope's pull request summary ends here -->",
+      "changed_files": 2,
+      "deletions": 85,
+      "head_ref": "t3code/d574c457",
+      "number": 2973,
+      "owner": "pingdotgg",
+      "repo": "t3code",
+      "title": "fix(cloud): use Electron fetch for proxying Clerk IPC requests",
+      "url": "https://github.com/pingdotgg/t3code/pull/2973"
+    },
+    "posture": "LOW_CONCERN",
+    "config_mode": "generic",
+    "finding_ids": [
+      "ui_copy_changed"
+    ],
+    "finding_kinds": [
+      "ui_copy_changed"
+    ],
+    "finding_count": 1,
+    "reviewer_findings": {
+      "scope_auditor": 0,
+      "test_skeptic": 0,
+      "contract_keeper": 0,
+      "product_guardrail_reviewer": 0,
+      "test_skeptic_v2": 0,
+      "regression_hunter": 0
+    },
+    "summary": "Low concern. Deterministic checks were not run. ForgeBench found no high-confidence merge blockers, but this is not a substitute for human review."
+  },
+  {
+    "slug": "t3code-2968-effect",
+    "repo": "pingdotgg/t3code",
+    "number": 2968,
+    "url": "https://github.com/pingdotgg/t3code/pull/2968",
+    "ok": true,
+    "exit_code": 0,
+    "clone_dir": "/tmp/forgebench-eo002-clones/pingdotgg-t3code",
+    "output_dir": "/Users/davidhorton/Developer/caissonhq/projects/forgebench/dogfood_runs/eo002-2026-06-05/t3code-2968-effect/forgebench-output",
+    "ran_at": "2026-06-05T22:16:05.921876+00:00",
+    "pr_metadata": {
+      "additions": 182,
+      "author": "juliusmarminge",
+      "base_ref": "main",
+      "body": "## Summary\n- Replaced recoverable `Effect.catch` fallbacks with `Effect.orElseSucceed` across desktop, server, relay, and shared runtime code.\n- Simplified a large number of error-handling paths that intentionally degrade to safe defaults like `null`, `false`, empty arrays, or cached fallback values.\n- Tightened the server package TypeScript setup by removing the Bun type dependency from `apps/server` and pinning `@types/bun` where needed.\n- Updated a small set of tests and build scripts to match the new fallback style and workspace configuration.\n\n## Testing\n- Not run.\n- Expected checks for this branch: `vp check`, `vp run typecheck`.\n- If native mobile code is affected, also run `vp run lint:mobile`.\n\n<!-- CURSOR_SUMMARY -->\n---\n\n> [!NOTE]\n> **Low Risk**\n> Behavior-preserving API style change with no auth or data-model changes; minor TS config risk around Bun types in the server PTY layer.\n> \n> **Overview**\n> Replaces recoverable **`Effect.catch(() => Effect.succeed(...))`** fallbacks with **`Effect.orElseSucceed(() => ...)`** across desktop, server, relay, shared Tailscale, and build scripts. Fallback values and degradation behavior stay the same (defaults like `null`, `false`, empty collections, and safe HTTP error responses).\n> \n> **TypeScript / workspace:** `apps/server` drops global **`bun`** types from `tsconfig.json` and pins **`@types/bun@1.3.14`** in devDependencies; **`BunPTY.ts`** adds a local `/// <reference types=\"bun\" />`. **`oxlint-plugin-t3code`** and **`scripts`** remove catalog **`@types/bun`**; **`scripts`** also drops **`@anthropic-ai/claude-agent-sdk`**. Root **`package.json`** adds a **`tc`** alias for typecheck; lockfile bumps **`@effect/tsgo`** and **`@typescript/native-preview`** and trims unused catalog entries.\n> \n> <sup>Reviewed by [Cursor Bugbot](https://cursor.com/bugbot) for commit caa0e02a7c02707c799329b2032d829c12baabaa. Bugbot is set up for automated code reviews on this repo. Configure [here](https://www.cursor.com/dashboard/bugbot).</sup>\n<!-- /CURSOR_SUMMARY -->\n\n<!-- Macroscope's pull request summary starts here -->\n<!-- Macroscope will only edit the content between these invisible markers, and the markers themselves will not be visible in the GitHub rendered markdown. -->\n<!-- If you delete either of the start / end markers from your PR's description, Macroscope will append its summary at the bottom of the description. -->\n> [!NOTE]\n> ### Replace `Effect.catch` fallbacks with `Effect.orElseSucceed` across the codebase\n> Replaces all instances of `Effect.catch(() => Effect.succeed(value))` with the equivalent `Effect.orElseSucceed(() => value)` across desktop, server, relay, and script code. This is a pure refactor with no behavioral change \u2014 `Effect.orElseSucceed` is the idiomatic Effect-TS API for recovering from any failure with a success value.\n>\n> <!-- Macroscope's review summary starts here -->\n>\n> <sup><a href=\"https://app.macroscope.com\">Macroscope</a> summarized caa0e02.</sup>\n> <!-- Macroscope's review summary ends here -->\n>\n<!-- macroscope-ui-refresh -->\n<!-- Macroscope's pull request summary ends here -->",
+      "changed_files": 42,
+      "deletions": 318,
+      "head_ref": "feature/effect-fallback-refactor",
+      "number": 2968,
+      "owner": "pingdotgg",
+      "repo": "t3code",
+      "title": "Refactor recoverable Effect fallbacks to orElseSucceed",
+      "url": "https://github.com/pingdotgg/t3code/pull/2968"
+    },
+    "posture": "REVIEW",
+    "config_mode": "generic",
+    "finding_ids": [
+      "dependency_surface_changed",
+      "build_config_changed",
+      "persistence_schema_changed",
+      "broad_file_surface",
+      "test_skeptic_weak_test_signal"
+    ],
+    "finding_kinds": [
+      "dependency_surface_changed",
+      "build_config_changed",
+      "persistence_schema_changed",
+      "broad_file_surface",
+      "test_skeptic_weak_test_signal"
+    ],
+    "finding_count": 5,
+    "reviewer_findings": {
+      "scope_auditor": 0,
+      "test_skeptic": 1,
+      "contract_keeper": 0,
+      "product_guardrail_reviewer": 0,
+      "test_skeptic_v2": 0,
+      "regression_hunter": 0
+    },
+    "summary": "Review before merge. The patch may be valid, but ForgeBench found high-severity risk that needs human review. Deterministic checks were not run."
+  },
+  {
+    "slug": "t3code-2955-codex",
+    "repo": "pingdotgg/t3code",
+    "number": 2955,
+    "url": "https://github.com/pingdotgg/t3code/pull/2955",
+    "ok": true,
+    "exit_code": 0,
+    "clone_dir": "/tmp/forgebench-eo002-clones/pingdotgg-t3code",
+    "output_dir": "/Users/davidhorton/Developer/caissonhq/projects/forgebench/dogfood_runs/eo002-2026-06-05/t3code-2955-codex/forgebench-output",
+    "ran_at": "2026-06-05T22:16:07.715288+00:00",
+    "pr_metadata": {
+      "additions": 460,
+      "author": "PabloSzx",
+      "base_ref": "main",
+      "body": "## Summary\nFix Codex `$skill` autocomplete for project/worktree-local skills.\n\n## Root cause\nCodex provider status was probed from the server process cwd, so `codex app-server skills/list` did not receive the active project or worktree cwd. Project-local `.agents/skills` entries could be parsed by Codex, but T3 Code's provider snapshot did not include them for the active workspace, leaving `$create-st` and similar skill queries with no matches.\n\n## Changes\n- Thread optional `cwd` context through `server.refreshProviders`, the WebSocket contract, provider registry refreshes, and managed provider snapshots.\n- Make managed providers remember an explicit refresh context so later background refreshes keep using the active workspace cwd.\n- Probe Codex provider status with the active project/worktree cwd, falling back to the configured server cwd.\n- Refresh the active Codex provider when the active workspace root changes so the existing `## Summary\nFix Codex `$skill` autocomplete for project/worktree-local skills.\n\n## Root cause\nCodex provider status was probed from the server process cwd, so `codex app-server skills/list` did not receive the active project or worktree cwd. Project-local `.agents/skills` entries could be parsed by Codex, but T3 Code's provider snapshot did not include them for the active workspace, leaving `$create-st` and similar skill queries with no matches.\n\n## Changes\n- Thread optional `cwd` context through `server.refreshProviders`, the WebSocket contract, provider registry refreshes, and managed provider snapshots.\n- Make managed providers remember an explicit refresh context so later background refreshes keep using the active workspace cwd.\n- Probe Codex provider status with the active project/worktree cwd, falling back to the configured server cwd.\n skill autocomplete has the right skill list.\n- Route workspace provider refreshes through the environment-specific API so remote workspace paths refresh the matching backend environment.\n- Keep OpenCode's provider refresh wrapper aligned with the new cwd contract by honoring the same optional refresh cwd fallback.\n- Preserve custom Codex instance targeting while provider status is catching up, falling back to the default Codex instance only if the requested instance no longer exists.\n- Avoid stale provider instance ids no-oping the workspace refresh, and clear the refresh de-dupe key after failed refreshes so the request can retry.\n- Add regression coverage for Codex cwd forwarding, registry refresh context, managed-provider context reuse, local API forwarding, and workspace refresh target selection.\n\n## Related\nRelated to #2637, but this PR intentionally does not change `/` command suggestions or close that issue.\nRelated to #2048, but this PR only wires the cwd consumer for Codex; Claude project skill discovery remains separate.\nBuilds on the closed stale approach from #2330, with the cwd coming from the active workspace rather than only the server config cwd.\nSupersedes draft #2954 with the requested `pabloszx/` branch prefix.\n\n## Validation\n- `mise exec -- pnpm exec vp check`\n- `mise exec -- pnpm --filter @t3tools/web exec vp test run --project unit src/components/ChatView.logic.test.ts`\n- `mise exec -- pnpm exec vp test run apps/server/src/provider/Layers/OpenCodeProvider.test.ts apps/server/src/provider/makeManagedServerProvider.test.ts apps/server/src/provider/Layers/ProviderRegistry.test.ts apps/web/src/localApi.test.ts`\n- `mise exec -- pnpm exec vp run --filter t3 --filter @t3tools/web --filter @t3tools/contracts typecheck`\n- `mise exec -- pnpm exec vp run typecheck`\n\n\n<!-- Macroscope's pull request summary starts here -->\n<!-- Macroscope will only edit the content between these invisible markers, and the markers themselves will not be visible in the GitHub rendered markdown. -->\n<!-- If you delete either of the start / end markers from your PR's description, Macroscope will append its summary at the bottom of the description. -->\n> [!NOTE]\n> ### Fix Codex workspace skill autocomplete by passing workspace `cwd` through provider refresh\n> - Extends the provider refresh pipeline to accept an optional `cwd` so Codex (and OpenCode) status probes run in the correct workspace directory.\n> - `makeManagedServerProvider` now takes `checkProvider` as a function receiving optional `ProviderSnapshotRefreshInput`, and remembers the last refresh input for subsequent background refreshes.\n> - `ProviderRegistry.refresh` and `refreshInstance` accept and forward the optional input through to the underlying provider drivers.\n> - The `ChatView` component triggers a Codex provider refresh with the active workspace `cwd` when a Codex provider is selected, with a fallback to the default instance if the targeted instance is not found.\n> - The `serverRefreshProviders` WS RPC schema and `LocalApi`/`EnvironmentApi` contracts are extended to carry optional `instanceId` and `cwd` fields.\n> - Behavioral Change: `ServerProviderShape.refresh` is now a function that must be called rather than a plain `Effect`; all callers have been updated.\n>\n> <!-- Macroscope's review summary starts here -->\n>\n> <sup><a href=\"https://app.macroscope.com\">Macroscope</a> summarized 97cd5a8.</sup>\n> <!-- Macroscope's review summary ends here -->\n>\n<!-- macroscope-ui-refresh -->\n<!-- Macroscope's pull request summary ends here -->\n\n<!-- CURSOR_SUMMARY -->\n---\n\n> [!NOTE]\n> **Medium Risk**\n> Changes the provider refresh contract and WS/API surfaces across server and web; behavior is well-tested but affects live provider snapshots and multi-instance Codex targeting.\n> \n> **Overview**\n> Fixes **Codex `$skill` autocomplete** for project/worktree-local skills by probing provider status against the **active workspace directory** instead of the server process cwd.\n> \n> The PR adds optional **`cwd` on provider refresh** (`ProviderSnapshotRefreshInput`) and threads it through managed snapshots, the provider registry, WebSocket `serverRefreshProviders`, and local/environment APIs. **`ServerProvider.refresh`** and **`checkProvider`** become callables that accept that context; managed providers **remember** an explicit refresh cwd so later background checks keep using the same workspace. **Codex** (and **OpenCode**) status probes use `refreshInput.cwd ?? serverConfig.cwd`.\n> \n> On the web client, **`ChatView`** refreshes the active **Codex** instance when the workspace root (project cwd or thread worktree) changes, using **`resolveProviderRefreshTarget`** to pick the right instance and optionally fall back to the default Codex instance if a custom id is stale. Failed refreshes clear the de-dupe key so retries can run.\n> \n> Tests cover cwd forwarding, registry refresh input, managed-provider context reuse, API forwarding, and refresh target selection.\n> \n> <sup>Reviewed by [Cursor Bugbot](https://cursor.com/bugbot) for commit 97cd5a8cab71a3366948fc384fe522988af6f4b8. Bugbot is set up for automated code reviews on this repo. Configure [here](https://www.cursor.com/dashboard/bugbot).</sup>\n<!-- /CURSOR_SUMMARY -->\n\n\n",
+      "changed_files": 22,
+      "deletions": 68,
+      "head_ref": "pabloszx/workspace-skill-autocomplete-only",
+      "number": 2955,
+      "owner": "pingdotgg",
+      "repo": "t3code",
+      "title": "[codex] Fix Codex workspace skill autocomplete",
+      "url": "https://github.com/pingdotgg/t3code/pull/2955"
+    },
+    "posture": "REVIEW",
+    "config_mode": "generic",
+    "finding_ids": [
+      "broad_file_surface",
+      "ui_copy_changed",
+      "test_skeptic_weak_test_signal"
+    ],
+    "finding_kinds": [
+      "broad_file_surface",
+      "ui_copy_changed",
+      "test_skeptic_weak_test_signal"
+    ],
+    "finding_count": 3,
+    "reviewer_findings": {
+      "scope_auditor": 0,
+      "test_skeptic": 1,
+      "contract_keeper": 0,
+      "product_guardrail_reviewer": 0,
+      "test_skeptic_v2": 0,
+      "regression_hunter": 0
+    },
+    "summary": "Review before merge. The patch touches a broad file surface and should be inspected for unrelated changes. Deterministic checks were not run."
+  },
+  {
+    "slug": "tsumi233-cc-switch-1",
+    "repo": "tsumi233/cc-switch",
+    "number": 1,
+    "url": "https://github.com/tsumi233/cc-switch/pull/1",
+    "ok": true,
+    "exit_code": 0,
+    "clone_dir": "/tmp/forgebench-eo002-clones/tsumi233-cc-switch",
+    "output_dir": "/Users/davidhorton/Developer/caissonhq/projects/forgebench/dogfood_runs/eo002-2026-06-05/tsumi233-cc-switch-1/forgebench-output",
+    "ran_at": "2026-06-05T22:16:11.184788+00:00",
+    "pr_metadata": {
+      "additions": 895,
+      "author": "tsumi233",
+      "base_ref": "main",
+      "body": "## What changed\n\n- Infer missing Chat Completions `tool_call.function.name` values from the original Codex Responses tool schema when the upstream provider omits the name.\n- Buffer streamed Chat tool calls until a usable name is available, then restore the proper Responses tool call item.\n- Keep safe Codex completion summary logs for diagnosing empty outputs and tool-call issues without logging request content or secrets.\n- Disable updater artifact generation so local unsigned macOS/Windows builds do not require private updater signing keys.\n\n## Why\n\nWith CC Switch local route mapping enabled for Codex through Chat Completions providers, some upstream responses produced tool-call arguments such as `cmd`, `workdir`, and `yield_time_ms` but omitted `function.name`. Codex then received `function_call.name = \"\"` and returned `unsupported call`, so the model kept saying it would call tools but nothing actually executed.\n\n## Validation\n\n- `cargo test tool_call_name_from_arguments`\n- `cargo test transform_codex_chat::tests::`\n- `cargo test streaming_codex_chat::tests::`\n- `cargo check`\n- `pnpm tauri build`\n\nBuilt local macOS artifacts successfully under `src-tauri/target/release/bundle/`.",
+      "changed_files": 22,
+      "deletions": 28,
+      "head_ref": "codex/codex-tool-name-fallback",
+      "number": 1,
+      "owner": "tsumi233",
+      "repo": "cc-switch",
+      "title": "[codex] Fix Codex chat tool name fallback",
+      "url": "https://github.com/tsumi233/cc-switch/pull/1"
+    },
+    "posture": "REVIEW",
+    "config_mode": "generic",
+    "finding_ids": [
+      "persistence_schema_changed",
+      "broad_file_surface",
+      "ui_copy_changed"
+    ],
+    "finding_kinds": [
+      "persistence_schema_changed",
+      "broad_file_surface",
+      "ui_copy_changed"
+    ],
+    "finding_count": 3,
+    "reviewer_findings": {
+      "scope_auditor": 0,
+      "test_skeptic": 0,
+      "contract_keeper": 0,
+      "product_guardrail_reviewer": 0,
+      "test_skeptic_v2": 0,
+      "regression_hunter": 0
+    },
+    "summary": "Review before merge. The patch may be valid, but ForgeBench found high-severity risk that needs human review. Deterministic checks were not run."
+  }
+]

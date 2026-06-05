@@ -1,0 +1,14 @@
+{
+  "additions": 895,
+  "author": "tsumi233",
+  "base_ref": "main",
+  "body": "## What changed\n\n- Infer missing Chat Completions `tool_call.function.name` values from the original Codex Responses tool schema when the upstream provider omits the name.\n- Buffer streamed Chat tool calls until a usable name is available, then restore the proper Responses tool call item.\n- Keep safe Codex completion summary logs for diagnosing empty outputs and tool-call issues without logging request content or secrets.\n- Disable updater artifact generation so local unsigned macOS/Windows builds do not require private updater signing keys.\n\n## Why\n\nWith CC Switch local route mapping enabled for Codex through Chat Completions providers, some upstream responses produced tool-call arguments such as `cmd`, `workdir`, and `yield_time_ms` but omitted `function.name`. Codex then received `function_call.name = \"\"` and returned `unsupported call`, so the model kept saying it would call tools but nothing actually executed.\n\n## Validation\n\n- `cargo test tool_call_name_from_arguments`\n- `cargo test transform_codex_chat::tests::`\n- `cargo test streaming_codex_chat::tests::`\n- `cargo check`\n- `pnpm tauri build`\n\nBuilt local macOS artifacts successfully under `src-tauri/target/release/bundle/`.",
+  "changed_files": 22,
+  "deletions": 28,
+  "head_ref": "codex/codex-tool-name-fallback",
+  "number": 1,
+  "owner": "tsumi233",
+  "repo": "cc-switch",
+  "title": "[codex] Fix Codex chat tool name fallback",
+  "url": "https://github.com/tsumi233/cc-switch/pull/1"
+}

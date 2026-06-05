@@ -1,0 +1,97 @@
+From cdf8c9b6b27c069040b5ce5557a2d58eb2cacc5f Mon Sep 17 00:00:00 2001
+From: Mohammed-Abdelhady <Mohammed_Abdelhady97@hotmail.com>
+Date: Wed, 27 May 2026 04:20:28 +0400
+Subject: [PATCH] fix: clarify codex hyperflow invocation
+
+---
+ README.md                  | 22 +++++++++++-----------
+ docs/installation.html     |  2 +-
+ docs/installation.md       |  2 +-
+ scripts/validate-plugin.py |  2 ++
+ 4 files changed, 15 insertions(+), 13 deletions(-)
+
+diff --git a/README.md b/README.md
+index 6152532..e97a0c8 100644
+--- a/README.md
++++ b/README.md
+@@ -63,7 +63,7 @@ Start with a rough idea — the pipeline carries it to shipped. Start at any ent
+ 
+ `amplify` hands off to `spec`, then `spec → scope → dispatch` auto-chains; `audit` and `deploy` are gates that fire at the end. Enter at `spec` for design-first work, `scope` when the approach is clear, `dispatch` when a task file already exists. `scaffold` is a one-time project setup — run it once per repo to build the `.hyperflow/` cache.
+ 
+-In Codex App/CLI, `/hyperflow:*` entries are treated as plugin skill aliases, not native host slash commands. If the host does not expose Hyperflow's `AskUserQuestion` popup UI, required gates still fire as concise `Hyperflow Question` chat blocks with numbered choices, then Hyperflow waits for your answer. When Codex subagents are available, Hyperflow maps worker/searcher/writer dispatches to them; otherwise those phases run inline and the chain continues in the same thread.
++In Codex App/CLI, Hyperflow does not register a bare `/hyperflow` root command. Use `hyperflow <skill>` as the portable spelling, or `/hyperflow:<skill>` where plugin aliases are active. If the host does not expose Hyperflow's `AskUserQuestion` popup UI, required gates still fire as concise `Hyperflow Question` chat blocks with numbered choices, then Hyperflow waits for your answer. When Codex subagents are available, Hyperflow maps worker/searcher/writer dispatches to them; otherwise those phases run inline and the chain continues in the same thread.
+ 
+ ## Quick start
+ 
+@@ -79,22 +79,22 @@ codex plugin marketplace add Mohammed-Abdelhady/hyperflow
+ codex plugin add hyperflow@hyperflow-marketplace
+ ```
+ 
+-First initialize the project (once), then invoke any skill:
++First initialize the project (once), then invoke any skill. In Codex, prefer the text form:
+ 
+ ```text
+-/hyperflow:scaffold                                        # first: set up the project (once per repo)
+-/hyperflow:amplify "make a login page"                     # turn a rough idea into a strong prompt
+-/hyperflow:spec "add user auth with login + middleware"    # design → scope → dispatch
+-/hyperflow:trace "tests fail after the auth refactor"      # root-cause a bug
+-/hyperflow:deploy                                          # pre-push gates + ship
++hyperflow scaffold                                        # first: set up the project (once per repo)
++hyperflow amplify "make a login page"                     # turn a rough idea into a strong prompt
++hyperflow spec "add user auth with login + middleware"    # design → scope → dispatch
++hyperflow trace "tests fail after the auth refactor"      # root-cause a bug
++hyperflow deploy                                          # pre-push gates + ship
+ ```
+ 
+-Codex-safe equivalent:
++Slash-alias equivalent when the host routes plugin aliases:
+ 
+ ```text
+-hyperflow scaffold
+-hyperflow amplify "make a login page"
+-hyperflow trace "tests fail after the auth refactor"
++/hyperflow:scaffold
++/hyperflow:amplify "make a login page"
++/hyperflow:trace "tests fail after the auth refactor"
+ ```
+ 
+ Auto-routing is on by default — say "audit the diff" or "debug this test" and the right skill runs without the `/hyperflow:*` prefix.
+diff --git a/docs/installation.html b/docs/installation.html
+index fa81a20..0194f85 100644
+--- a/docs/installation.html
++++ b/docs/installation.html
+@@ -105,7 +105,7 @@ <h2 id="where-heading">Codex and terminal CLI environments.</h2>
+         </p>
+ 
+         <p class="install-note" style="margin-top:1rem;">
+-          In Codex App/CLI, <code>/hyperflow:*</code> is a Hyperflow alias rather than a native host slash command. <code>hyperflow spec</code>, <code>hyperflow amplify</code>, and similar text invocations are the most portable form; the plugin still recognizes <code>/hyperflow:*</code> aliases when the session-start hook is loaded.
++          In Codex App/CLI, Hyperflow does not register a bare <code>/hyperflow</code> root command, so it may not appear in the slash-command picker. <code>hyperflow spec</code>, <code>hyperflow amplify</code>, and similar text invocations are the most portable form; <code>/hyperflow:*</code> remains an alias when the session-start hook is loaded.
+         </p>
+ 
+         <h3 style="margin-top:2rem;">Workarounds for Desktop / web users</h3>
+diff --git a/docs/installation.md b/docs/installation.md
+index cd8fab4..20d3e10 100644
+--- a/docs/installation.md
++++ b/docs/installation.md
+@@ -20,7 +20,7 @@ Hyperflow loads as a plugin into Codex App/CLI and terminal CLI environments. It
+ 
+ If `/hyperflow:spec` returns `isn't a recognized command here. Some commands only work in the Claude Code terminal.`, you are in Desktop or web — open a terminal in the same project directory and run `claude`.
+ 
+-In Codex App/CLI, `/hyperflow:*` is a Hyperflow alias rather than a native host slash command. `hyperflow spec`, `hyperflow amplify`, and similar text invocations are the most portable form; the plugin still recognizes `/hyperflow:*` aliases when the session-start hook is loaded.
++In Codex App/CLI, Hyperflow does not register a bare `/hyperflow` root command, so it may not appear in the slash-command picker. `hyperflow spec`, `hyperflow amplify`, and similar text invocations are the most portable form; `/hyperflow:*` remains an alias when the session-start hook is loaded.
+ 
+ **Workarounds for Desktop / web users:**
+ 
+diff --git a/scripts/validate-plugin.py b/scripts/validate-plugin.py
+index 2e6275b..df17df5 100755
+--- a/scripts/validate-plugin.py
++++ b/scripts/validate-plugin.py
+@@ -209,6 +209,8 @@ def check_hooks() -> None:
+                     .strip('"')
+                 )
+                 script_path = Path(resolved.split()[0]) if resolved else None
++                if script_path and not script_path.is_absolute():
++                    script_path = ROOT / script_path
+                 if script_path and not script_path.exists():
+                     fail(f"hooks.json {event_name} references non-existent script: {script_path}")
+                 elif script_path and not script_path.is_file():

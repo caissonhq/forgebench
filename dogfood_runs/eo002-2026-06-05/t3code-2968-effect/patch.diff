@@ -1,0 +1,1589 @@
+From cf7ecebe37007442b22403af0dff5a4726df01df Mon Sep 17 00:00:00 2001
+From: Julius Marminge <julius0216@outlook.com>
+Date: Thu, 4 Jun 2026 22:38:53 -0700
+Subject: [PATCH 1/2] Replace recoverable Effect catches with orElseSucceed
+
+- Simplify fallback handling across desktop, server, and relay code
+- Pin server Bun types and remove Bun from server tsconfig types
+---
+ apps/desktop/src/app/DesktopAppIdentity.ts    |   2 +-
+ .../src/backend/tailscaleEndpointProvider.ts  |   4 +-
+ .../src/settings/DesktopAppSettings.ts        |   2 +-
+ .../src/settings/DesktopClientSettings.ts     |   2 +-
+ .../src/settings/DesktopSavedEnvironments.ts  |   2 +-
+ .../src/shell/DesktopShellEnvironment.ts      |   2 +-
+ apps/desktop/src/updates/DesktopUpdates.ts    |   2 +-
+ apps/server/package.json                      |   2 +-
+ .../checkpointing/Layers/CheckpointStore.ts   |   2 +-
+ .../src/cloud/ManagedEndpointRuntime.ts       |   4 +-
+ apps/server/src/git/GitManager.ts             |  14 +-
+ apps/server/src/http.ts                       |  26 +-
+ .../Layers/ProjectionPipeline.ts              |   6 +-
+ .../project/Layers/ProjectFaviconResolver.ts  |   6 +-
+ .../src/provider/providerMaintenance.ts       |   6 +-
+ apps/server/src/review/ReviewService.ts       |   4 +-
+ apps/server/src/sourceControl/BitbucketApi.ts |  12 +-
+ .../SourceControlProviderDiscovery.ts         |   2 +-
+ .../SourceControlRepositoryService.ts         |   6 +-
+ .../telemetry/Layers/AnalyticsService.test.ts |   2 +-
+ apps/server/src/terminal/Layers/Manager.ts    |   2 +-
+ .../src/textGeneration/CodexTextGeneration.ts |   4 +-
+ apps/server/src/vcs/GitVcsDriver.ts           |   2 +-
+ apps/server/src/vcs/GitVcsDriverCore.ts       |  66 +++--
+ .../src/workspace/Layers/WorkspaceEntries.ts  |  12 +-
+ .../Layers/WorkspaceFileSystem.test.ts        |   2 +-
+ .../src/workspace/Layers/WorkspacePaths.ts    |   4 +-
+ apps/server/src/ws.ts                         |  10 +-
+ apps/server/tsconfig.json                     |   2 +-
+ infra/relay/scripts/deploy.ts                 |   2 +-
+ infra/relay/src/auth/RelayTokens.ts           |   2 +-
+ .../environments/ManagedEndpointProvider.ts   |   2 +-
+ oxlint-plugin-t3code/package.json             |   1 -
+ oxlint-plugin-t3code/tsconfig.json            |   2 +-
+ package.json                                  |   1 +
+ packages/tailscale/src/tailscale.ts           |   2 +-
+ pnpm-lock.yaml                                | 238 +++++-------------
+ pnpm-workspace.yaml                           |   6 +-
+ scripts/build-desktop-artifact.ts             |  26 +-
+ scripts/mobile-native-static-check.ts         |   2 +-
+ scripts/package.json                          |   2 -
+ 41 files changed, 180 insertions(+), 318 deletions(-)
+
+diff --git a/apps/desktop/src/app/DesktopAppIdentity.ts b/apps/desktop/src/app/DesktopAppIdentity.ts
+index 7a566194ab1..52f4b12808e 100644
+--- a/apps/desktop/src/app/DesktopAppIdentity.ts
++++ b/apps/desktop/src/app/DesktopAppIdentity.ts
+@@ -52,7 +52,7 @@ const make = Effect.gen(function* () {
+           Effect.map((parsed) =>
+             Option.fromNullishOr(parsed.t3codeCommitHash).pipe(Option.flatMap(normalizeCommitHash)),
+           ),
+-          Effect.catch(() => Effect.succeed(Option.none<string>())),
++          Effect.orElseSucceed(() => Option.none<string>()),
+         ),
+     });
+   });
+diff --git a/apps/desktop/src/backend/tailscaleEndpointProvider.ts b/apps/desktop/src/backend/tailscaleEndpointProvider.ts
+index bd46e9f03f5..b343c3c2bf0 100644
+--- a/apps/desktop/src/backend/tailscaleEndpointProvider.ts
++++ b/apps/desktop/src/backend/tailscaleEndpointProvider.ts
+@@ -116,11 +116,11 @@ export const resolveTailscaleAdvertisedEndpoints = Effect.fn("resolveTailscaleAd
+       input.statusJson === undefined
+         ? yield* readTailscaleStatus.pipe(
+             Effect.map((status) => status.magicDnsName),
+-            Effect.catch(() => Effect.succeed(null)),
++            Effect.orElseSucceed(() => null),
+           )
+         : input.statusJson
+           ? yield* parseTailscaleMagicDnsName(input.statusJson).pipe(
+-              Effect.catch(() => Effect.succeed(null)),
++              Effect.orElseSucceed(() => null),
+             )
+           : null;
+     const magicDnsEndpoint = yield* resolveTailscaleMagicDnsAdvertisedEndpoint({
+diff --git a/apps/desktop/src/settings/DesktopAppSettings.ts b/apps/desktop/src/settings/DesktopAppSettings.ts
+index 97b590b0350..a54f22fec5b 100644
+--- a/apps/desktop/src/settings/DesktopAppSettings.ts
++++ b/apps/desktop/src/settings/DesktopAppSettings.ts
+@@ -209,7 +209,7 @@ function readSettings(
+         onSome: (raw) =>
+           decodeDesktopSettingsJson(raw).pipe(
+             Effect.map((parsed) => normalizeDesktopSettingsDocument(parsed, appVersion)),
+-            Effect.catch(() => Effect.succeed(defaultSettings)),
++            Effect.orElseSucceed(() => defaultSettings),
+           ),
+       }),
+     ),
+diff --git a/apps/desktop/src/settings/DesktopClientSettings.ts b/apps/desktop/src/settings/DesktopClientSettings.ts
+index be494359412..68d3fdc904a 100644
+--- a/apps/desktop/src/settings/DesktopClientSettings.ts
++++ b/apps/desktop/src/settings/DesktopClientSettings.ts
+@@ -63,7 +63,7 @@ const readClientSettings = (
+         onSome: (raw) =>
+           decodeClientSettingsJson(raw).pipe(
+             Effect.map((settings) => Option.some(settings)),
+-            Effect.catch(() => Effect.succeed(Option.none<ClientSettings>())),
++            Effect.orElseSucceed(() => Option.none<ClientSettings>()),
+           ),
+       }),
+     ),
+diff --git a/apps/desktop/src/settings/DesktopSavedEnvironments.ts b/apps/desktop/src/settings/DesktopSavedEnvironments.ts
+index bb571a9ad3b..531b50ba73b 100644
+--- a/apps/desktop/src/settings/DesktopSavedEnvironments.ts
++++ b/apps/desktop/src/settings/DesktopSavedEnvironments.ts
+@@ -185,7 +185,7 @@ function readRegistryDocument(
+         onSome: (raw) =>
+           decodeSavedEnvironmentRegistryDocumentJson(raw).pipe(
+             Effect.map(normalizeSavedEnvironmentRegistryDocument),
+-            Effect.catch(() => Effect.succeed({ version: 1, records: [] })),
++            Effect.orElseSucceed(() => ({ version: 1, records: [] })),
+           ),
+       }),
+     ),
+diff --git a/apps/desktop/src/shell/DesktopShellEnvironment.ts b/apps/desktop/src/shell/DesktopShellEnvironment.ts
+index a7d775d68fb..13ac35b6297 100644
+--- a/apps/desktop/src/shell/DesktopShellEnvironment.ts
++++ b/apps/desktop/src/shell/DesktopShellEnvironment.ts
+@@ -196,7 +196,7 @@ const runCommandOutput = Effect.fn("desktop.shellEnvironment.runCommandOutput")(
+     .pipe(
+       Effect.timeoutOption(input.timeout),
+       Effect.map(Option.getOrElse(() => "")),
+-      Effect.catch(() => Effect.succeed("")),
++      Effect.orElseSucceed(() => ""),
+     );
+ });
+ 
+diff --git a/apps/desktop/src/updates/DesktopUpdates.ts b/apps/desktop/src/updates/DesktopUpdates.ts
+index 056bca4a0e1..e6c81d8d25b 100644
+--- a/apps/desktop/src/updates/DesktopUpdates.ts
++++ b/apps/desktop/src/updates/DesktopUpdates.ts
+@@ -120,7 +120,7 @@ function parseAppUpdateYml(raw: string): Effect.Effect<Option.Option<AppUpdateYm
+ 
+   return decodeAppUpdateYmlConfig(entries).pipe(
+     Effect.map((config) => (config.provider ? Option.some(config) : Option.none())),
+-    Effect.catch(() => Effect.succeed(Option.none<AppUpdateYmlConfig>())),
++    Effect.orElseSucceed(() => Option.none<AppUpdateYmlConfig>()),
+   );
+ }
+ 
+diff --git a/apps/server/package.json b/apps/server/package.json
+index 5f4555501fd..8c248df16be 100644
+--- a/apps/server/package.json
++++ b/apps/server/package.json
+@@ -38,7 +38,7 @@
+     "@t3tools/shared": "workspace:*",
+     "@t3tools/tailscale": "workspace:*",
+     "@t3tools/web": "workspace:*",
+-    "@types/bun": "catalog:",
++    "@types/bun": "1.3.14",
+     "@types/node": "catalog:",
+     "effect-acp": "workspace:*",
+     "effect-codex-app-server": "workspace:*",
+diff --git a/apps/server/src/checkpointing/Layers/CheckpointStore.ts b/apps/server/src/checkpointing/Layers/CheckpointStore.ts
+index 9bd72e78b6b..53b8d163e4c 100644
+--- a/apps/server/src/checkpointing/Layers/CheckpointStore.ts
++++ b/apps/server/src/checkpointing/Layers/CheckpointStore.ts
+@@ -35,7 +35,7 @@ const makeCheckpointStore = Effect.gen(function* () {
+   const isGitRepository: CheckpointStoreShape["isGitRepository"] = (cwd) =>
+     vcsRegistry.resolve({ cwd, requestedKind: "git" }).pipe(
+       Effect.map(() => true),
+-      Effect.catch(() => Effect.succeed(false)),
++      Effect.orElseSucceed(() => false),
+     );
+ 
+   const captureCheckpoint: CheckpointStoreShape["captureCheckpoint"] = Effect.fn(
+diff --git a/apps/server/src/cloud/ManagedEndpointRuntime.ts b/apps/server/src/cloud/ManagedEndpointRuntime.ts
+index 65656292ebc..73e549ebf49 100644
+--- a/apps/server/src/cloud/ManagedEndpointRuntime.ts
++++ b/apps/server/src/cloud/ManagedEndpointRuntime.ts
+@@ -152,9 +152,7 @@ export const makeCloudManagedEndpointRuntime = Effect.gen(function* () {
+     const nextConfigKey = runtimeConfigKey(config);
+     const active = yield* Ref.get(activeRef);
+     if (active?.configKey === nextConfigKey) {
+-      const isRunning = yield* active.child.isRunning.pipe(
+-        Effect.catch(() => Effect.succeed(false)),
+-      );
++      const isRunning = yield* active.child.isRunning.pipe(Effect.orElseSucceed(() => false));
+       if (isRunning) {
+         return {
+           status: "running",
+diff --git a/apps/server/src/git/GitManager.ts b/apps/server/src/git/GitManager.ts
+index 8d1a71f8302..5423f4f1476 100644
+--- a/apps/server/src/git/GitManager.ts
++++ b/apps/server/src/git/GitManager.ts
+@@ -702,7 +702,7 @@ export const makeGitManager = Effect.fn("makeGitManager")(function* () {
+ 
+   const tempDir = process.env.TMPDIR ?? process.env.TEMP ?? process.env.TMP ?? "/tmp";
+   const canonicalizeExistingPath = (value: string) =>
+-    fileSystem.realPath(value).pipe(Effect.catch(() => Effect.succeed(value)));
++    fileSystem.realPath(value).pipe(Effect.orElseSucceed(() => value));
+   const normalizeStatusCacheKey = canonicalizeExistingPath;
+   const nonRepositoryStatusDetails = {
+     isRepo: false,
+@@ -766,7 +766,7 @@ export const makeGitManager = Effect.fn("makeGitManager")(function* () {
+               if (details.isDefaultBranch && latest.state !== "open") return null;
+               return toStatusPr(latest);
+             }),
+-            Effect.catch(() => Effect.succeed(null)),
++            Effect.orElseSucceed(() => null),
+           )
+         : null;
+ 
+@@ -788,7 +788,7 @@ export const makeGitManager = Effect.fn("makeGitManager")(function* () {
+     );
+ 
+   const readConfigValueNullable = (cwd: string, key: string) =>
+-    gitCore.readConfigValue(cwd, key).pipe(Effect.catch(() => Effect.succeed(null)));
++    gitCore.readConfigValue(cwd, key).pipe(Effect.orElseSucceed(() => null));
+ 
+   const resolveHostingProvider = Effect.fn("resolveHostingProvider")(function* (
+     cwd: string,
+@@ -972,7 +972,7 @@ export const makeGitManager = Effect.fn("makeGitManager")(function* () {
+   ) {
+     const terms = yield* sourceControlProvider(cwd).pipe(
+       Effect.map((provider) => getChangeRequestTerminologyForKind(provider.kind)),
+-      Effect.catch(() => Effect.succeed(getChangeRequestTerminologyForKind("unknown"))),
++      Effect.orElseSucceed(() => getChangeRequestTerminologyForKind("unknown")),
+     );
+     const summary = summarizeGitActionResult(result, terms);
+     let latestOpenPr: PullRequestInfo | null = null;
+@@ -1016,7 +1016,7 @@ export const makeGitManager = Effect.fn("makeGitManager")(function* () {
+         upstreamRef: finalBranchContext.upstreamRef,
+       }).pipe(
+         Effect.flatMap((headContext) => findOpenPr(cwd, headContext)),
+-        Effect.catch(() => Effect.succeed(null)),
++        Effect.orElseSucceed(() => null),
+       );
+     }
+ 
+@@ -1080,7 +1080,7 @@ export const makeGitManager = Effect.fn("makeGitManager")(function* () {
+ 
+     const defaultFromProvider = yield* sourceControlProvider(cwd).pipe(
+       Effect.flatMap((provider) => provider.getDefaultBranch({ cwd })),
+-      Effect.catch(() => Effect.succeed(null)),
++      Effect.orElseSucceed(() => null),
+     );
+     if (defaultFromProvider) {
+       return defaultFromProvider;
+@@ -1686,7 +1686,7 @@ export const makeGitManager = Effect.fn("makeGitManager")(function* () {
+         const changeRequestTerms = wantsPr
+           ? yield* sourceControlProvider(input.cwd).pipe(
+               Effect.map((provider) => getChangeRequestTerminologyForKind(provider.kind)),
+-              Effect.catch(() => Effect.succeed(getChangeRequestTerminologyForKind("unknown"))),
++              Effect.orElseSucceed(() => getChangeRequestTerminologyForKind("unknown")),
+             )
+           : null;
+ 
+diff --git a/apps/server/src/http.ts b/apps/server/src/http.ts
+index 4e815aae8cc..517d57168c3 100644
+--- a/apps/server/src/http.ts
++++ b/apps/server/src/http.ts
+@@ -156,8 +156,8 @@ export const otlpTracesProxyRouteLayer = HttpRouter.add(
+             otlpTracesUrl,
+           }),
+         ),
+-        Effect.catch(() =>
+-          Effect.succeed(HttpServerResponse.text("Trace export failed.", { status: 502 })),
++        Effect.orElseSucceed(() =>
++          HttpServerResponse.text("Trace export failed.", { status: 502 }),
+         ),
+       );
+   }).pipe(
+@@ -205,9 +205,7 @@ export const attachmentsRouteLayer = HttpRouter.add(
+     }
+ 
+     const fileSystem = yield* FileSystem.FileSystem;
+-    const fileInfo = yield* fileSystem
+-      .stat(filePath)
+-      .pipe(Effect.catch(() => Effect.succeed(null)));
++    const fileInfo = yield* fileSystem.stat(filePath).pipe(Effect.orElseSucceed(() => null));
+     if (!fileInfo || fileInfo.type !== "File") {
+       return HttpServerResponse.text("Not Found", { status: 404 });
+     }
+@@ -218,9 +216,7 @@ export const attachmentsRouteLayer = HttpRouter.add(
+         "Cache-Control": "public, max-age=31536000, immutable",
+       },
+     }).pipe(
+-      Effect.catch(() =>
+-        Effect.succeed(HttpServerResponse.text("Internal Server Error", { status: 500 })),
+-      ),
++      Effect.orElseSucceed(() => HttpServerResponse.text("Internal Server Error", { status: 500 })),
+     );
+   }).pipe(
+     Effect.catchTags({
+@@ -265,9 +261,7 @@ export const projectFaviconRouteLayer = HttpRouter.add(
+         "Cache-Control": PROJECT_FAVICON_CACHE_CONTROL,
+       },
+     }).pipe(
+-      Effect.catch(() =>
+-        Effect.succeed(HttpServerResponse.text("Internal Server Error", { status: 500 })),
+-      ),
++      Effect.orElseSucceed(() => HttpServerResponse.text("Internal Server Error", { status: 500 })),
+     );
+   }).pipe(
+     Effect.catchTags({
+@@ -337,14 +331,12 @@ export const staticAndDevRouteLayer = HttpRouter.add(
+       }
+     }
+ 
+-    const fileInfo = yield* fileSystem
+-      .stat(filePath)
+-      .pipe(Effect.catch(() => Effect.succeed(null)));
++    const fileInfo = yield* fileSystem.stat(filePath).pipe(Effect.orElseSucceed(() => null));
+     if (!fileInfo || fileInfo.type !== "File") {
+       const indexPath = path.resolve(staticRoot, "index.html");
+       const indexData = yield* fileSystem
+         .readFile(indexPath)
+-        .pipe(Effect.catch(() => Effect.succeed(null)));
++        .pipe(Effect.orElseSucceed(() => null));
+       if (!indexData) {
+         return HttpServerResponse.text("Not Found", { status: 404 });
+       }
+@@ -355,9 +347,7 @@ export const staticAndDevRouteLayer = HttpRouter.add(
+     }
+ 
+     const contentType = Mime.getType(filePath) ?? "application/octet-stream";
+-    const data = yield* fileSystem
+-      .readFile(filePath)
+-      .pipe(Effect.catch(() => Effect.succeed(null)));
++    const data = yield* fileSystem.readFile(filePath).pipe(Effect.orElseSucceed(() => null));
+     if (!data) {
+       return HttpServerResponse.text("Internal Server Error", { status: 500 });
+     }
+diff --git a/apps/server/src/orchestration/Layers/ProjectionPipeline.ts b/apps/server/src/orchestration/Layers/ProjectionPipeline.ts
+index c201e1d9f9e..4a48de19d39 100644
+--- a/apps/server/src/orchestration/Layers/ProjectionPipeline.ts
++++ b/apps/server/src/orchestration/Layers/ProjectionPipeline.ts
+@@ -335,7 +335,7 @@ const runAttachmentSideEffects = Effect.fn("runAttachmentSideEffects")(function*
+   const attachmentsRootDir = serverConfig.attachmentsDir;
+   const readAttachmentRootEntries = fileSystem
+     .readDirectory(attachmentsRootDir, { recursive: false })
+-    .pipe(Effect.catch(() => Effect.succeed([] as Array<string>)));
++    .pipe(Effect.orElseSucceed(() => [] as Array<string>));
+ 
+   const removeDeletedThreadAttachmentEntry = Effect.fn("removeDeletedThreadAttachmentEntry")(
+     function* (threadSegment: string, entry: string) {
+@@ -397,9 +397,7 @@ const runAttachmentSideEffects = Effect.fn("runAttachmentSideEffects")(function*
+     }
+ 
+     const absolutePath = path.join(attachmentsRootDir, relativePath);
+-    const fileInfo = yield* fileSystem
+-      .stat(absolutePath)
+-      .pipe(Effect.catch(() => Effect.succeed(null)));
++    const fileInfo = yield* fileSystem.stat(absolutePath).pipe(Effect.orElseSucceed(() => null));
+     if (!fileInfo || fileInfo.type !== "File") {
+       return;
+     }
+diff --git a/apps/server/src/project/Layers/ProjectFaviconResolver.ts b/apps/server/src/project/Layers/ProjectFaviconResolver.ts
+index ed5412bf138..cdfddd5438a 100644
+--- a/apps/server/src/project/Layers/ProjectFaviconResolver.ts
++++ b/apps/server/src/project/Layers/ProjectFaviconResolver.ts
+@@ -80,9 +80,7 @@ export const makeProjectFaviconResolver = Effect.gen(function* () {
+       if (!isPathWithinProject(projectCwd, candidate)) {
+         continue;
+       }
+-      const stats = yield* fileSystem
+-        .stat(candidate)
+-        .pipe(Effect.catch(() => Effect.succeed(null)));
++      const stats = yield* fileSystem.stat(candidate).pipe(Effect.orElseSucceed(() => null));
+       if (stats?.type === "File") {
+         return candidate;
+       }
+@@ -105,7 +103,7 @@ export const makeProjectFaviconResolver = Effect.gen(function* () {
+       const sourcePath = path.join(cwd, sourceFile);
+       const source = yield* fileSystem
+         .readFileString(sourcePath)
+-        .pipe(Effect.catch(() => Effect.succeed(null)));
++        .pipe(Effect.orElseSucceed(() => null));
+       if (!source) {
+         continue;
+       }
+diff --git a/apps/server/src/provider/providerMaintenance.ts b/apps/server/src/provider/providerMaintenance.ts
+index 7f5e9d94dc5..3b0fabf6a99 100644
+--- a/apps/server/src/provider/providerMaintenance.ts
++++ b/apps/server/src/provider/providerMaintenance.ts
+@@ -347,7 +347,7 @@ export const resolveProviderMaintenanceCapabilitiesEffect = Effect.fn(
+   const fileSystem = yield* FileSystem.FileSystem;
+   const realCommandPath = yield* fileSystem
+     .realPath(resolvedCommandPath)
+-    .pipe(Effect.catch(() => Effect.succeed(resolvedCommandPath)));
++    .pipe(Effect.orElseSucceed(() => resolvedCommandPath));
+   return resolver.resolve({
+     ...options,
+     realCommandPath,
+@@ -406,7 +406,7 @@ const fetchNpmLatestVersion = Effect.fn("fetchNpmLatestVersion")(function* (pack
+   ).pipe(HttpClientRequest.setHeader("accept", "application/json"));
+   const response = yield* client.execute(request).pipe(
+     Effect.timeoutOption(LATEST_VERSION_TIMEOUT_MS),
+-    Effect.catch(() => Effect.succeed(Option.none())),
++    Effect.orElseSucceed(() => Option.none()),
+   );
+   if (Option.isNone(response)) {
+     return null;
+@@ -417,7 +417,7 @@ const fetchNpmLatestVersion = Effect.fn("fetchNpmLatestVersion")(function* (pack
+   }
+   const payload = yield* httpResponse.json.pipe(
+     Effect.flatMap(Schema.decodeUnknownEffect(NpmLatestVersionResponse)),
+-    Effect.catch(() => Effect.succeed(null)),
++    Effect.orElseSucceed(() => null),
+   );
+   return payload ? nonEmptyString(payload.version) : null;
+ });
+diff --git a/apps/server/src/review/ReviewService.ts b/apps/server/src/review/ReviewService.ts
+index ddbad606e92..63f1d133213 100644
+--- a/apps/server/src/review/ReviewService.ts
++++ b/apps/server/src/review/ReviewService.ts
+@@ -35,9 +35,7 @@ export const make = Effect.fn("makeReviewService")(function* () {
+   const git = yield* GitVcsDriver.GitVcsDriver;
+ 
+   const canonicalizePath = (value: string) =>
+-    fileSystem
+-      .realPath(path.resolve(value))
+-      .pipe(Effect.catch(() => Effect.succeed(path.resolve(value))));
++    fileSystem.realPath(path.resolve(value)).pipe(Effect.orElseSucceed(() => path.resolve(value)));
+ 
+   const isWithinRoot = (candidate: string, root: string) => {
+     const relative = path.relative(root, candidate);
+diff --git a/apps/server/src/sourceControl/BitbucketApi.ts b/apps/server/src/sourceControl/BitbucketApi.ts
+index 7b5f19b6b91..632778eca24 100644
+--- a/apps/server/src/sourceControl/BitbucketApi.ts
++++ b/apps/server/src/sourceControl/BitbucketApi.ts
+@@ -359,7 +359,7 @@ function responseError(
+   response: HttpClientResponse.HttpClientResponse,
+ ): Effect.Effect<never, BitbucketApiError> {
+   return response.text.pipe(
+-    Effect.catch(() => Effect.succeed("")),
++    Effect.orElseSucceed(() => ""),
+     Effect.flatMap((body) =>
+       Effect.fail(
+         new BitbucketApiError({
+@@ -524,7 +524,7 @@ export const make = Effect.fn("makeBitbucketApi")(function* () {
+     );
+ 
+   const readConfigValueNullable = (cwd: string, key: string) =>
+-    git.readConfigValue(cwd, key).pipe(Effect.catch(() => Effect.succeed(null)));
++    git.readConfigValue(cwd, key).pipe(Effect.orElseSucceed(() => null));
+ 
+   const resolveCheckoutRemote = Effect.fn("BitbucketApi.resolveCheckoutRemote")(function* (input: {
+     readonly cwd: string;
+@@ -544,7 +544,7 @@ export const make = Effect.fn("makeBitbucketApi")(function* () {
+     if (!input.isCrossRepository) {
+       const remoteName = yield* git
+         .resolvePrimaryRemoteName(input.cwd)
+-        .pipe(Effect.catch(() => Effect.succeed(null)));
++        .pipe(Effect.orElseSucceed(() => null));
+       if (remoteName) return remoteName;
+     }
+ 
+@@ -575,7 +575,7 @@ export const make = Effect.fn("makeBitbucketApi")(function* () {
+         host: Option.some("bitbucket.org"),
+         detail: Option.none<string>(),
+       })),
+-      Effect.catch(() => Effect.succeed(authFromConfig(config))),
++      Effect.orElseSucceed(() => authFromConfig(config)),
+     ),
+     listPullRequests: (input) =>
+       resolveRepository(input).pipe(
+@@ -685,8 +685,8 @@ export const make = Effect.fn("makeBitbucketApi")(function* () {
+             {
+               repository: getRepositoryFromLocator(locator),
+               branchingModel: getBranchingModelFromLocator(locator).pipe(
+-                Effect.catch(() =>
+-                  Effect.succeed<typeof RawBitbucketBranchingModelSchema.Type | null>(null),
++                Effect.orElseSucceed(
++                  (): typeof RawBitbucketBranchingModelSchema.Type | null => null,
+                 ),
+               ),
+             },
+diff --git a/apps/server/src/sourceControl/SourceControlProviderDiscovery.ts b/apps/server/src/sourceControl/SourceControlProviderDiscovery.ts
+index c5ab091ac45..856d6948e09 100644
+--- a/apps/server/src/sourceControl/SourceControlProviderDiscovery.ts
++++ b/apps/server/src/sourceControl/SourceControlProviderDiscovery.ts
+@@ -299,7 +299,7 @@ export const refineUnknownRemoteProvider = Effect.fn("refineUnknownRemoteProvide
+               auth,
+             }),
+           ),
+-          Effect.catch(() => Effect.succeed(null)),
++          Effect.orElseSucceed(() => null),
+         ),
+     );
+     const provider = providers.find((candidate) => candidate !== null);
+diff --git a/apps/server/src/sourceControl/SourceControlRepositoryService.ts b/apps/server/src/sourceControl/SourceControlRepositoryService.ts
+index 3f8c146f4c7..106d300ec2d 100644
+--- a/apps/server/src/sourceControl/SourceControlRepositoryService.ts
++++ b/apps/server/src/sourceControl/SourceControlRepositoryService.ts
+@@ -277,12 +277,10 @@ export const make = Effect.fn("makeSourceControlRepositoryService")(function* ()
+         })
+         .pipe(
+           Effect.map(() => true),
+-          Effect.catch(() => Effect.succeed(false)),
++          Effect.orElseSucceed(() => false),
+         );
+       if (!hasCommits) {
+-        const details = yield* git
+-          .statusDetails(input.cwd)
+-          .pipe(Effect.catch(() => Effect.succeed(null)));
++        const details = yield* git.statusDetails(input.cwd).pipe(Effect.orElseSucceed(() => null));
+         return {
+           repository: toRepositoryInfo(providerKind, urls),
+           remoteName,
+diff --git a/apps/server/src/telemetry/Layers/AnalyticsService.test.ts b/apps/server/src/telemetry/Layers/AnalyticsService.test.ts
+index 03ebd2fdc65..5aa47406d9b 100644
+--- a/apps/server/src/telemetry/Layers/AnalyticsService.test.ts
++++ b/apps/server/src/telemetry/Layers/AnalyticsService.test.ts
+@@ -62,7 +62,7 @@ it.layer(NodeServices.layer)("AnalyticsService test", (it) => {
+ 
+           const payload = yield* request.json.pipe(
+             Effect.map((body) => body as RecordedBatchRequest["body"]),
+-            Effect.catch(() => Effect.succeed(null)),
++            Effect.orElseSucceed(() => null),
+           );
+ 
+           capturedRequests.push({ path: request.url, body: payload });
+diff --git a/apps/server/src/terminal/Layers/Manager.ts b/apps/server/src/terminal/Layers/Manager.ts
+index a690975a4b9..cd490de1e3f 100644
+--- a/apps/server/src/terminal/Layers/Manager.ts
++++ b/apps/server/src/terminal/Layers/Manager.ts
+@@ -1289,7 +1289,7 @@ export const makeTerminalManagerWithOptions = Effect.fn("makeTerminalManagerWith
+       const threadPrefix = `${toSafeThreadId(threadId)}_`;
+       const entries = yield* fileSystem
+         .readDirectory(logsDir, { recursive: false })
+-        .pipe(Effect.catch(() => Effect.succeed([] as Array<string>)));
++        .pipe(Effect.orElseSucceed(() => [] as Array<string>));
+       yield* Effect.forEach(
+         entries.filter(
+           (name) =>
+diff --git a/apps/server/src/textGeneration/CodexTextGeneration.ts b/apps/server/src/textGeneration/CodexTextGeneration.ts
+index 7f400d9ce50..d42fb07aa03 100644
+--- a/apps/server/src/textGeneration/CodexTextGeneration.ts
++++ b/apps/server/src/textGeneration/CodexTextGeneration.ts
+@@ -140,9 +140,7 @@ export const makeCodexTextGeneration = Effect.fn("makeCodexTextGeneration")(func
+       if (!resolvedPath || !path.isAbsolute(resolvedPath)) {
+         continue;
+       }
+-      const fileInfo = yield* fileSystem
+-        .stat(resolvedPath)
+-        .pipe(Effect.catch(() => Effect.succeed(null)));
++      const fileInfo = yield* fileSystem.stat(resolvedPath).pipe(Effect.orElseSucceed(() => null));
+       if (!fileInfo || fileInfo.type !== "File") {
+         continue;
+       }
+diff --git a/apps/server/src/vcs/GitVcsDriver.ts b/apps/server/src/vcs/GitVcsDriver.ts
+index c75570d4b1c..465cd21f320 100644
+--- a/apps/server/src/vcs/GitVcsDriver.ts
++++ b/apps/server/src/vcs/GitVcsDriver.ts
+@@ -403,7 +403,7 @@ export const makeVcsDriverShape = Effect.fn("makeGitVcsDriverShape")(function* (
+       "GitVcsDriver.detectRepository.commonDir",
+       cwd,
+       ["rev-parse", "--git-common-dir"],
+-    ).pipe(Effect.catch(() => Effect.succeed(null)));
++    ).pipe(Effect.orElseSucceed(() => null));
+ 
+     return {
+       kind: "git" as const,
+diff --git a/apps/server/src/vcs/GitVcsDriverCore.ts b/apps/server/src/vcs/GitVcsDriverCore.ts
+index b6a48f5b18c..240c20336c6 100644
+--- a/apps/server/src/vcs/GitVcsDriverCore.ts
++++ b/apps/server/src/vcs/GitVcsDriverCore.ts
+@@ -885,7 +885,7 @@ export const makeGitVcsDriverCore = Effect.fn("makeGitVcsDriverCore")(function*
+ 
+     const remoteNames = yield* runGitStdout("GitVcsDriver.listRemoteNames", cwd, ["remote"]).pipe(
+       Effect.map(parseRemoteNames),
+-      Effect.catch(() => Effect.succeed<ReadonlyArray<string>>([])),
++      Effect.orElseSucceed((): ReadonlyArray<string> => []),
+     );
+     return (
+       parseUpstreamRefWithRemoteNames(upstreamRef, remoteNames) ??
+@@ -996,7 +996,7 @@ export const makeGitVcsDriverCore = Effect.fn("makeGitVcsDriverCore")(function*
+     cwd: string,
+     branchName: string,
+   ) {
+-    const remoteNames = yield* listRemoteNames(cwd).pipe(Effect.catch(() => Effect.succeed([])));
++    const remoteNames = yield* listRemoteNames(cwd).pipe(Effect.orElseSucceed(() => []));
+     const parsedRemoteRef = parseRemoteRefWithRemoteNames(branchName, remoteNames);
+     return parsedRemoteRef?.branchName ?? branchName;
+   });
+@@ -1042,7 +1042,7 @@ export const makeGitVcsDriverCore = Effect.fn("makeGitVcsDriverCore")(function*
+       return pushDefaultRemote;
+     }
+ 
+-    return yield* resolvePrimaryRemoteName(cwd).pipe(Effect.catch(() => Effect.succeed(null)));
++    return yield* resolvePrimaryRemoteName(cwd).pipe(Effect.orElseSucceed(() => null));
+   });
+ 
+   const ensureRemote: GitVcsDriver.GitVcsDriverShape["ensureRemote"] = Effect.fn("ensureRemote")(
+@@ -1090,7 +1090,7 @@ export const makeGitVcsDriverCore = Effect.fn("makeGitVcsDriverCore")(function*
+     ).pipe(Effect.map((stdout) => stdout.trim()));
+ 
+     const primaryRemoteName = yield* resolvePrimaryRemoteName(cwd).pipe(
+-      Effect.catch(() => Effect.succeed(null)),
++      Effect.orElseSucceed(() => null),
+     );
+     const defaultBranch =
+       primaryRemoteName === null ? null : yield* resolveDefaultBranchName(cwd, primaryRemoteName);
+@@ -1231,7 +1231,7 @@ export const makeGitVcsDriverCore = Effect.fn("makeGitVcsDriverCore")(function*
+               allowNonZeroExit: true,
+             },
+           ),
+-          originRemoteExists(cwd).pipe(Effect.catch(() => Effect.succeed(false))),
++          originRemoteExists(cwd).pipe(Effect.orElseSucceed(() => false)),
+         ],
+         { concurrency: "unbounded" },
+       );
+@@ -1276,9 +1276,7 @@ export const makeGitVcsDriverCore = Effect.fn("makeGitVcsDriverCore")(function*
+ 
+     const fallbackAheadCount =
+       !upstreamRef && refName
+-        ? yield* computeAheadCountAgainstBase(cwd, refName).pipe(
+-            Effect.catch(() => Effect.succeed(0)),
+-          )
++        ? yield* computeAheadCountAgainstBase(cwd, refName).pipe(Effect.orElseSucceed(() => 0))
+         : null;
+ 
+     if (fallbackAheadCount !== null) {
+@@ -1294,9 +1292,7 @@ export const makeGitVcsDriverCore = Effect.fn("makeGitVcsDriverCore")(function*
+       aheadOfDefaultCount =
+         fallbackAheadCount !== null
+           ? fallbackAheadCount
+-          : yield* computeAheadCountAgainstBase(cwd, refName).pipe(
+-              Effect.catch(() => Effect.succeed(0)),
+-            );
++          : yield* computeAheadCountAgainstBase(cwd, refName).pipe(Effect.orElseSucceed(() => 0));
+     }
+ 
+     const stagedEntries = parseNumstatEntries(stagedNumstatStdout);
+@@ -1494,11 +1490,11 @@ export const makeGitVcsDriverCore = Effect.fn("makeGitVcsDriverCore")(function*
+       }
+ 
+       const comparableBaseBranch = yield* resolveBaseBranchForNoUpstream(cwd, branch).pipe(
+-        Effect.catch(() => Effect.succeed(null)),
++        Effect.orElseSucceed(() => null),
+       );
+       if (comparableBaseBranch) {
+         const publishRemoteName = yield* resolvePushRemoteName(cwd, branch).pipe(
+-          Effect.catch(() => Effect.succeed(null)),
++          Effect.orElseSucceed(() => null),
+         );
+         if (!publishRemoteName) {
+           return {
+@@ -1508,7 +1504,7 @@ export const makeGitVcsDriverCore = Effect.fn("makeGitVcsDriverCore")(function*
+         }
+ 
+         const hasRemoteBranch = yield* remoteBranchExists(cwd, publishRemoteName, branch).pipe(
+-          Effect.catch(() => Effect.succeed(false)),
++          Effect.orElseSucceed(() => false),
+         );
+         if (hasRemoteBranch) {
+           return {
+@@ -1545,7 +1541,7 @@ export const makeGitVcsDriverCore = Effect.fn("makeGitVcsDriverCore")(function*
+     }
+ 
+     const currentUpstream = yield* resolveCurrentUpstream(cwd).pipe(
+-      Effect.catch(() => Effect.succeed(null)),
++      Effect.orElseSucceed(() => null),
+     );
+     if (currentUpstream) {
+       yield* runGit("GitVcsDriver.pushCurrentBranch.pushUpstream", cwd, [
+@@ -1716,7 +1712,7 @@ export const makeGitVcsDriverCore = Effect.fn("makeGitVcsDriverCore")(function*
+       input.baseRef ??
+       (branch
+         ? yield* resolveBaseBranchForNoUpstream(input.cwd, branch).pipe(
+-            Effect.catch(() => Effect.succeed(null)),
++            Effect.orElseSucceed(() => null),
+           )
+         : null);
+ 
+@@ -1729,18 +1725,16 @@ export const makeGitVcsDriverCore = Effect.fn("makeGitVcsDriverCore")(function*
+         appendTruncationMarker: true,
+       },
+     ).pipe(
+-      Effect.catch(() =>
+-        Effect.succeed({
+-          exitCode: 0,
+-          stdout: "",
+-          stderr: "",
+-          stdoutTruncated: false,
+-          stderrTruncated: false,
+-        }),
+-      ),
++      Effect.orElseSucceed(() => ({
++        exitCode: 0,
++        stdout: "",
++        stderr: "",
++        stdoutTruncated: false,
++        stderrTruncated: false,
++      })),
+     );
+     const dirtyUntracked = yield* readUntrackedReviewDiffs(input.cwd).pipe(
+-      Effect.catch(() => Effect.succeed({ diff: "", truncated: false })),
++      Effect.orElseSucceed(() => ({ diff: "", truncated: false })),
+     );
+     const dirtyDiff = [dirtyTrackedResult.stdout.trimEnd(), dirtyUntracked.diff.trimEnd()]
+       .filter((diff) => diff.length > 0)
+@@ -1757,15 +1751,13 @@ export const makeGitVcsDriverCore = Effect.fn("makeGitVcsDriverCore")(function*
+               appendTruncationMarker: true,
+             },
+           ).pipe(
+-            Effect.catch(() =>
+-              Effect.succeed({
+-                exitCode: 0,
+-                stdout: "",
+-                stderr: "",
+-                stdoutTruncated: false,
+-                stderrTruncated: false,
+-              }),
+-            ),
++            Effect.orElseSucceed(() => ({
++              exitCode: 0,
++              stdout: "",
++              stderr: "",
++              stdoutTruncated: false,
++              stderrTruncated: false,
++            })),
+           )
+         : null;
+     const baseDiff = baseResult?.stdout ?? "";
+@@ -1827,7 +1819,7 @@ export const makeGitVcsDriverCore = Effect.fn("makeGitVcsDriverCore")(function*
+   const listRefs: GitVcsDriver.GitVcsDriverShape["listRefs"] = Effect.fn("listRefs")(
+     function* (input) {
+       const branchRecencyPromise = readBranchRecency(input.cwd).pipe(
+-        Effect.catch(() => Effect.succeed(new Map<string, number>())),
++        Effect.orElseSucceed(() => new Map<string, number>()),
+       );
+       const localBranchResult = yield* executeGit(
+         "GitVcsDriver.listRefs.branchNoColor",
+@@ -1970,7 +1962,7 @@ export const makeGitVcsDriverCore = Effect.fn("makeGitVcsDriverCore")(function*
+             const candidatePath = line.slice("worktree ".length);
+             const exists = yield* fileSystem.stat(candidatePath).pipe(
+               Effect.map(() => true),
+-              Effect.catch(() => Effect.succeed(false)),
++              Effect.orElseSucceed(() => false),
+             );
+             currentPath = exists ? candidatePath : null;
+           } else if (line.startsWith("branch refs/heads/") && currentPath) {
+diff --git a/apps/server/src/workspace/Layers/WorkspaceEntries.ts b/apps/server/src/workspace/Layers/WorkspaceEntries.ts
+index f3b9d5b7671..d52d4f14663 100644
+--- a/apps/server/src/workspace/Layers/WorkspaceEntries.ts
++++ b/apps/server/src/workspace/Layers/WorkspaceEntries.ts
+@@ -188,7 +188,7 @@ export const makeWorkspaceEntries = Effect.gen(function* () {
+   const isInsideVcsWorkTree = (cwd: string): Effect.Effect<boolean> =>
+     vcsRegistry.detect({ cwd }).pipe(
+       Effect.map((handle) => handle !== null),
+-      Effect.catch(() => Effect.succeed(false)),
++      Effect.orElseSucceed(() => false),
+     );
+ 
+   const filterVcsIgnoredPaths = (
+@@ -200,23 +200,23 @@ export const makeWorkspaceEntries = Effect.gen(function* () {
+         handle
+           ? handle.driver.filterIgnoredPaths(cwd, relativePaths).pipe(
+               Effect.map((paths) => [...paths]),
+-              Effect.catch(() => Effect.succeed(relativePaths)),
++              Effect.orElseSucceed(() => relativePaths),
+             )
+           : Effect.succeed(relativePaths),
+       ),
+-      Effect.catch(() => Effect.succeed(relativePaths)),
++      Effect.orElseSucceed(() => relativePaths),
+     );
+ 
+   const buildWorkspaceIndexFromVcs = Effect.fn("WorkspaceEntries.buildWorkspaceIndexFromVcs")(
+     function* (cwd: string) {
+-      const vcs = yield* vcsRegistry.detect({ cwd }).pipe(Effect.catch(() => Effect.succeed(null)));
++      const vcs = yield* vcsRegistry.detect({ cwd }).pipe(Effect.orElseSucceed(() => null));
+       if (!vcs) {
+         return null;
+       }
+ 
+       const listedFiles = yield* vcs.driver
+         .listWorkspaceFiles(cwd)
+-        .pipe(Effect.catch(() => Effect.succeed(null)));
++        .pipe(Effect.orElseSucceed(() => null));
+ 
+       if (!listedFiles) {
+         return null;
+@@ -431,7 +431,7 @@ export const makeWorkspaceEntries = Effect.gen(function* () {
+   const invalidate: WorkspaceEntriesShape["invalidate"] = Effect.fn("WorkspaceEntries.invalidate")(
+     function* (cwd) {
+       const normalizedCwd = yield* normalizeWorkspaceRoot(cwd).pipe(
+-        Effect.catch(() => Effect.succeed(cwd)),
++        Effect.orElseSucceed(() => cwd),
+       );
+       yield* Cache.invalidate(workspaceIndexCache, cwd);
+       if (normalizedCwd !== cwd) {
+diff --git a/apps/server/src/workspace/Layers/WorkspaceFileSystem.test.ts b/apps/server/src/workspace/Layers/WorkspaceFileSystem.test.ts
+index e748a27a58a..9b93b1e863b 100644
+--- a/apps/server/src/workspace/Layers/WorkspaceFileSystem.test.ts
++++ b/apps/server/src/workspace/Layers/WorkspaceFileSystem.test.ts
+@@ -132,7 +132,7 @@ it.layer(TestLayer)("WorkspaceFileSystemLive", (it) => {
+         const escapedPath = path.resolve(cwd, "..", "escape.md");
+         const escapedStat = yield* fileSystem
+           .stat(escapedPath)
+-          .pipe(Effect.catch(() => Effect.succeed(null)));
++          .pipe(Effect.orElseSucceed(() => null));
+         expect(escapedStat).toBeNull();
+       }),
+     );
+diff --git a/apps/server/src/workspace/Layers/WorkspacePaths.ts b/apps/server/src/workspace/Layers/WorkspacePaths.ts
+index 9dd33aaac7d..f994aa875ef 100644
+--- a/apps/server/src/workspace/Layers/WorkspacePaths.ts
++++ b/apps/server/src/workspace/Layers/WorkspacePaths.ts
+@@ -37,7 +37,7 @@ export const makeWorkspacePaths = Effect.gen(function* () {
+     const normalizedWorkspaceRoot = path.resolve(expandHomePath(workspaceRoot.trim(), path));
+     let workspaceStat = yield* fileSystem
+       .stat(normalizedWorkspaceRoot)
+-      .pipe(Effect.catch(() => Effect.succeed(null)));
++      .pipe(Effect.orElseSucceed(() => null));
+     if (!workspaceStat && options?.createIfMissing) {
+       yield* fileSystem.makeDirectory(normalizedWorkspaceRoot, { recursive: true }).pipe(
+         Effect.mapError(
+@@ -50,7 +50,7 @@ export const makeWorkspacePaths = Effect.gen(function* () {
+       );
+       workspaceStat = yield* fileSystem
+         .stat(normalizedWorkspaceRoot)
+-        .pipe(Effect.catch(() => Effect.succeed(null)));
++        .pipe(Effect.orElseSucceed(() => null));
+     }
+     if (!workspaceStat) {
+       return yield* new WorkspaceRootNotExistsError({
+diff --git a/apps/server/src/ws.ts b/apps/server/src/ws.ts
+index 059918e132f..0f2a8f790bf 100644
+--- a/apps/server/src/ws.ts
++++ b/apps/server/src/ws.ts
+@@ -436,7 +436,7 @@ const makeWsRpcLayer = (currentSession: AuthenticatedSession) =>
+                   repositoryIdentity,
+                 },
+               } satisfies OrchestrationEvent;
+-            }).pipe(Effect.catch(() => Effect.succeed(event)));
++            }).pipe(Effect.orElseSucceed(() => event));
+           default:
+             return Effect.succeed(event);
+         }
+@@ -459,7 +459,7 @@ const makeWsRpcLayer = (currentSession: AuthenticatedSession) =>
+                   project: nextProject,
+                 })),
+               ),
+-              Effect.catch(() => Effect.succeed(Option.none())),
++              Effect.orElseSucceed(() => Option.none()),
+             );
+           case "project.deleted":
+             return Effect.succeed(
+@@ -487,7 +487,7 @@ const makeWsRpcLayer = (currentSession: AuthenticatedSession) =>
+                   thread: nextThread,
+                 })),
+               ),
+-              Effect.catch(() => Effect.succeed(Option.none())),
++              Effect.orElseSucceed(() => Option.none()),
+             );
+           default:
+             if (event.aggregateKind !== "thread") {
+@@ -503,7 +503,7 @@ const makeWsRpcLayer = (currentSession: AuthenticatedSession) =>
+                     thread: nextThread,
+                   })),
+                 ),
+-                Effect.catch(() => Effect.succeed(Option.none())),
++                Effect.orElseSucceed(() => Option.none()),
+               );
+         }
+       };
+@@ -777,7 +777,7 @@ const makeWsRpcLayer = (currentSession: AuthenticatedSession) =>
+                               thread.session !== null && thread.session.status !== "stopped",
+                           }),
+                         ),
+-                        Effect.catch(() => Effect.succeed(false)),
++                        Effect.orElseSucceed(() => false),
+                       )
+                   : false;
+               const result = yield* dispatchNormalizedCommand(normalizedCommand);
+diff --git a/apps/server/tsconfig.json b/apps/server/tsconfig.json
+index 44e9d1206d0..63ce5a30c45 100644
+--- a/apps/server/tsconfig.json
++++ b/apps/server/tsconfig.json
+@@ -1,7 +1,7 @@
+ {
+   "extends": "../../tsconfig.base.json",
+   "compilerOptions": {
+-    "types": ["node", "bun"],
++    "types": ["node"],
+     "lib": ["ESNext", "esnext.disposable"]
+   },
+   "include": ["src", "vite.config.ts", "scripts", "integration", "../../scripts/lib"]
+diff --git a/infra/relay/scripts/deploy.ts b/infra/relay/scripts/deploy.ts
+index eb90a2ead33..d259b8b026c 100644
+--- a/infra/relay/scripts/deploy.ts
++++ b/infra/relay/scripts/deploy.ts
+@@ -95,7 +95,7 @@ const loadDeployConfigProvider = Effect.fn("relay.deploy.loadConfigProvider")(fu
+   }
+ 
+   return yield* ConfigProvider.fromDotEnv({ path: path.join(root, ".env") }).pipe(
+-    Effect.catch(() => Effect.succeed(ConfigProvider.fromEnv())),
++    Effect.orElseSucceed(() => ConfigProvider.fromEnv()),
+   );
+ });
+ 
+diff --git a/infra/relay/src/auth/RelayTokens.ts b/infra/relay/src/auth/RelayTokens.ts
+index b9c50bd2e81..f7f02c49f8c 100644
+--- a/infra/relay/src/auth/RelayTokens.ts
++++ b/infra/relay/src/auth/RelayTokens.ts
+@@ -161,7 +161,7 @@ const make = Effect.gen(function* () {
+         }
+         return claims;
+       }),
+-      Effect.catch(() => Effect.succeed(null)),
++      Effect.orElseSucceed(() => null),
+     ),
+   );
+ 
+diff --git a/infra/relay/src/environments/ManagedEndpointProvider.ts b/infra/relay/src/environments/ManagedEndpointProvider.ts
+index 068beccff00..00fef2bbf7f 100644
+--- a/infra/relay/src/environments/ManagedEndpointProvider.ts
++++ b/infra/relay/src/environments/ManagedEndpointProvider.ts
+@@ -242,7 +242,7 @@ const make = Effect.gen(function* () {
+         .updateRecord(preferredDnsRecordId, dnsRecord)
+         .pipe(
+           Effect.as(true),
+-          Effect.catch(() => Effect.succeed(false)),
++          Effect.orElseSucceed(() => false),
+         );
+       if (checkpointedRecordUpdated) {
+         return preferredDnsRecordId;
+diff --git a/oxlint-plugin-t3code/package.json b/oxlint-plugin-t3code/package.json
+index 4c71d04094d..08c7c54b9f9 100644
+--- a/oxlint-plugin-t3code/package.json
++++ b/oxlint-plugin-t3code/package.json
+@@ -13,7 +13,6 @@
+   },
+   "devDependencies": {
+     "@effect/vitest": "catalog:",
+-    "@types/bun": "catalog:",
+     "vite-plus": "catalog:"
+   }
+ }
+diff --git a/oxlint-plugin-t3code/tsconfig.json b/oxlint-plugin-t3code/tsconfig.json
+index 266b534fef0..61307d2992e 100644
+--- a/oxlint-plugin-t3code/tsconfig.json
++++ b/oxlint-plugin-t3code/tsconfig.json
+@@ -2,7 +2,7 @@
+   "extends": "../tsconfig.base.json",
+   "compilerOptions": {
+     "composite": true,
+-    "types": ["bun", "node"],
++    "types": ["node"],
+     "lib": ["ESNext", "esnext.disposable"]
+   },
+   "include": ["**/*.ts"]
+diff --git a/package.json b/package.json
+index 73c2aaed6aa..ec11096b451 100644
+--- a/package.json
++++ b/package.json
+@@ -17,6 +17,7 @@
+     "build:marketing": "vp run --filter @t3tools/marketing build",
+     "build:desktop": "vp run --filter @t3tools/desktop --filter t3 build",
+     "typecheck": "vp run -r --concurrency-limit 2 typecheck",
++    "tc": "vp run -r --concurrency-limit 2 typecheck",
+     "lint": "vp lint --report-unused-disable-directives",
+     "lint:mobile": "node scripts/mobile-native-static-check.ts",
+     "test": "vp run -r test",
+diff --git a/packages/tailscale/src/tailscale.ts b/packages/tailscale/src/tailscale.ts
+index cdb549232b3..45fdbc6d0d1 100644
+--- a/packages/tailscale/src/tailscale.ts
++++ b/packages/tailscale/src/tailscale.ts
+@@ -297,7 +297,7 @@ export const probeTailscaleHttpsEndpoint = (input: {
+       onNone: () => false,
+       onSome: (httpResponse) => httpResponse.status >= 200 && httpResponse.status < 300,
+     });
+-  }).pipe(Effect.catch(() => Effect.succeed(false)));
++  }).pipe(Effect.orElseSucceed(() => false));
+ 
+ export const resolveTailscaleHttpsBaseUrl = (
+   input: {
+diff --git a/pnpm-lock.yaml b/pnpm-lock.yaml
+index 393fd95dedf..686a725883e 100644
+--- a/pnpm-lock.yaml
++++ b/pnpm-lock.yaml
+@@ -10,8 +10,8 @@ catalogs:
+       specifier: 4.0.0-beta.78
+       version: 4.0.0-beta.78
+     '@effect/tsgo':
+-      specifier: 0.11.4
+-      version: 0.11.4
++      specifier: 0.13.2
++      version: 0.13.2
+     '@noble/curves':
+       specifier: 1.9.1
+       version: 1.9.1
+@@ -21,12 +21,9 @@ catalogs:
+     '@pierre/diffs':
+       specifier: 1.1.20
+       version: 1.1.20
+-    '@types/bun':
+-      specifier: ^1.3.11
+-      version: 1.3.14
+     '@typescript/native-preview':
+-      specifier: 7.0.0-dev.20260527.2
+-      version: 7.0.0-dev.20260527.2
++      specifier: 7.0.0-dev.20260604.1
++      version: 7.0.0-dev.20260604.1
+     jose:
+       specifier: 6.2.2
+       version: 6.2.2
+@@ -87,7 +84,7 @@ importers:
+         version: 7.28.6(@babel/core@7.29.7)
+       '@effect/tsgo':
+         specifier: 'catalog:'
+-        version: 0.11.4
++        version: 0.13.2
+       '@oxlint/plugins':
+         specifier: ^1.63.0
+         version: 1.68.0
+@@ -96,7 +93,7 @@ importers:
+         version: 24.12.4
+       '@typescript/native-preview':
+         specifier: 'catalog:'
+-        version: 7.0.0-dev.20260527.2
++        version: 7.0.0-dev.20260604.1
+       vite-plus:
+         specifier: 'catalog:'
+         version: 0.1.24(@types/node@24.12.4)(bufferutil@4.1.0)(esbuild@0.27.7)(jiti@2.7.0)(terser@5.48.0)(typescript@6.0.3)(unrun@0.2.39)(utf-8-validate@6.0.6)(yaml@2.9.0)
+@@ -417,7 +414,7 @@ importers:
+         specifier: workspace:*
+         version: link:../web
+       '@types/bun':
+-        specifier: 'catalog:'
++        specifier: 1.3.14
+         version: 1.3.14
+       '@types/node':
+         specifier: 24.12.4
+@@ -644,9 +641,6 @@ importers:
+       '@effect/vitest':
+         specifier: 4.0.0-beta.78
+         version: 4.0.0-beta.78(patch_hash=42b87cc47e70d74e62496e7a8261b3fd298ecad4464d209348ab04b96f853a5f)(effect@4.0.0-beta.78(patch_hash=883249d8efbb462e928e21fefef96027b66aec50751178cafdce45f08eee3754))
+-      '@types/bun':
+-        specifier: 'catalog:'
+-        version: 1.3.14
+       vite-plus:
+         specifier: 'catalog:'
+         version: 0.1.24(@types/node@24.12.4)(bufferutil@4.1.0)(esbuild@0.27.7)(jiti@2.7.0)(terser@5.48.0)(typescript@6.0.3)(unrun@0.2.39)(utf-8-validate@6.0.6)(yaml@2.9.0)
+@@ -807,9 +801,6 @@ importers:
+ 
+   scripts:
+     dependencies:
+-      '@anthropic-ai/claude-agent-sdk':
+-        specifier: ^0.2.77
+-        version: 0.2.141(zod@4.4.3)
+       '@effect/platform-node':
+         specifier: 4.0.0-beta.78
+         version: 4.0.0-beta.78(bufferutil@4.1.0)(effect@4.0.0-beta.78(patch_hash=883249d8efbb462e928e21fefef96027b66aec50751178cafdce45f08eee3754))(ioredis@5.11.0)(utf-8-validate@6.0.6)
+@@ -829,9 +820,6 @@ importers:
+       '@effect/vitest':
+         specifier: 4.0.0-beta.78
+         version: 4.0.0-beta.78(patch_hash=42b87cc47e70d74e62496e7a8261b3fd298ecad4464d209348ab04b96f853a5f)(effect@4.0.0-beta.78(patch_hash=883249d8efbb462e928e21fefef96027b66aec50751178cafdce45f08eee3754))
+-      '@types/bun':
+-        specifier: 'catalog:'
+-        version: 1.3.14
+       vite-plus:
+         specifier: 'catalog:'
+         version: 0.1.24(@types/node@24.12.4)(bufferutil@4.1.0)(esbuild@0.27.7)(jiti@2.7.0)(terser@5.48.0)(typescript@6.0.3)(unrun@0.2.39)(utf-8-validate@6.0.6)(yaml@2.9.0)
+@@ -851,92 +839,46 @@ packages:
+   '@alchemy.run/node-utils@0.0.4':
+     resolution: {integrity: sha512-TiIhPXCTCi3tk0zmdYJJ14CNSesSfsJxXdIOP0HTSItQ1mZWLocrF7qCuEWKyW/IEFzp6kaiOf19aIA/mbCp1g==}
+ 
+-  '@anthropic-ai/claude-agent-sdk-darwin-arm64@0.2.141':
+-    resolution: {integrity: sha512-9HZ0ot6+FwOfQ1aeMqQLH4IJGMm/DcP08SysDxscVjBm6l2JjqleHohxi3zid0DurfGweqT+4x9GScJffwg55g==}
+-    cpu: [arm64]
+-    os: [darwin]
+-
+   '@anthropic-ai/claude-agent-sdk-darwin-arm64@0.3.159':
+     resolution: {integrity: sha512-3nnH4yUNJVSyaU5DBlGw2yxc4zlnVvAnc9UOe+La47QVG7/dN+rWAgn4zCbqKk9bWFLDQ1Ek0r56EZE1Qo4UKQ==}
+     cpu: [arm64]
+     os: [darwin]
+ 
+-  '@anthropic-ai/claude-agent-sdk-darwin-x64@0.2.141':
+-    resolution: {integrity: sha512-4iAdarJaQ+2R58s6QJswZCzUdz2WQmL5lYG7Y+FLzWbRSROFfcH0QYpmOqSaPXd2KRQhIJwEacqecDZd/Q1XKQ==}
+-    cpu: [x64]
+-    os: [darwin]
+-
+   '@anthropic-ai/claude-agent-sdk-darwin-x64@0.3.159':
+     resolution: {integrity: sha512-iv+NRjz+t4Q1R2+kLdDbccSo3b0wedVJ9jMT3noznOVojZHzgkxVpTvt36/XkXV0rqIDQ5H18bBYIZZzOXu7mg==}
+     cpu: [x64]
+     os: [darwin]
+ 
+-  '@anthropic-ai/claude-agent-sdk-linux-arm64-musl@0.2.141':
+-    resolution: {integrity: sha512-6H1AJ/AVaWNnV22kubUPkOTRzZFH0+qP9k7WlhriHMN9gtgZcVAsITMddDeGjQsQJMCAdhXFd6sgi7TM1LdeOQ==}
+-    cpu: [arm64]
+-    os: [linux]
+-
+   '@anthropic-ai/claude-agent-sdk-linux-arm64-musl@0.3.159':
+     resolution: {integrity: sha512-WvwiQBWt3tdu5EwqjpDZszI6p2uetYsw4Cxc6ptO/SmLIYXcDienP8nmirZdsZrS+Gzk6imgY0IY5mmNaRhelQ==}
+     cpu: [arm64]
+     os: [linux]
+ 
+-  '@anthropic-ai/claude-agent-sdk-linux-arm64@0.2.141':
+-    resolution: {integrity: sha512-Jdf0ZEwJzOP8sE6rPqdJN+SxMb0/L8sxJg4twCv/7S+Qzk0hJtls+wxSi+0Tjh6EEMaNxJqEGc7S3fx99Wi99Q==}
+-    cpu: [arm64]
+-    os: [linux]
+-
+   '@anthropic-ai/claude-agent-sdk-linux-arm64@0.3.159':
+     resolution: {integrity: sha512-FlsS5M4GCpzsQVaNDFF8dRgFGR3QwyAHZFl/xM/2Y2BqVBH+NH17RpKQSJxr1qr41QnsNkinMnu2iSKoc33hKg==}
+     cpu: [arm64]
+     os: [linux]
+ 
+-  '@anthropic-ai/claude-agent-sdk-linux-x64-musl@0.2.141':
+-    resolution: {integrity: sha512-fTI1YuM4cxOa4nSgsyMAdB5ELizkWp+w5Ispo4JnnYtcczMAL4D9GBNjWPW0sUzKvjsJOUVim68SmWLWhUOpXQ==}
+-    cpu: [x64]
+-    os: [linux]
+-
+   '@anthropic-ai/claude-agent-sdk-linux-x64-musl@0.3.159':
+     resolution: {integrity: sha512-kFH6RC2YJbPc8XWRNy/wL4YU7LzdJjSwAdH488sVzIif3q+TrvVrV5y/IW0+MLmta+CKIqtFYpGaucsJYvj7Eg==}
+     cpu: [x64]
+     os: [linux]
+ 
+-  '@anthropic-ai/claude-agent-sdk-linux-x64@0.2.141':
+-    resolution: {integrity: sha512-DVjp72f3HmrRYpbneWZZWIqkUht5kTZXS7wXGFiwzLz6eNYEgjjh+GcsnhIi8UOwZUtNiKUrjZnoP38ovFqV8A==}
+-    cpu: [x64]
+-    os: [linux]
+-
+   '@anthropic-ai/claude-agent-sdk-linux-x64@0.3.159':
+     resolution: {integrity: sha512-uNPEC/iRzVb4bEdzs0KAz1zV7i1PVGEZZnJTQyi1OtgVa81sAoH/H0CbbzDiTsquKdaESf+1DSSEkUlfZmMUEw==}
+     cpu: [x64]
+     os: [linux]
+ 
+-  '@anthropic-ai/claude-agent-sdk-win32-arm64@0.2.141':
+-    resolution: {integrity: sha512-Wm10J6kfbufbPGFELokiJ/7Y5Oqug4Uag3HXFsV8g7TWCpaItx/oqVaJoiGptuAtXQB7xGLQVTuk082wER+Y5w==}
+-    cpu: [arm64]
+-    os: [win32]
+-
+   '@anthropic-ai/claude-agent-sdk-win32-arm64@0.3.159':
+     resolution: {integrity: sha512-WN1QEZGgWXz9GMl61QU6j9E+LEF5plki87bL2xsGwuCPzK+OeVPQU55pabuP8P+vFBFHUo3Y9OlTVyZHnUzmAQ==}
+     cpu: [arm64]
+     os: [win32]
+ 
+-  '@anthropic-ai/claude-agent-sdk-win32-x64@0.2.141':
+-    resolution: {integrity: sha512-IXuP29YJuWbR5Q6xOHrjFVGG54V2s1FC61UVNwEN5fpxL09MwPnbwtQL6fqgzt/U1MP7vWAwpXZriYAklkH/mg==}
+-    cpu: [x64]
+-    os: [win32]
+-
+   '@anthropic-ai/claude-agent-sdk-win32-x64@0.3.159':
+     resolution: {integrity: sha512-Ty4seccD+dTDX5hhj89IUELZd/LkxO5O43Uiz5Mo8ZJktoX38SK4XMZlBS935QdqTFLRvPL0hvK4Lt4dTOqzPw==}
+     cpu: [x64]
+     os: [win32]
+ 
+-  '@anthropic-ai/claude-agent-sdk@0.2.141':
+-    resolution: {integrity: sha512-AIBacMWGcZIUcXlUoObqjwJ6pmJI3BayAqPAFXuvSq3DHJXdiuZVs7l/zTB5l3nRhRv5cqSrI2XbiDeHgZWizw==}
+-    engines: {node: '>=18.0.0'}
+-    peerDependencies:
+-      zod: ^4.0.0
+-
+   '@anthropic-ai/claude-agent-sdk@0.3.159':
+     resolution: {integrity: sha512-Xh1oVMIK6N3KsiNIhqNH8ZK90zjRmAEL9d1Md8ZlGdHJE+HhdMYdBadujc3KEkV0uufsEUvYp+A3fDenfypGSA==}
+     engines: {node: '>=18.0.0'}
+@@ -1776,43 +1718,43 @@ packages:
+     peerDependencies:
+       effect: 4.0.0-beta.78
+ 
+-  '@effect/tsgo-darwin-arm64@0.11.4':
+-    resolution: {integrity: sha512-rslT4W8tWY8pdd48kDpY7Q+yo0xkrmcEySG1+sJfb06w7TwbywjHsGlC0BmcUaQt0qmLY+BApbWWDfZw7fgwjw==}
++  '@effect/tsgo-darwin-arm64@0.13.2':
++    resolution: {integrity: sha512-AlYlxU2sD3urNCmNCQWtatPJS/+m2r3CvgZdDTs9KEz2YcyQc2GV1g2RWFkoMwmgzYBx69DBLu1oscqJO2qAog==}
+     cpu: [arm64]
+     os: [darwin]
+ 
+-  '@effect/tsgo-darwin-x64@0.11.4':
+-    resolution: {integrity: sha512-p3v3j+zp7L7yx5ctjvA1W85I4WjOpbOcga8kUu5MFEKfYfsApxUHXwsunCVbUKwrpXqcTc0sw9AjnCNs6i6GRw==}
++  '@effect/tsgo-darwin-x64@0.13.2':
++    resolution: {integrity: sha512-oGWIUsWuzCGBRaxB3R4ZjzmqaWb20OtLpBc8HKf3mGstyiCpGUtb7arqncpSq04nN9yb+mM5yBpGKZ9EJAYuEA==}
+     cpu: [x64]
+     os: [darwin]
+ 
+-  '@effect/tsgo-linux-arm64@0.11.4':
+-    resolution: {integrity: sha512-dz5ZIQUnRzN9mpVcELYCmVERpmstes5rVHbKUb7DOWCbrbupT3tV1LCzOaNX9sIsoBKmpvdGvAWEPLHgymSgTQ==}
++  '@effect/tsgo-linux-arm64@0.13.2':
++    resolution: {integrity: sha512-v9PIgdLR6jREQk42EIm/mtFBwmB4Xzuq70l1Uf/7MnV/eivrZP+Wjfex/UuzMRbjM5eLRP3FFMj2HZvjkFQv6Q==}
+     cpu: [arm64]
+     os: [linux]
+ 
+-  '@effect/tsgo-linux-arm@0.11.4':
+-    resolution: {integrity: sha512-uXsw+IbO+ltn/fbhOWWqXK8ZW3Qa5EZD+wnGbF3gIGWINthbF+/7X+CgRzvcgLBWeBfV6F83hAmOaEZ4hQmd+w==}
++  '@effect/tsgo-linux-arm@0.13.2':
++    resolution: {integrity: sha512-y5aTN7MrwnsStcSJ4Z8J93Nszeh9yf8kbaHk+03bRm9n0TrhVea/bJZoi9cprLJSy01Umt+xC3jFyvOSMrWB8g==}
+     cpu: [arm]
+     os: [linux]
+ 
+-  '@effect/tsgo-linux-x64@0.11.4':
+-    resolution: {integrity: sha512-P3m7Y4FJtziL13Muffyb99AnQeTRvo0/knfYRqoHKNwYUaNM59RO3qFi5y57Hasgd8rKat0xTPmUkK6koZPPFQ==}
++  '@effect/tsgo-linux-x64@0.13.2':
++    resolution: {integrity: sha512-MzrApKfCL0DnFGvoyJUKtW39PGDykJZkkB/tOZSuTSurcYAzkmUIOUwuTASeNqDjj4/DixT7Ha4CMVeCQgg6hg==}
+     cpu: [x64]
+     os: [linux]
+ 
+-  '@effect/tsgo-win32-arm64@0.11.4':
+-    resolution: {integrity: sha512-FKLm9Y+luZSdLpfkbdw8VXa8xy0zR+Asg078qemqHHGwRQLDVGjvIk7tj1HxBM6VQN+TwsofDd225ht83kMk8w==}
++  '@effect/tsgo-win32-arm64@0.13.2':
++    resolution: {integrity: sha512-WwYLSrgCa4iiSIZe5KkG2P1q+JmIloDI6tbqHqpvumrz3uU8fg33e5A7wQ68sRgr4ofqrTYPQhJ6b+Eyeadazg==}
+     cpu: [arm64]
+     os: [win32]
+ 
+-  '@effect/tsgo-win32-x64@0.11.4':
+-    resolution: {integrity: sha512-oc4Y8TbLlv0b1deAILAEep1N6pnSS1d4pk7gJJM4NDXrTKWDyEulO6tXwRQ6vWkO2lhLTUVWHDFfzmMJj3HxPQ==}
++  '@effect/tsgo-win32-x64@0.13.2':
++    resolution: {integrity: sha512-M4Cf98tlCzCWig61QNoPxhE0LyMJtlVIQY2hed0Y1uYpwv0W1BMyOACLcj6ll+vuLWmXvVlOfXC+BuDOqPo9fg==}
+     cpu: [x64]
+     os: [win32]
+ 
+-  '@effect/tsgo@0.11.4':
+-    resolution: {integrity: sha512-wliq5Dis2gLoIUKoCRT3Iv5kpO+fKrUBJPPxIsHADeirk9HMQevKvYaBpGS3Khw1tNLmoQWsSX559owJAdHgBA==}
++  '@effect/tsgo@0.13.2':
++    resolution: {integrity: sha512-zPQMHBdCN1k7Jbxjxq0HVAbzsZd+LAoRPzBEZ3F4y/uxNK0K/XGvFXUUw/CUAsD6rhUtC2VahZY1tp0owb5lgg==}
+     hasBin: true
+ 
+   '@effect/vitest@4.0.0-beta.78':
+@@ -4505,50 +4447,50 @@ packages:
+   '@types/yauzl@2.10.3':
+     resolution: {integrity: sha512-oJoftv0LSuaDZE3Le4DbKX+KS9G36NzOeSap90UIK0yMA/NhKJhqlSGtNDORNRaIbQfzjXDrQa0ytJ6mNRGz/Q==}
+ 
+-  '@typescript/native-preview-darwin-arm64@7.0.0-dev.20260527.2':
+-    resolution: {integrity: sha512-3LqSu4DlxkEfeC/Z/29QMCJn5jjkDtXI7LYuxfmjdmAatS6umDKqm8J17fnP/7fyrZUMBTIYRwSDpChGV3G1ew==}
++  '@typescript/native-preview-darwin-arm64@7.0.0-dev.20260604.1':
++    resolution: {integrity: sha512-zs616um9UuaODLsNlCu5Aw95rFcTV4u3hVt090r6k0lVvTxfaJOv8HKA6BpIotcEYlZlMQowrMSYCCdedo7iyA==}
+     engines: {node: '>=16.20.0'}
+     cpu: [arm64]
+     os: [darwin]
+ 
+-  '@typescript/native-preview-darwin-x64@7.0.0-dev.20260527.2':
+-    resolution: {integrity: sha512-H4+sxE9qaBbLF83wMdWE0FsgfK0Pom+/O+/oxqyGzhVkDJlNt3vfpgQZMit48/Gm44AacGfBggJ9Dhbi3aeSFw==}
++  '@typescript/native-preview-darwin-x64@7.0.0-dev.20260604.1':
++    resolution: {integrity: sha512-pOdNAf2pwc9JBjo8gUsvLs5uqg7d0AhYXfE8/3zvPKBlIZG+mTcvEWW1hPawlWxXzf/vxnP4dgYwUHAMDghhKA==}
+     engines: {node: '>=16.20.0'}
+     cpu: [x64]
+     os: [darwin]
+ 
+-  '@typescript/native-preview-linux-arm64@7.0.0-dev.20260527.2':
+-    resolution: {integrity: sha512-BGUDMjC2Z3TTdZRkGGwhBLelkP5UYgO2rbep8aF4dS3fu7T5lFPPrnfS6EgqJgie+cF5Fsev7xEq8wWyBDM+lg==}
++  '@typescript/native-preview-linux-arm64@7.0.0-dev.20260604.1':
++    resolution: {integrity: sha512-GjIrt6YHP3bbOWBCCE08SlBSDf84Lnjn3Td822/lOX9nm6ODlA/HI7rtGh7KzS/fxehep2Vy4dXU4Il12X1s5A==}
+     engines: {node: '>=16.20.0'}
+     cpu: [arm64]
+     os: [linux]
+ 
+-  '@typescript/native-preview-linux-arm@7.0.0-dev.20260527.2':
+-    resolution: {integrity: sha512-6I9Cv9ozwfS9zB9vRQDPIYseLX3artEO9jl3yVgLj4ishwlSF4cWAbIsjl5IztPaEgHv8coej/6tX1D0uaBzXg==}
++  '@typescript/native-preview-linux-arm@7.0.0-dev.20260604.1':
++    resolution: {integrity: sha512-IKaZL3i5HKmKqwb2IZEXW1j68fVg1HsvAaXkbrkOIG/J5Eyksu5tEnTzucrIY1oPdzgHT+y2HpDIYp2sGeHFvw==}
+     engines: {node: '>=16.20.0'}
+     cpu: [arm]
+     os: [linux]
+ 
+-  '@typescript/native-preview-linux-x64@7.0.0-dev.20260527.2':
+-    resolution: {integrity: sha512-vpazOu+ozlxBo8U57YJMzsOPuxAV8H7fu36KJ8ea8At/D8pdGmOAy5TuB+9OBQV9JDe0OXJMy2kmbhOpmkTAmA==}
++  '@typescript/native-preview-linux-x64@7.0.0-dev.20260604.1':
++    resolution: {integrity: sha512-twQ7XDjsmaHIevN1MjeRYIVLUPL0fBm8A0jg1FhGYPckhTxEBiHIpJf9E//eFidAdrEHjeTSBP1jJw3GNAensg==}
+     engines: {node: '>=16.20.0'}
+     cpu: [x64]
+     os: [linux]
+ 
+-  '@typescript/native-preview-win32-arm64@7.0.0-dev.20260527.2':
+-    resolution: {integrity: sha512-DBFnFE3V6AITkPO1K1VxXf3yEZKjU2FwtXlNwRqhzDu0rrL2SsJHOSrBDX+OacTxQFzZMxFcpiuhV8jHZALPEg==}
++  '@typescript/native-preview-win32-arm64@7.0.0-dev.20260604.1':
++    resolution: {integrity: sha512-QBRxaVT3SFiNfOhwYb/56ddpHWPMFdfiJ4zkFJIjaAXeZ/ssWNHM9lH7yR++GrE9VTsUZ4eVSZfOmQbzRERhgw==}
+     engines: {node: '>=16.20.0'}
+     cpu: [arm64]
+     os: [win32]
+ 
+-  '@typescript/native-preview-win32-x64@7.0.0-dev.20260527.2':
+-    resolution: {integrity: sha512-1tBlErMvQgcMqqYwsx4tytupcjCJcOUXD3vBn1Wb/kAvus1FzWQAFE0fcKBvLfcqLQfTiiEwKKEtbLjGmakqqg==}
++  '@typescript/native-preview-win32-x64@7.0.0-dev.20260604.1':
++    resolution: {integrity: sha512-hR7YHoRpm88Q86gK6/IMayWUA+ROdHGzOPKK8EBp1xD/Cg2Bh5AXbut8HcyUDx/bcGQvnuht/XsW47bT3to9mg==}
+     engines: {node: '>=16.20.0'}
+     cpu: [x64]
+     os: [win32]
+ 
+-  '@typescript/native-preview@7.0.0-dev.20260527.2':
+-    resolution: {integrity: sha512-piqkDwikVeizCFqA1lcwI5F4wOAtBdxuliWe77ApBNRyBPPvfCJB+u/HYi9/8t5nd0sWvFs6/qt/AzJ1CCoykQ==}
++  '@typescript/native-preview@7.0.0-dev.20260604.1':
++    resolution: {integrity: sha512-A3/9yZTt2V5NlDURcVJ4mN2YjfeQTXCRyLuENKrNdGhO+y59mC/2UDr7UvpB3Li+83TRAuhDN8SBoM+7gkHdzQ==}
+     engines: {node: '>=16.20.0'}
+     hasBin: true
+ 
+@@ -9698,72 +9640,30 @@ snapshots:
+ 
+   '@alchemy.run/node-utils@0.0.4': {}
+ 
+-  '@anthropic-ai/claude-agent-sdk-darwin-arm64@0.2.141':
+-    optional: true
+-
+   '@anthropic-ai/claude-agent-sdk-darwin-arm64@0.3.159':
+     optional: true
+ 
+-  '@anthropic-ai/claude-agent-sdk-darwin-x64@0.2.141':
+-    optional: true
+-
+   '@anthropic-ai/claude-agent-sdk-darwin-x64@0.3.159':
+     optional: true
+ 
+-  '@anthropic-ai/claude-agent-sdk-linux-arm64-musl@0.2.141':
+-    optional: true
+-
+   '@anthropic-ai/claude-agent-sdk-linux-arm64-musl@0.3.159':
+     optional: true
+ 
+-  '@anthropic-ai/claude-agent-sdk-linux-arm64@0.2.141':
+-    optional: true
+-
+   '@anthropic-ai/claude-agent-sdk-linux-arm64@0.3.159':
+     optional: true
+ 
+-  '@anthropic-ai/claude-agent-sdk-linux-x64-musl@0.2.141':
+-    optional: true
+-
+   '@anthropic-ai/claude-agent-sdk-linux-x64-musl@0.3.159':
+     optional: true
+ 
+-  '@anthropic-ai/claude-agent-sdk-linux-x64@0.2.141':
+-    optional: true
+-
+   '@anthropic-ai/claude-agent-sdk-linux-x64@0.3.159':
+     optional: true
+ 
+-  '@anthropic-ai/claude-agent-sdk-win32-arm64@0.2.141':
+-    optional: true
+-
+   '@anthropic-ai/claude-agent-sdk-win32-arm64@0.3.159':
+     optional: true
+ 
+-  '@anthropic-ai/claude-agent-sdk-win32-x64@0.2.141':
+-    optional: true
+-
+   '@anthropic-ai/claude-agent-sdk-win32-x64@0.3.159':
+     optional: true
+ 
+-  '@anthropic-ai/claude-agent-sdk@0.2.141(zod@4.4.3)':
+-    dependencies:
+-      '@anthropic-ai/sdk': 0.93.0(zod@4.4.3)
+-      '@modelcontextprotocol/sdk': 1.29.0(zod@4.4.3)
+-      zod: 4.4.3
+-    optionalDependencies:
+-      '@anthropic-ai/claude-agent-sdk-darwin-arm64': 0.2.141
+-      '@anthropic-ai/claude-agent-sdk-darwin-x64': 0.2.141
+-      '@anthropic-ai/claude-agent-sdk-linux-arm64': 0.2.141
+-      '@anthropic-ai/claude-agent-sdk-linux-arm64-musl': 0.2.141
+-      '@anthropic-ai/claude-agent-sdk-linux-x64': 0.2.141
+-      '@anthropic-ai/claude-agent-sdk-linux-x64-musl': 0.2.141
+-      '@anthropic-ai/claude-agent-sdk-win32-arm64': 0.2.141
+-      '@anthropic-ai/claude-agent-sdk-win32-x64': 0.2.141
+-    transitivePeerDependencies:
+-      - '@cfworker/json-schema'
+-      - supports-color
+-
+   '@anthropic-ai/claude-agent-sdk@0.3.159(@anthropic-ai/sdk@0.93.0(zod@4.4.3))(@modelcontextprotocol/sdk@1.29.0(zod@4.4.3))(zod@4.4.3)':
+     dependencies:
+       '@anthropic-ai/sdk': 0.93.0(zod@4.4.3)
+@@ -10931,36 +10831,36 @@ snapshots:
+     dependencies:
+       effect: 4.0.0-beta.78(patch_hash=883249d8efbb462e928e21fefef96027b66aec50751178cafdce45f08eee3754)
+ 
+-  '@effect/tsgo-darwin-arm64@0.11.4':
++  '@effect/tsgo-darwin-arm64@0.13.2':
+     optional: true
+ 
+-  '@effect/tsgo-darwin-x64@0.11.4':
++  '@effect/tsgo-darwin-x64@0.13.2':
+     optional: true
+ 
+-  '@effect/tsgo-linux-arm64@0.11.4':
++  '@effect/tsgo-linux-arm64@0.13.2':
+     optional: true
+ 
+-  '@effect/tsgo-linux-arm@0.11.4':
++  '@effect/tsgo-linux-arm@0.13.2':
+     optional: true
+ 
+-  '@effect/tsgo-linux-x64@0.11.4':
++  '@effect/tsgo-linux-x64@0.13.2':
+     optional: true
+ 
+-  '@effect/tsgo-win32-arm64@0.11.4':
++  '@effect/tsgo-win32-arm64@0.13.2':
+     optional: true
+ 
+-  '@effect/tsgo-win32-x64@0.11.4':
++  '@effect/tsgo-win32-x64@0.13.2':
+     optional: true
+ 
+-  '@effect/tsgo@0.11.4':
++  '@effect/tsgo@0.13.2':
+     optionalDependencies:
+-      '@effect/tsgo-darwin-arm64': 0.11.4
+-      '@effect/tsgo-darwin-x64': 0.11.4
+-      '@effect/tsgo-linux-arm': 0.11.4
+-      '@effect/tsgo-linux-arm64': 0.11.4
+-      '@effect/tsgo-linux-x64': 0.11.4
+-      '@effect/tsgo-win32-arm64': 0.11.4
+-      '@effect/tsgo-win32-x64': 0.11.4
++      '@effect/tsgo-darwin-arm64': 0.13.2
++      '@effect/tsgo-darwin-x64': 0.13.2
++      '@effect/tsgo-linux-arm': 0.13.2
++      '@effect/tsgo-linux-arm64': 0.13.2
++      '@effect/tsgo-linux-x64': 0.13.2
++      '@effect/tsgo-win32-arm64': 0.13.2
++      '@effect/tsgo-win32-x64': 0.13.2
+ 
+   '@effect/vitest@4.0.0-beta.78(patch_hash=42b87cc47e70d74e62496e7a8261b3fd298ecad4464d209348ab04b96f853a5f)(effect@4.0.0-beta.78(patch_hash=883249d8efbb462e928e21fefef96027b66aec50751178cafdce45f08eee3754))':
+     dependencies:
+@@ -13581,36 +13481,36 @@ snapshots:
+       '@types/node': 24.12.4
+     optional: true
+ 
+-  '@typescript/native-preview-darwin-arm64@7.0.0-dev.20260527.2':
++  '@typescript/native-preview-darwin-arm64@7.0.0-dev.20260604.1':
+     optional: true
+ 
+-  '@typescript/native-preview-darwin-x64@7.0.0-dev.20260527.2':
++  '@typescript/native-preview-darwin-x64@7.0.0-dev.20260604.1':
+     optional: true
+ 
+-  '@typescript/native-preview-linux-arm64@7.0.0-dev.20260527.2':
++  '@typescript/native-preview-linux-arm64@7.0.0-dev.20260604.1':
+     optional: true
+ 
+-  '@typescript/native-preview-linux-arm@7.0.0-dev.20260527.2':
++  '@typescript/native-preview-linux-arm@7.0.0-dev.20260604.1':
+     optional: true
+ 
+-  '@typescript/native-preview-linux-x64@7.0.0-dev.20260527.2':
++  '@typescript/native-preview-linux-x64@7.0.0-dev.20260604.1':
+     optional: true
+ 
+-  '@typescript/native-preview-win32-arm64@7.0.0-dev.20260527.2':
++  '@typescript/native-preview-win32-arm64@7.0.0-dev.20260604.1':
+     optional: true
+ 
+-  '@typescript/native-preview-win32-x64@7.0.0-dev.20260527.2':
++  '@typescript/native-preview-win32-x64@7.0.0-dev.20260604.1':
+     optional: true
+ 
+-  '@typescript/native-preview@7.0.0-dev.20260527.2':
++  '@typescript/native-preview@7.0.0-dev.20260604.1':
+     optionalDependencies:
+-      '@typescript/native-preview-darwin-arm64': 7.0.0-dev.20260527.2
+-      '@typescript/native-preview-darwin-x64': 7.0.0-dev.20260527.2
+-      '@typescript/native-preview-linux-arm': 7.0.0-dev.20260527.2
+-      '@typescript/native-preview-linux-arm64': 7.0.0-dev.20260527.2
+-      '@typescript/native-preview-linux-x64': 7.0.0-dev.20260527.2
+-      '@typescript/native-preview-win32-arm64': 7.0.0-dev.20260527.2
+-      '@typescript/native-preview-win32-x64': 7.0.0-dev.20260527.2
++      '@typescript/native-preview-darwin-arm64': 7.0.0-dev.20260604.1
++      '@typescript/native-preview-darwin-x64': 7.0.0-dev.20260604.1
++      '@typescript/native-preview-linux-arm': 7.0.0-dev.20260604.1
++      '@typescript/native-preview-linux-arm64': 7.0.0-dev.20260604.1
++      '@typescript/native-preview-linux-x64': 7.0.0-dev.20260604.1
++      '@typescript/native-preview-win32-arm64': 7.0.0-dev.20260604.1
++      '@typescript/native-preview-win32-x64': 7.0.0-dev.20260604.1
+ 
+   '@ungap/structured-clone@1.3.1': {}
+ 
+diff --git a/pnpm-workspace.yaml b/pnpm-workspace.yaml
+index ac001acc9ff..ccd810fdbf7 100644
+--- a/pnpm-workspace.yaml
++++ b/pnpm-workspace.yaml
+@@ -25,16 +25,14 @@ catalog:
+   "@effect/sql-pg": 4.0.0-beta.78
+   "@effect/sql-sqlite-bun": 4.0.0-beta.78
+   "@effect/vitest": 4.0.0-beta.78
+-  "@effect/tsgo": 0.11.4
++  "@effect/tsgo": 0.13.2
+   "@noble/curves": 1.9.1
+   "@noble/hashes": 1.8.0
+   "@pierre/diffs": 1.1.20
+   "@vitest/runner": 4.1.8
+-  "@types/bun": ^1.3.11
+   "@types/node": 24.12.4
+-  "@typescript/native-preview": 7.0.0-dev.20260527.2
++  "@typescript/native-preview": 7.0.0-dev.20260604.1
+   jose: 6.2.2
+-  tsdown: ^0.20.3
+   typescript: ~6.0.3
+   vitest: npm:@voidzero-dev/vite-plus-test@0.1.24
+   vite: npm:@voidzero-dev/vite-plus-core@0.1.24
+diff --git a/scripts/build-desktop-artifact.ts b/scripts/build-desktop-artifact.ts
+index 0ee2e38880e..4d63a11dbb0 100644
+--- a/scripts/build-desktop-artifact.ts
++++ b/scripts/build-desktop-artifact.ts
+@@ -178,13 +178,11 @@ const resolveGitCommitHash = Effect.fn("resolveGitCommitHash")(function* (repoRo
+       cwd: repoRoot,
+     }),
+   ).pipe(
+-    Effect.catch(() =>
+-      Effect.succeed({
+-        stdout: "",
+-        stderr: "",
+-        exitCode: 1,
+-      }),
+-    ),
++    Effect.orElseSucceed(() => ({
++      stdout: "",
++      stderr: "",
++      exitCode: 1,
++    })),
+   );
+ 
+   if (result.exitCode !== 0) {
+@@ -220,13 +218,11 @@ const resolvePythonForNodeGyp = Effect.fn("resolvePythonForNodeGyp")(function* (
+   const probe = yield* spawnAndCollectOutput(
+     ChildProcess.make("python", ["-c", "import sys;print(sys.executable)"]),
+   ).pipe(
+-    Effect.catch(() =>
+-      Effect.succeed({
+-        stdout: "",
+-        stderr: "",
+-        exitCode: 1,
+-      }),
+-    ),
++    Effect.orElseSucceed(() => ({
++      stdout: "",
++      stderr: "",
++      exitCode: 1,
++    })),
+   );
+ 
+   if (probe.exitCode !== 0) {
+@@ -1008,7 +1004,7 @@ const buildDesktopArtifact = Effect.fn("buildDesktopArtifact")(function* (
+   const copiedArtifacts: string[] = [];
+   for (const entry of stageEntries) {
+     const from = path.join(stageDistDir, entry);
+-    const stat = yield* fs.stat(from).pipe(Effect.catch(() => Effect.succeed(null)));
++    const stat = yield* fs.stat(from).pipe(Effect.orElseSucceed(() => null));
+     if (!stat || stat.type !== "File") continue;
+ 
+     const to = path.join(options.outputDir, entry);
+diff --git a/scripts/mobile-native-static-check.ts b/scripts/mobile-native-static-check.ts
+index ca871fd8a17..2f29034b42c 100644
+--- a/scripts/mobile-native-static-check.ts
++++ b/scripts/mobile-native-static-check.ts
+@@ -73,7 +73,7 @@ const commandExists = Effect.fn("commandExists")(function* (command: string) {
+   return yield* spawner.spawn(lookupCommand).pipe(
+     Effect.flatMap((child) => child.exitCode),
+     Effect.map((exitCode) => exitCode === 0),
+-    Effect.catch(() => Effect.succeed(false)),
++    Effect.orElseSucceed(() => false),
+   );
+ });
+ 
+diff --git a/scripts/package.json b/scripts/package.json
+index 7a01e5e3419..510bb230b8c 100644
+--- a/scripts/package.json
++++ b/scripts/package.json
+@@ -7,7 +7,6 @@
+     "test": "vp test run"
+   },
+   "dependencies": {
+-    "@anthropic-ai/claude-agent-sdk": "^0.2.77",
+     "@effect/platform-node": "catalog:",
+     "@t3tools/contracts": "workspace:*",
+     "@t3tools/shared": "workspace:*",
+@@ -16,7 +15,6 @@
+   },
+   "devDependencies": {
+     "@effect/vitest": "catalog:",
+-    "@types/bun": "catalog:",
+     "vite-plus": "catalog:"
+   }
+ }
+
+From caa0e02a7c02707c799329b2032d829c12baabaa Mon Sep 17 00:00:00 2001
+From: Julius Marminge <julius0216@outlook.com>
+Date: Thu, 4 Jun 2026 22:45:27 -0700
+Subject: [PATCH 2/2] kewl
+
+---
+ apps/server/src/terminal/Layers/BunPTY.ts | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/apps/server/src/terminal/Layers/BunPTY.ts b/apps/server/src/terminal/Layers/BunPTY.ts
+index 40113a1915c..5fde1469193 100644
+--- a/apps/server/src/terminal/Layers/BunPTY.ts
++++ b/apps/server/src/terminal/Layers/BunPTY.ts
+@@ -1,3 +1,5 @@
++/// <reference types="bun" />
++
+ import * as Effect from "effect/Effect";
+ import * as Layer from "effect/Layer";
+ import { PtyAdapter } from "../Services/PTY.ts";

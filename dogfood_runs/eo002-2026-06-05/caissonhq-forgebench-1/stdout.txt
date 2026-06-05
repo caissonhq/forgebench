@@ -1,0 +1,33 @@
+ForgeBench GitHub PR review complete.
+
+PR: https://github.com/caissonhq/forgebench/pull/1
+Title: Docs-only ForgeBench PR intake smoke test
+
+ForgeBench review complete.
+
+Posture: LOW_CONCERN
+
+No forgebench.yml found.
+Configuration mode: generic
+Run `forgebench init --repo . --out forgebench.yml`
+to create starter guardrails.
+
+Findings:
+- ADVISORY: User-facing copy or UI surface changed [fnd_5d418f2182dc]
+
+Deterministic checks: not run
+Heuristic review lenses: completed, no additional findings
+LLM review: not run
+
+Reports written:
+- /Users/davidhorton/Developer/caissonhq/projects/forgebench/dogfood_runs/eo002-2026-06-05/caissonhq-forgebench-1/forgebench-output/forgebench-report.md
+- /Users/davidhorton/Developer/caissonhq/projects/forgebench/dogfood_runs/eo002-2026-06-05/caissonhq-forgebench-1/forgebench-output/forgebench-report.json
+- /Users/davidhorton/Developer/caissonhq/projects/forgebench/dogfood_runs/eo002-2026-06-05/caissonhq-forgebench-1/forgebench-output/repair-prompt.md
+- /Users/davidhorton/Developer/caissonhq/projects/forgebench/dogfood_runs/eo002-2026-06-05/caissonhq-forgebench-1/forgebench-output/pr-comment.md
+
+PR checkout:
+- status: not_requested
+- checks target: not_run
+
+GitHub comment:
+- not requested

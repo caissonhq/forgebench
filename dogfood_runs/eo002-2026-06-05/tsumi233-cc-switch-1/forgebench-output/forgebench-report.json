@@ -1,0 +1,283 @@
+{
+  "schema_version": "1.2.0",
+  "config_mode": "generic",
+  "guardrails_source": null,
+  "first_run_guidance": true,
+  "posture": "REVIEW",
+  "pre_llm_posture": "REVIEW",
+  "final_posture": "REVIEW",
+  "summary": "Review before merge. The patch may be valid, but ForgeBench found high-severity risk that needs human review. Deterministic checks were not run.",
+  "task_summary": "GitHub PR Review PR: https://github.com/tsumi233/cc-switch/pull/1 Title: [codex] Fix Codex chat tool name fallback Body: ## What changed - Infer missing Chat Completions `tool_call.function.name` values from the origi...",
+  "changed_files": [
+    "pnpm-workspace.yaml",
+    "src-tauri/src/database/dao/proxy.rs",
+    "src-tauri/src/database/mod.rs",
+    "src-tauri/src/database/schema.rs",
+    "src-tauri/src/database/tests.rs",
+    "src-tauri/src/proxy/body_filter.rs",
+    "src-tauri/src/proxy/forwarder.rs",
+    "src-tauri/src/proxy/handler_context.rs",
+    "src-tauri/src/proxy/server.rs",
+    "src-tauri/src/proxy/types.rs",
+    "src/components/proxy/AutoFailoverConfigPanel.tsx",
+    "src/components/proxy/ProxyPanel.tsx",
+    "src/i18n/locales/en.json",
+    "src/i18n/locales/ja.json",
+    "src/i18n/locales/zh-TW.json",
+    "src/i18n/locales/zh.json",
+    "src/types/proxy.ts",
+    "src-tauri/src/proxy/handlers.rs",
+    "src-tauri/src/proxy/providers/streaming_codex_chat.rs",
+    "src-tauri/src/proxy/providers/transform_codex_chat.rs",
+    "src-tauri/src/proxy/response_processor.rs",
+    "src-tauri/tauri.conf.json"
+  ],
+  "findings": [
+    {
+      "id": "persistence_schema_changed",
+      "uid": "fnd_e3046b7a523b",
+      "kind": "persistence_schema_changed",
+      "title": "Persistence or schema behavior may have changed",
+      "severity": "HIGH",
+      "confidence": "MEDIUM",
+      "evidence_type": "STATIC",
+      "files": [
+        "src-tauri/src/database/dao/proxy.rs",
+        "src-tauri/src/database/mod.rs",
+        "src-tauri/src/database/schema.rs",
+        "src-tauri/src/database/tests.rs"
+      ],
+      "evidence": [
+        "Persistence, schema, model, or migration file changed: src-tauri/src/database/dao/proxy.rs",
+        "Persistence, schema, model, or migration file changed: src-tauri/src/database/mod.rs",
+        "Persistence, schema, model, or migration file changed: src-tauri/src/database/schema.rs",
+        "Persistence, schema, model, or migration file changed: src-tauri/src/database/tests.rs"
+      ],
+      "reviewer": null,
+      "supporting_finding_ids": [],
+      "explanation": "The patch changes a likely persistence, schema, model, or migration file. If no corresponding test file changed, data behavior may have changed without regression coverage.",
+      "suggested_fix": "Review the data model impact, verify migration behavior, and add tests around persistence compatibility."
+    },
+    {
+      "id": "broad_file_surface",
+      "uid": "fnd_1f8d591373be",
+      "kind": "broad_file_surface",
+      "title": "Patch touches a broad file surface",
+      "severity": "MEDIUM",
+      "confidence": "HIGH",
+      "evidence_type": "STATIC",
+      "files": [
+        "pnpm-workspace.yaml",
+        "src-tauri/src/database/dao/proxy.rs",
+        "src-tauri/src/database/mod.rs",
+        "src-tauri/src/database/schema.rs",
+        "src-tauri/src/database/tests.rs",
+        "src-tauri/src/proxy/body_filter.rs",
+        "src-tauri/src/proxy/forwarder.rs",
+        "src-tauri/src/proxy/handler_context.rs",
+        "src-tauri/src/proxy/server.rs",
+        "src-tauri/src/proxy/types.rs",
+        "src/components/proxy/AutoFailoverConfigPanel.tsx",
+        "src/components/proxy/ProxyPanel.tsx",
+        "src/i18n/locales/en.json",
+        "src/i18n/locales/ja.json",
+        "src/i18n/locales/zh-TW.json",
+        "src/i18n/locales/zh.json",
+        "src/types/proxy.ts",
+        "src-tauri/src/proxy/handlers.rs",
+        "src-tauri/src/proxy/providers/streaming_codex_chat.rs",
+        "src-tauri/src/proxy/providers/transform_codex_chat.rs",
+        "src-tauri/src/proxy/response_processor.rs",
+        "src-tauri/tauri.conf.json"
+      ],
+      "evidence": [
+        "22 files changed"
+      ],
+      "reviewer": null,
+      "supporting_finding_ids": [],
+      "explanation": "The patch changes more than 10 files. Broad patches are harder to review and more likely to contain unrelated changes.",
+      "suggested_fix": "Split unrelated changes, reduce the patch scope, or provide a clear review map for the touched areas."
+    },
+    {
+      "id": "ui_copy_changed",
+      "uid": "fnd_2f6bf3bbbda7",
+      "kind": "ui_copy_changed",
+      "title": "User-facing copy or UI surface changed",
+      "severity": "ADVISORY",
+      "confidence": "LOW",
+      "evidence_type": "STATIC",
+      "files": [
+        "src/components/proxy/AutoFailoverConfigPanel.tsx",
+        "src/components/proxy/ProxyPanel.tsx"
+      ],
+      "evidence": [
+        "Likely user-facing, documentation, or UI file changed: src/components/proxy/AutoFailoverConfigPanel.tsx",
+        "Likely user-facing, documentation, or UI file changed: src/components/proxy/ProxyPanel.tsx"
+      ],
+      "reviewer": null,
+      "supporting_finding_ids": [],
+      "explanation": "The patch touches files that often affect user-facing copy, documentation, or UI. This is not automatically a defect, but it deserves product review when relevant.",
+      "suggested_fix": "Review the changed UI or copy for accuracy, tone, and unintended product behavior."
+    }
+  ],
+  "static_signals": {
+    "changed_file_count": 22,
+    "added_line_count": 895,
+    "deleted_line_count": 29,
+    "source_files_changed": [
+      "src-tauri/src/database/dao/proxy.rs",
+      "src-tauri/src/database/mod.rs",
+      "src-tauri/src/database/schema.rs",
+      "src-tauri/src/proxy/body_filter.rs",
+      "src-tauri/src/proxy/forwarder.rs",
+      "src-tauri/src/proxy/handler_context.rs",
+      "src-tauri/src/proxy/handlers.rs",
+      "src-tauri/src/proxy/providers/streaming_codex_chat.rs",
+      "src-tauri/src/proxy/providers/transform_codex_chat.rs",
+      "src-tauri/src/proxy/response_processor.rs",
+      "src-tauri/src/proxy/server.rs",
+      "src-tauri/src/proxy/types.rs",
+      "src/components/proxy/AutoFailoverConfigPanel.tsx",
+      "src/components/proxy/ProxyPanel.tsx",
+      "src/types/proxy.ts"
+    ],
+    "test_files_changed": [
+      "src-tauri/src/database/tests.rs"
+    ],
+    "tests_changed": true,
+    "deleted_test_files": [],
+    "weakened_test_files": [],
+    "dependency_files_changed": [],
+    "build_or_config_files_changed": [],
+    "persistence_or_schema_files_changed": [
+      "src-tauri/src/database/dao/proxy.rs",
+      "src-tauri/src/database/mod.rs",
+      "src-tauri/src/database/schema.rs",
+      "src-tauri/src/database/tests.rs"
+    ],
+    "generated_or_unrelated_files_changed": [],
+    "ui_or_copy_files_changed": [
+      "src/components/proxy/AutoFailoverConfigPanel.tsx",
+      "src/components/proxy/ProxyPanel.tsx"
+    ],
+    "binary_files_changed": [],
+    "config_mode": "generic"
+  },
+  "guardrail_hits": [],
+  "deterministic_checks": {
+    "run_requested": false,
+    "results": [],
+    "summary": {
+      "passed": 0,
+      "failed": 0,
+      "timed_out": 0,
+      "skipped": 0,
+      "not_configured": 0,
+      "errors": 0
+    }
+  },
+  "policy": {
+    "active_categories": [],
+    "finding_adjustments": [],
+    "suppressed_findings": [],
+    "posture_ceiling": null,
+    "posture_ceiling_reason": null,
+    "posture_ceiling_rule": null
+  },
+  "specialized_reviewers": {
+    "enabled": true,
+    "results": [
+      {
+        "reviewer_id": "scope_auditor",
+        "reviewer_name": "Scope Auditor",
+        "status": "completed",
+        "summary": "Broad or scope-sensitive static evidence is already present; no additional scope finding added.",
+        "findings": [],
+        "referenced_finding_ids": [
+          "broad_file_surface"
+        ],
+        "error_message": null
+      },
+      {
+        "reviewer_id": "test_skeptic",
+        "reviewer_name": "Test Skeptic",
+        "status": "completed",
+        "summary": "No additional test coverage concern found.",
+        "findings": [],
+        "referenced_finding_ids": [],
+        "error_message": null
+      },
+      {
+        "reviewer_id": "contract_keeper",
+        "reviewer_name": "Contract Keeper",
+        "status": "completed",
+        "summary": "Contract risk is already represented by existing static findings.",
+        "findings": [],
+        "referenced_finding_ids": [
+          "persistence_schema_changed"
+        ],
+        "error_message": null
+      },
+      {
+        "reviewer_id": "product_guardrail_reviewer",
+        "reviewer_name": "Product / Guardrail Reviewer",
+        "status": "completed",
+        "summary": "No additional product or guardrail concern found.",
+        "findings": [],
+        "referenced_finding_ids": [],
+        "error_message": null
+      },
+      {
+        "reviewer_id": "test_skeptic_v2",
+        "reviewer_name": "Test Skeptic v2",
+        "status": "skipped",
+        "summary": "Added test lines already include common assertion tokens.",
+        "findings": [],
+        "referenced_finding_ids": [],
+        "error_message": null
+      },
+      {
+        "reviewer_id": "regression_hunter",
+        "reviewer_name": "Regression Hunter",
+        "status": "skipped",
+        "summary": "No removed test assertion lines were present.",
+        "findings": [],
+        "referenced_finding_ids": [],
+        "error_message": null
+      }
+    ],
+    "findings": [],
+    "metadata": {
+      "skipped_lenses": [
+        {
+          "lens_id": "test_skeptic_v2",
+          "reason": "Added test lines already include common assertion tokens."
+        },
+        {
+          "lens_id": "regression_hunter",
+          "reason": "No removed test assertion lines were present."
+        }
+      ],
+      "llm_call_used": false
+    }
+  },
+  "llm_review": {
+    "enabled": false,
+    "provider": null,
+    "status": "skipped",
+    "reviewer_name": null,
+    "summary": null,
+    "findings": [],
+    "error_message": null
+  },
+  "pr_checkout": {
+    "requested": false,
+    "status": "not_requested",
+    "worktree_path": null,
+    "checks_target": "not_run",
+    "error_message": null,
+    "kept": false,
+    "cleanup_error": null
+  },
+  "generated_at": "2026-06-05T22:16:11+00:00"
+}

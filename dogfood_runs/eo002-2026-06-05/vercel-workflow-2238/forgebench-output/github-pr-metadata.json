@@ -1,0 +1,14 @@
+{
+  "additions": 10,
+  "author": "pranaygp",
+  "base_ref": "main",
+  "body": "### Description\n\nAdd a checked-in Codex environment descriptor so Codex tasks bootstrap the workspace with `pnpm install --frozen-lockfile`.\n\nThis keeps environment setup deterministic from the committed lockfile and avoids coupling the bootstrap step to app credentials or target-specific builds. An empty changeset is included because this is internal configuration and does not change a published package.\n\n### How did you test your changes?\n\n- Parsed `.codex/environments/environment.toml` with Python `tomllib`.\n- Ran `git diff --check origin/main...HEAD`.\n- Verified the signed, signed-off commit is reported as valid by GitHub.\n",
+  "changed_files": 2,
+  "deletions": 0,
+  "head_ref": "pranaygp/codex/add-codex-environment",
+  "number": 2238,
+  "owner": "vercel",
+  "repo": "workflow",
+  "title": "[codex] Add Codex environment setup",
+  "url": "https://github.com/vercel/workflow/pull/2238"
+}

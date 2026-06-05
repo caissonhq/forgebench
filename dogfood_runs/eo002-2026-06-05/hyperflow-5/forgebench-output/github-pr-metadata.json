@@ -1,0 +1,14 @@
+{
+  "additions": 15,
+  "author": "Mohammed-Abdelhady",
+  "base_ref": "main",
+  "body": "## Summary\n\n- Clarifies that Codex App/CLI does not expose a bare `/hyperflow` root slash command.\n- Moves Codex quick-start examples to the portable `hyperflow <skill>` form while keeping `/hyperflow:<skill>` as an alias form.\n- Resolves hook validation commands relative to the plugin root so validation works from any current working directory.\n\n## Validation\n\n- `python3 scripts/validate-plugin.py`\n- `python3 /Users/mohammedabdelhady/Documents/coding/projects/hyperflow/scripts/validate-plugin.py` from `/Users/mohammedabdelhady/Documents/coding/projects/forgepath`\n- `git diff --check`\n",
+  "changed_files": 4,
+  "deletions": 13,
+  "head_ref": "codex/fix-codex-hyperflow-command-docs",
+  "number": 5,
+  "owner": "Mohammed-Abdelhady",
+  "repo": "hyperflow",
+  "title": "[codex] clarify Codex Hyperflow invocation",
+  "url": "https://github.com/Mohammed-Abdelhady/hyperflow/pull/5"
+}

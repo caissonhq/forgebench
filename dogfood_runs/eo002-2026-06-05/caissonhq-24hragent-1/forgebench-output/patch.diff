@@ -1,0 +1,113 @@
+From 42514b9dfbfe1a0b9bd45c5dc1019ce8d9df47b2 Mon Sep 17 00:00:00 2001
+From: Hortyhort <horty4444@gmail.com>
+Date: Mon, 25 May 2026 05:02:53 -0700
+Subject: [PATCH] fix: load 24hragent Gemini key from environment
+
+---
+ .env.example  |  2 ++
+ .gitignore    |  2 ++
+ agent.py      | 47 +++++++++++++++++++++++++++++++++++++++++++++++
+ test_agent.py | 20 ++++++++++++++++++++
+ 4 files changed, 71 insertions(+)
+ create mode 100644 .env.example
+ create mode 100644 agent.py
+ create mode 100644 test_agent.py
+
+diff --git a/.env.example b/.env.example
+new file mode 100644
+index 0000000..e35c5fe
+--- /dev/null
++++ b/.env.example
+@@ -0,0 +1,2 @@
++# Copy to .env locally. Never commit real secrets.
++GEMINI_API_KEY=
+diff --git a/.gitignore b/.gitignore
+index b1015fd..a209d20 100644
+--- a/.gitignore
++++ b/.gitignore
+@@ -1,4 +1,6 @@
+ .env
++.env.*
++!.env.example
+ venv/
+ __pycache__/
+ .DS_Store
+diff --git a/agent.py b/agent.py
+new file mode 100644
+index 0000000..0e9d60b
+--- /dev/null
++++ b/agent.py
+@@ -0,0 +1,47 @@
++import os
++
++MODEL = "gemini-2.0-flash-exp"
++
++PERSONA = """
++You are a farm management assistant for a 40-acre farm in Yucca, Arizona.
++Focus on livestock (cattle) and irrigation in a desert climate.
++When discussing water, always convert 'inches' to total gallons required for the full 40 acres.
++"""
++
++def get_api_key() -> str:
++    api_key = os.environ.get("GEMINI_API_KEY")
++    if not api_key:
++        raise RuntimeError("GEMINI_API_KEY is required. Set it in your shell or local .env loader before running the agent.")
++    return api_key
++
++
++def create_chat(api_key: str | None = None):
++    from google import genai
++    from google.genai import types
++
++    client = genai.Client(api_key=api_key or get_api_key())
++    return client.chats.create(
++        model=MODEL,
++        config=types.GenerateContentConfig(
++            system_instruction=PERSONA
++        )
++    )
++
++
++def main() -> None:
++    chat = create_chat()
++    print("--- AZ Farm Agent Online (Type 'quit' to exit) ---")
++
++    while True:
++        user_input = input("You: ")
++
++        if user_input.lower() in ["quit", "exit"]:
++            print("Agent: Shutting down. Goodbye!")
++            break
++
++        response = chat.send_message(user_input)
++        print(f"Agent: {response.text}\n")
++
++
++if __name__ == "__main__":
++    main()
+diff --git a/test_agent.py b/test_agent.py
+new file mode 100644
+index 0000000..25d0ecf
+--- /dev/null
++++ b/test_agent.py
+@@ -0,0 +1,20 @@
++import os
++import unittest
++from unittest.mock import patch
++
++import agent
++
++
++class AgentConfigTests(unittest.TestCase):
++    @patch.dict(os.environ, {}, clear=True)
++    def test_get_api_key_requires_environment_variable(self):
++        with self.assertRaisesRegex(RuntimeError, "GEMINI_API_KEY is required"):
++            agent.get_api_key()
++
++    @patch.dict(os.environ, {"GEMINI_API_KEY": "test-key"}, clear=True)
++    def test_get_api_key_reads_environment_variable(self):
++        self.assertEqual(agent.get_api_key(), "test-key")
++
++
++if __name__ == "__main__":
++    unittest.main()

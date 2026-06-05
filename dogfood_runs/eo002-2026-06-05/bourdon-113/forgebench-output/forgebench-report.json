@@ -1,0 +1,150 @@
+{
+  "schema_version": "1.2.0",
+  "config_mode": "generic",
+  "guardrails_source": null,
+  "first_run_guidance": true,
+  "posture": "LOW_CONCERN",
+  "pre_llm_posture": "LOW_CONCERN",
+  "final_posture": "LOW_CONCERN",
+  "summary": "Low concern. Deterministic checks were not run. ForgeBench found no high-confidence merge blockers, but this is not a substitute for human review.",
+  "task_summary": "GitHub PR Review PR: https://github.com/getbourdon/bourdon/pull/113 Title: [codex] separate Codex L5 publisher freshness Body: ## Summary - expose Codex L5 staleness as shared derived snapshot data instead of HTML-onl...",
+  "changed_files": [
+    "scripts/codex_memory_metrics.py",
+    "tests/test_codex_memory_metrics.py"
+  ],
+  "findings": [],
+  "static_signals": {
+    "changed_file_count": 2,
+    "added_line_count": 81,
+    "deleted_line_count": 13,
+    "source_files_changed": [
+      "scripts/codex_memory_metrics.py"
+    ],
+    "test_files_changed": [
+      "tests/test_codex_memory_metrics.py"
+    ],
+    "tests_changed": true,
+    "deleted_test_files": [],
+    "weakened_test_files": [],
+    "dependency_files_changed": [],
+    "build_or_config_files_changed": [],
+    "persistence_or_schema_files_changed": [],
+    "generated_or_unrelated_files_changed": [],
+    "ui_or_copy_files_changed": [],
+    "binary_files_changed": [],
+    "config_mode": "generic"
+  },
+  "guardrail_hits": [],
+  "deterministic_checks": {
+    "run_requested": false,
+    "results": [],
+    "summary": {
+      "passed": 0,
+      "failed": 0,
+      "timed_out": 0,
+      "skipped": 0,
+      "not_configured": 0,
+      "errors": 0
+    }
+  },
+  "policy": {
+    "active_categories": [],
+    "finding_adjustments": [],
+    "suppressed_findings": [],
+    "posture_ceiling": null,
+    "posture_ceiling_reason": null,
+    "posture_ceiling_rule": null
+  },
+  "specialized_reviewers": {
+    "enabled": true,
+    "results": [
+      {
+        "reviewer_id": "scope_auditor",
+        "reviewer_name": "Scope Auditor",
+        "status": "completed",
+        "summary": "No additional scope concern found from task text and changed files.",
+        "findings": [],
+        "referenced_finding_ids": [],
+        "error_message": null
+      },
+      {
+        "reviewer_id": "test_skeptic",
+        "reviewer_name": "Test Skeptic",
+        "status": "completed",
+        "summary": "No additional test coverage concern found.",
+        "findings": [],
+        "referenced_finding_ids": [],
+        "error_message": null
+      },
+      {
+        "reviewer_id": "contract_keeper",
+        "reviewer_name": "Contract Keeper",
+        "status": "completed",
+        "summary": "No additional contract-surface concern found.",
+        "findings": [],
+        "referenced_finding_ids": [],
+        "error_message": null
+      },
+      {
+        "reviewer_id": "product_guardrail_reviewer",
+        "reviewer_name": "Product / Guardrail Reviewer",
+        "status": "completed",
+        "summary": "No additional product or guardrail concern found.",
+        "findings": [],
+        "referenced_finding_ids": [],
+        "error_message": null
+      },
+      {
+        "reviewer_id": "test_skeptic_v2",
+        "reviewer_name": "Test Skeptic v2",
+        "status": "skipped",
+        "summary": "Added test lines already include common assertion tokens.",
+        "findings": [],
+        "referenced_finding_ids": [],
+        "error_message": null
+      },
+      {
+        "reviewer_id": "regression_hunter",
+        "reviewer_name": "Regression Hunter",
+        "status": "skipped",
+        "summary": "Removed test assertions had an obvious assertion replacement in the same file.",
+        "findings": [],
+        "referenced_finding_ids": [],
+        "error_message": null
+      }
+    ],
+    "findings": [],
+    "metadata": {
+      "skipped_lenses": [
+        {
+          "lens_id": "test_skeptic_v2",
+          "reason": "Added test lines already include common assertion tokens."
+        },
+        {
+          "lens_id": "regression_hunter",
+          "reason": "Removed test assertions had an obvious assertion replacement in the same file."
+        }
+      ],
+      "llm_call_used": false
+    }
+  },
+  "llm_review": {
+    "enabled": false,
+    "provider": null,
+    "status": "skipped",
+    "reviewer_name": null,
+    "summary": null,
+    "findings": [],
+    "error_message": null
+  },
+  "pr_checkout": {
+    "requested": false,
+    "status": "not_requested",
+    "worktree_path": null,
+    "checks_target": "not_run",
+    "error_message": null,
+    "kept": false,
+    "cleanup_error": null
+  },
+  "generated_at": "2026-06-05T22:15:58+00:00"
+}

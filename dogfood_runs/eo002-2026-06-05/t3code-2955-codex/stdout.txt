@@ -1,0 +1,35 @@
+ForgeBench GitHub PR review complete.
+
+PR: https://github.com/pingdotgg/t3code/pull/2955
+Title: [codex] Fix Codex workspace skill autocomplete
+
+ForgeBench review complete.
+
+Posture: REVIEW
+
+No forgebench.yml found.
+Configuration mode: generic
+Run `forgebench init --repo . --out forgebench.yml`
+to create starter guardrails.
+
+Findings:
+- MEDIUM: Patch touches a broad file surface [fnd_2b622c6c09b6]
+- ADVISORY: User-facing copy or UI surface changed [fnd_b2956cd24d9d]
+- LOW: Test changes do not show a clear assertion signal [fnd_3e8b76cc7439]
+
+Deterministic checks: not run
+Heuristic review lenses: completed, findings=1
+LLM review: not run
+
+Reports written:
+- /Users/davidhorton/Developer/caissonhq/projects/forgebench/dogfood_runs/eo002-2026-06-05/t3code-2955-codex/forgebench-output/forgebench-report.md
+- /Users/davidhorton/Developer/caissonhq/projects/forgebench/dogfood_runs/eo002-2026-06-05/t3code-2955-codex/forgebench-output/forgebench-report.json
+- /Users/davidhorton/Developer/caissonhq/projects/forgebench/dogfood_runs/eo002-2026-06-05/t3code-2955-codex/forgebench-output/repair-prompt.md
+- /Users/davidhorton/Developer/caissonhq/projects/forgebench/dogfood_runs/eo002-2026-06-05/t3code-2955-codex/forgebench-output/pr-comment.md
+
+PR checkout:
+- status: not_requested
+- checks target: not_run
+
+GitHub comment:
+- not requested

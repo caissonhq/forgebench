@@ -1,0 +1,22 @@
+From 7f0919431d85c1ede6757656639d28d8335b650d Mon Sep 17 00:00:00 2001
+From: Hortyhort <horty4444@gmail.com>
+Date: Sat, 25 Apr 2026 16:45:31 -0700
+Subject: [PATCH] Add PR intake smoke-test README note
+
+---
+ README.md | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/README.md b/README.md
+index 4623d8a..35f2b18 100644
+--- a/README.md
++++ b/README.md
+@@ -84,6 +84,8 @@ ForgeBench can fetch a GitHub pull request through the local `gh` CLI, derive ta
+ forgebench review-pr https://github.com/OWNER/REPO/pull/123
+ ```
+ 
++This keeps PR review local by default while producing a comment-ready summary for manual use.
++
+ ForgeBench requires the GitHub CLI for this flow. Install `gh`, run `gh auth login`, and make sure your local auth can read the target PR.
+ 
+ The default output directory is PR-scoped:

@@ -1,0 +1,14 @@
+{
+  "additions": 81,
+  "author": "ryandavispro1-cmyk",
+  "base_ref": "main",
+  "body": "## Summary\n- expose Codex L5 staleness as shared derived snapshot data instead of HTML-only state\n- rename the dashboard blocker to 'Codex L5 publisher not recently run' so it does not imply the publisher code is broken\n- split Codex L5 publisher and manifest cards, and include the publisher command in evidence drawers\n- add regression coverage for snapshot staleness fields and dashboard copy\n\n## Local automation\nCreated active Codex automation `codex-l5-publisher` to run the Codex L5 export every 24 hours and refresh the metrics dashboard afterward. This automation writes only `/Users/radman/agent-library/agents/codex.l5.yaml` plus metrics/report artifacts; it does not inspect `~/.codex/auth.json` or mutate Codex SQLite.\n\n## Validation\n- `./.venv/bin/ruff check scripts/codex_memory_metrics.py tests/test_codex_memory_metrics.py`\n- `./.venv/bin/pytest -q -p no:cacheprovider tests/test_codex_memory_metrics.py` run 3x\n- `./.venv/bin/pytest -q -p no:cacheprovider tests/test_cli.py tests/test_codex_adapter.py tests/test_codex_memory_metrics.py` -> 123 passed\n- `./.venv/bin/pytest -q -p no:cacheprovider tests` -> 771 passed, 1 skipped\n- live Codex L5 publish + dashboard refresh: latest snapshot now reports `codex_l5_stale: false`, `518` entities, `81` sessions\n\n## Notes\nThe native-memory heartbeat remains read-only. Publication freshness is now handled by the separate publisher automation and reported as a distinct signal.",
+  "changed_files": 2,
+  "deletions": 13,
+  "head_ref": "codex/l5-publisher-freshness",
+  "number": 113,
+  "owner": "getbourdon",
+  "repo": "bourdon",
+  "title": "[codex] separate Codex L5 publisher freshness",
+  "url": "https://github.com/getbourdon/bourdon/pull/113"
+}
