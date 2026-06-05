@@ -6,6 +6,8 @@ Checks declared in `forgebench.yml` are only run when `--run-checks` is explicit
 
 If no guardrails file is passed and no `forgebench.yml` exists in the repo, ForgeBench runs in generic mode. Generic mode uses first-run heuristics and reports that it is unconfigured. Run `forgebench init --repo . --out forgebench.yml` to create local guardrails, then edit the protected behavior, forbidden patterns, risk paths, and checks before relying on strict posture decisions.
 
+Team and Enterprise repos can layer shared policy with `extends`, `include`, and the `FORGEBENCH_ORG_POLICY` environment variable. See [team-enterprise.md](team-enterprise.md).
+
 ## Local Trust Note
 
 `forgebench.yml` is local project configuration. Treat check commands as trusted local commands only in repositories you trust. Parsing the file is passive, but running checks executes user-configured shell commands from the repo root.
@@ -70,6 +72,24 @@ When no `review_scope` is configured, ForgeBench still detects multiple package 
 - Default: `120`
 - Purpose: Timeout for configured check commands.
 
+### `extends`
+
+- Type: string
+- Default: unset
+- Purpose: Path to a base policy file merged before the current file. Relative paths resolve from the current file's directory.
+
+### `include`
+
+- Type: string or list of strings
+- Default: unset
+- Purpose: One or more shared policy files merged before the current file.
+
+### `team`
+
+- Type: string or mapping with `name`
+- Default: `null`
+- Purpose: Team or org label surfaced in reports and the policy dashboard export.
+
 ### `policy`
 
 - Type: mapping or `null`
@@ -83,6 +103,14 @@ Supported policy children:
 - `advisory_only`
 - `suppress_findings`
 - `posture_overrides`
+
+## Org policy environment variable
+
+Set `FORGEBENCH_ORG_POLICY` to an absolute or repo-relative path of a trusted org-wide policy file. ForgeBench merges org policy on top of the repo `forgebench.yml` when the file exists.
+
+## Policy dashboard export
+
+Run `forgebench dashboard --repo .` to export a local HTML policy dashboard skeleton and `policy-manifest.json`. This is not a hosted service.
 
 ## Validation
 

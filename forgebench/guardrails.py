@@ -31,6 +31,9 @@ KNOWN_TOP_LEVEL_KEYS = {
     "checks",
     "check_timeout_seconds",
     "policy",
+    "extends",
+    "include",
+    "team",
 }
 
 
@@ -39,18 +42,22 @@ class GuardrailsParseError(ValueError):
 
 
 def load_guardrails(path: str | Path | None) -> Guardrails:
-    if path is None:
-        return Guardrails()
-    return parse_guardrails(Path(path).read_text(encoding="utf-8", errors="replace"))
+    from forgebench.policy_layers import load_layered_guardrails
+
+    return load_layered_guardrails(path)
 
 
 def parse_guardrails(text: str) -> Guardrails:
-    payload = _parse_yaml(text)
+    return guardrails_from_payload(_parse_yaml(text))
+
+
+def guardrails_from_payload(payload: dict[str, object]) -> Guardrails:
     warnings = _unknown_key_warnings(payload)
     _validate_guardrails_payload(payload)
     risk_files = _as_dict(payload.get("risk_files"))
     checks_payload = _as_dict(payload.get("checks"))
     review_scope = _as_dict(payload.get("review_scope"))
+    team_payload = _as_dict(payload.get("team"))
 
     return Guardrails(
         project=_optional_string(payload.get("project")),
@@ -66,6 +73,7 @@ def parse_guardrails(text: str) -> Guardrails:
         check_timeout_seconds=_parse_timeout(payload.get("check_timeout_seconds", 120)),
         policy=_parse_policy(_as_dict(payload.get("policy"))),
         warnings=warnings,
+        team=_optional_string(team_payload.get("name")) or _optional_string(payload.get("team")),
     )
 
 

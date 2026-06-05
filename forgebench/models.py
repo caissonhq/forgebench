@@ -255,6 +255,8 @@ class Guardrails:
     check_timeout_seconds: int = 120
     policy: "GuardrailsPolicy" = field(default_factory=lambda: GuardrailsPolicy())
     warnings: list[str] = field(default_factory=list)
+    sources: list[str] = field(default_factory=list)
+    team: str | None = None
 
 
 @dataclass(frozen=True)

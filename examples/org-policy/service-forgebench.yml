@@ -1,0 +1,16 @@
+# Example service repo overlay layered on forgebench-org.yml
+
+extends: forgebench-org.yml
+
+project: Payments API
+
+checks:
+  test: pytest -q
+  lint: ruff check .
+
+forbidden_patterns:
+  - stripe.charges.create
+
+review_scope:
+  include_paths:
+    - "services/payments/**"

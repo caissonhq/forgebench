@@ -1,0 +1,27 @@
+# Shared org policy example. Layer into repos with `extends` or FORGEBENCH_ORG_POLICY.
+
+team:
+  name: Example Org Platform
+
+protected_behavior:
+  - Agent patches must not bypass auth middleware
+  - Production schema changes require migration review
+
+forbidden_patterns:
+  - eval(
+  - subprocess.run(["rm", "-rf"
+
+risk_files:
+  high:
+    - "**/auth/**"
+    - "**/migrations/**"
+  medium:
+    - "**/api/**"
+
+policy:
+  path_categories:
+    docs:
+      patterns:
+        - "README.md"
+        - "docs/**"
+      default_severity: advisory

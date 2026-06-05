@@ -33,7 +33,10 @@
     "path_filter_excluded_paths": [],
     "monorepo_packages_detected": [],
     "monorepo_hint": null,
-    "config_mode": "configured"
+    "config_mode": "configured",
+    "policy_sources": [
+      "examples/sample_report/low_concern_case/forgebench.yml"
+    ]
   },
   "guardrail_hits": [],
   "deterministic_checks": {
@@ -213,5 +216,5 @@
     "kept": false,
     "cleanup_error": null
   },
-  "generated_at": "2026-06-05T22:39:26+00:00"
+  "generated_at": "2026-06-05T23:27:12+00:00"
 }

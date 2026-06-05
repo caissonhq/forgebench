@@ -99,7 +99,10 @@
     "path_filter_excluded_paths": [],
     "monorepo_packages_detected": [],
     "monorepo_hint": null,
-    "config_mode": "configured"
+    "config_mode": "configured",
+    "policy_sources": [
+      "examples/sample_report/block_case/forgebench.yml"
+    ]
   },
   "guardrail_hits": [
     "High-risk guardrail pattern '**/migrations/**' matched db/migrations/20260426_add_payment_receipts.sql"
@@ -296,5 +299,5 @@
     "kept": false,
     "cleanup_error": null
   },
-  "generated_at": "2026-06-05T22:39:26+00:00"
+  "generated_at": "2026-06-05T23:27:12+00:00"
 }

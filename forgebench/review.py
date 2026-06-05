@@ -11,6 +11,7 @@ from forgebench.adversaries.models import ReviewerContext
 from forgebench.check_runner import checks_not_run, findings_from_check_results, run_configured_checks
 from forgebench.diff_parser import parse_diff_file
 from forgebench.guardrails import GuardrailsParseError, evaluate_guardrails, load_guardrails
+from forgebench.policy_layers import resolve_guardrails_path
 from forgebench.llm_config import resolve_llm_config
 from forgebench.llm_review import apply_llm_posture, build_review_bundle, llm_review_not_run, llm_review_skipped, run_llm_review
 from forgebench.path_filter import apply_review_scope
@@ -54,7 +55,7 @@ def run_review(
     repo = Path(repo_path)
     diff = _resolve_input_path(Path(diff_path), repo)
     task = _resolve_input_path(Path(task_path), repo)
-    guardrails_file = _resolve_guardrails_path(repo, guardrails_path)
+    guardrails_file = resolve_guardrails_path(repo, guardrails_path)
     config_mode = "configured" if guardrails_file else "generic"
     first_run_guidance = config_mode == "generic"
     out_dir = Path(output_dir) if output_dir else Path("forgebench-output")
@@ -78,6 +79,10 @@ def run_review(
     findings = _dedupe_findings(deterministic_findings + static_findings + guardrail_findings)
     findings, static_signals, policy_decision = apply_guardrails_policy(diff_summary, findings, static_signals, guardrails)
     static_signals["config_mode"] = config_mode
+    if guardrails.sources:
+        static_signals["policy_sources"] = list(guardrails.sources)
+    if guardrails.team:
+        static_signals["policy_team"] = guardrails.team
     findings = _apply_generic_mode_calibration(findings, diff_summary) if config_mode == "generic" else findings
 
     llm_config = resolve_llm_config(
@@ -181,13 +186,6 @@ def run_review(
         guardrails=guardrails,
         output_dir=out_dir,
     )
-
-
-def _resolve_guardrails_path(repo: Path, guardrails_path: str | Path | None) -> Path | None:
-    if guardrails_path:
-        return _resolve_input_path(Path(guardrails_path), repo)
-    candidate = repo / "forgebench.yml"
-    return candidate if candidate.exists() else None
 
 
 def _validate_inputs(repo_path: Path, diff_path: Path, task_path: Path, guardrails_path: Path | None) -> None:
