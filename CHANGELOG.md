@@ -12,6 +12,7 @@
 
 - EO-005 (integrations): Cursor review rule, MCP server, and `forgebench repair` for review → paste repair prompt workflow.
 - EO-005 (benchmark): Merge Risk Benchmark page and `forgebench benchmark` CLI over the golden corpus.
+- EO-005 (marketplace): GitHub Marketplace listing prep for the ForgeBench Action.
 - EO-004 (LLM provider): OpenAI-compatible built-in LLM provider (`--llm-provider openai`, `FORGEBENCH_LLM_API_KEY`), and `FORGEBENCH_LLM_COMMAND` default for command provider.
 - EO-004 (reviewers): Dependency Watcher v0, Repo Convention Reviewer, and improved Test Skeptic with setup-only and paired-test-path signals.
 - EO-004 (path filter): Monorepo `review_scope` include/exclude path filters with package-root detection hints.

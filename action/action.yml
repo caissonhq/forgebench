@@ -1,5 +1,8 @@
 name: ForgeBench
-description: Review AI-generated pull request diffs before merge.
+description: Review AI-generated pull request diffs for merge risk before they reach main.
+branding:
+  icon: shield
+  color: blue
 
 inputs:
   pr-url:

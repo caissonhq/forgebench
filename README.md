@@ -737,6 +737,12 @@ Publishable benchmark content: [docs/merge-risk-benchmark.md](docs/merge-risk-be
 forgebench benchmark --cases examples/golden_cases
 ```
 
+## GitHub Marketplace Action
+
+Action README: [action/README.md](action/README.md)
+
+Marketplace listing prep: [docs/github-marketplace-listing.md](docs/github-marketplace-listing.md)
+
 ## Sample Reports
 
 ForgeBench includes synthetic, human-approved sample reports under [examples/sample_report](examples/sample_report). They are designed to show first-run output shape for a `BLOCK` case and a `LOW_CONCERN` case. They are not real customer reports and do not contain proprietary code.
