@@ -4,8 +4,18 @@ ForgeBench is currently a local CLI proof for adversarial pre-merge QA on coding
 
 ## Local Setup
 
+From PyPI:
+
+```bash
+python3 -m pip install forgebench
+forgebench doctor
+```
+
+From source:
+
 ```bash
 python3 -m pip install -e .
+forgebench doctor
 ```
 
 ## Test

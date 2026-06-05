@@ -12,6 +12,7 @@ class InstallDocsTests(unittest.TestCase):
         readme = (ROOT / "README.md").read_text(encoding="utf-8")
 
         self.assertIn("pip install forgebench", readme)
+        self.assertIn("forgebench doctor", readme)
         self.assertIn("forgebench review-pr PR_URL", readme)
         self.assertIn("forgebench init", readme)
         self.assertIn("--guardrails forgebench.yml", readme)

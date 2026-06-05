@@ -11,7 +11,7 @@ inputs:
     required: false
     default: forgebench.yml
   run-checks:
-    description: Run configured deterministic checks.
+    description: Run configured deterministic checks against a temporary PR worktree (--checkout-pr is added automatically).
     required: false
     default: "false"
   post-comment:

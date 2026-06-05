@@ -25,9 +25,9 @@ jobs:
       # to write the generated PR summary back to the pull request.
       #
       # - name: ForgeBench review and post comment
-      #   uses: caissonhq/forgebench/action@main
+      #   uses: caissonhq/forgebench/action@v0.9.0
       #   env:
       #     GH_TOKEN: ${{ github.token }}
       #   with:
-      #     run-checks: "true"
+      #     run-checks: "true"   # action also enables --checkout-pr
       #     post-comment: "true"

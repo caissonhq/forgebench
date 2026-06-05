@@ -32,3 +32,33 @@ jobs:
 
       - name: Run calibration
         run: PYTHONDONTWRITEBYTECODE=1 python -m forgebench calibrate --cases examples/golden_cases
+
+  smoke-install:
+    name: PyPI wheel smoke (Python 3.12)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Build wheel and sdist
+        run: |
+          python -m pip install --upgrade pip build
+          python -m build
+
+      - name: Install built distribution in a clean venv
+        run: |
+          python -m venv /tmp/forgebench-smoke-venv
+          /tmp/forgebench-smoke-venv/bin/pip install --upgrade pip
+          /tmp/forgebench-smoke-venv/bin/pip install dist/forgebench-*.whl
+
+      - name: Smoke test installed CLI
+        run: |
+          /tmp/forgebench-smoke-venv/bin/forgebench --version
+          /tmp/forgebench-smoke-venv/bin/forgebench --help
+          /tmp/forgebench-smoke-venv/bin/forgebench doctor
+          /tmp/forgebench-smoke-venv/bin/python -c "import forgebench; assert forgebench.__version__ == '0.9.0'"

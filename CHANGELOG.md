@@ -1,8 +1,14 @@
 # Changelog
 
-## Unreleased
+## 0.9.0 — 2026-06-05
 
-- Sprint 13: Bumped package version to `0.9.0`, bumped JSON schema to `1.2.0`, added generic-mode first-run guidance, calibrated unconfigured repo severity to reduce path-based noise, added `forgebench init` presets, and added local feedback-to-guardrails suggestion output.
+- Published to PyPI as `forgebench==0.9.0` with README-on-PyPI metadata and Apache-2.0 license.
+- Added `forgebench doctor` for first-run install and tooling checks.
+- `review-pr --run-checks` now requires `--checkout-pr` so checks never run against the wrong checkout.
+- GitHub Action: `run-checks: "true"` automatically adds `--checkout-pr`.
+- CI: wheel install smoke test verifies `pip install` and `forgebench doctor`.
+
+## Unreleased
 - Sprint 12A: Bumped package version to `0.8.0`, added the narrow Regression Hunter lens for potentially load-bearing assertion removal, added synthetic Regression Hunter golden cases, and added calibration posture/finding/lens summaries. Real anonymized PR corpus work remains blocked pending approved source material.
 - Sprint 11: Bumped package version to `0.7.0`, added a safe-default GitHub Action wrapper, simplified install docs, and hardened security/trust-boundary documentation.
 - Sprint 10: Bumped package version to `0.6.0`, bumped JSON schema to `1.1.0`, added stable finding UIDs/kinds, local-only feedback logging, and a dogfood feedback summary script.

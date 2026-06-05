@@ -41,6 +41,14 @@ Install ForgeBench:
 pip install forgebench
 ```
 
+Verify your local install and tooling:
+
+```bash
+forgebench doctor
+```
+
+`forgebench doctor` checks Python, the installed package, git, optional GitHub CLI auth, and a writable `forgebench-output/` directory. Fix any failed checks before running PR review.
+
 First run a PR review with generic heuristics:
 
 ```bash
@@ -178,19 +186,13 @@ Inside it, ForgeBench writes:
 - `repair-prompt.md`
 - `pr-comment.md`
 
-To include configured local checks:
-
-```bash
-forgebench review-pr https://github.com/OWNER/REPO/pull/123 --run-checks
-```
-
-Important: without `--checkout-pr`, deterministic checks run against the current local repo checkout, not the PR branch.
-
-To run configured checks against the actual PR code, ask ForgeBench to prepare a temporary git worktree:
+To run configured checks against the actual PR code, use a temporary git worktree. `--run-checks` requires `--checkout-pr`:
 
 ```bash
 forgebench review-pr https://github.com/OWNER/REPO/pull/123 --checkout-pr --run-checks
 ```
+
+The GitHub Action enables `--checkout-pr` automatically when `run-checks: "true"`.
 
 ForgeBench fetches the PR head into a temporary namespaced ref, creates a detached worktree, runs checks from that worktree, and removes the worktree/ref by default. It does not mutate your current checkout.
 
@@ -257,7 +259,7 @@ See [examples/github-action-usage.yml](examples/github-action-usage.yml) for a f
 Safe defaults:
 
 - `post-comment` defaults to `false`; the action writes local artifacts unless you explicitly set `post-comment: "true"`.
-- `run-checks` defaults to `false`; deterministic checks run only when configured in `forgebench.yml` and requested.
+- `run-checks` defaults to `false`; when enabled, the action also uses `--checkout-pr` so checks run against PR code.
 - Missing `forgebench.yml` falls back to generic review rules.
 - LLM review is off unless `llm-review: "true"` is provided.
 

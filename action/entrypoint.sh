@@ -77,7 +77,8 @@ else
 fi
 
 if is_true "${RUN_CHECKS}"; then
-  command+=(--run-checks)
+  command+=(--run-checks --checkout-pr)
+  echo "ForgeBench action: run-checks enabled; using --checkout-pr so checks run against PR code."
 fi
 
 if is_true "${POST_COMMENT}"; then

@@ -227,5 +227,22 @@ class CliTests(unittest.TestCase):
             self.assertIn("tests_failed", {finding["id"] for finding in payload["findings"]})
 
 
+    def test_review_pr_run_checks_requires_checkout_pr(self) -> None:
+        stderr = StringIO()
+
+        with self.assertRaises(SystemExit) as raised:
+            with redirect_stderr(stderr):
+                main(
+                    [
+                        "review-pr",
+                        "https://github.com/owner/repo/pull/1",
+                        "--run-checks",
+                    ]
+                )
+
+        self.assertEqual(raised.exception.code, 2)
+        self.assertIn("--checkout-pr", stderr.getvalue())
+
+
 if __name__ == "__main__":
     unittest.main()

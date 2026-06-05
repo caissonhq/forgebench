@@ -59,6 +59,7 @@ class GitHubActionTests(unittest.TestCase):
 
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertIn("--run-checks", result.args)
+        self.assertIn("--checkout-pr", result.args)
 
     def test_entrypoint_maps_llm_review_flag(self) -> None:
         result = _run_entrypoint(

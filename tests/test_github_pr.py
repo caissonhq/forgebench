@@ -181,23 +181,17 @@ class GitHubPRTests(unittest.TestCase):
         self.assertNotIn("You are repairing an AI-generated code change", comment)
         self.assertLess(len(comment), 4000)
 
-    def test_review_pr_with_run_checks_includes_checkout_caveat(self) -> None:
-        with TemporaryDirectory() as tmp:
-            result = run_github_pr_review(
+    def test_run_checks_without_checkout_pr_raises(self) -> None:
+        with self.assertRaises(GitHubPRError) as raised:
+            run_github_pr_review(
                 repo_path=ROOT,
                 pr_url=PR_URL,
                 guardrails_path=FIXTURES / "checks_all_pass.yml",
-                output_dir=Path(tmp) / "out",
                 run_checks=True,
                 client=FakeGitHubPRClient(),
             )
-            markdown = result.review_result.written_paths["markdown"].read_text(encoding="utf-8")
-            comment = result.comment_path.read_text(encoding="utf-8")
 
-        caveat = "Deterministic checks were run against the current local checkout, not the PR checkout."
-        self.assertIn(caveat, markdown)
-        self.assertIn(caveat, comment)
-        self.assertEqual(result.pr_checkout.checks_target, "current_checkout")
+        self.assertIn("checkout_pr", str(raised.exception))
 
     def test_checkout_pr_creates_checkout_metadata(self) -> None:
         with TemporaryDirectory() as tmp:

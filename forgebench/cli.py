@@ -6,6 +6,7 @@ from pathlib import Path
 
 from forgebench import __version__
 from forgebench.calibration import format_calibration_result, run_calibration
+from forgebench.doctor import format_doctor_report, run_doctor
 from forgebench.feedback import FeedbackError, append_feedback, format_feedback_summary, suggest_guardrails, summarize_feedback
 from forgebench.github_pr import GitHubPRError, GitHubPRReviewResult, run_github_pr_review
 from forgebench.init import InitError, write_starter_guardrails
@@ -19,6 +20,9 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.command == "calibrate":
         return _run_calibrate(args)
+
+    if args.command == "doctor":
+        return _run_doctor(args)
 
     if args.command == "init":
         return _run_init(args)
@@ -34,6 +38,12 @@ def main(argv: list[str] | None = None) -> int:
         return 2
 
     return _run_review(args)
+
+
+def _run_doctor(args: argparse.Namespace) -> int:
+    report = run_doctor(repo_path=args.repo)
+    print(format_doctor_report(report))
+    return report.exit_code
 
 
 def _run_init(args: argparse.Namespace) -> int:
@@ -82,6 +92,11 @@ def _run_review_pr(args: argparse.Namespace) -> int:
     pr_url = args.pr_url or args.pr_url_option
     if not pr_url:
         _fail("review-pr requires a GitHub PR URL.")
+    if args.run_checks and not args.checkout_pr:
+        _fail(
+            "review-pr --run-checks requires --checkout-pr so deterministic checks run against PR code, "
+            "not your current checkout."
+        )
     if args.post_comment and not args.dry_run:
         print("Posting ForgeBench comment to PR...")
     try:
@@ -168,6 +183,9 @@ def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="forgebench", description="Adversarial pre-merge QA for coding-agent output.")
     parser.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
     subparsers = parser.add_subparsers(dest="command")
+
+    doctor = subparsers.add_parser("doctor", help="Verify local install, tooling, and first-run readiness.")
+    doctor.add_argument("--repo", required=False, default=".", help="Repository path to inspect. Defaults to current directory.")
 
     init = subparsers.add_parser("init", help="Write a starter forgebench.yml for a local repo.")
     init.add_argument("--repo", required=False, default=".", help="Repository to inspect. Defaults to current directory.")

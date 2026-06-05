@@ -93,6 +93,13 @@ Regression Hunter is the first narrow Phase 2 lens. It only checks for potential
 - Generic mode is intentionally less strict for unconfigured repos; teams should still add `forgebench.yml` before relying on strict posture decisions.
 - Feedback is local-only and useful for alpha dogfood, but ForgeBench does not aggregate or upload feedback anywhere. Feedback suggestions do not automatically tune future runs.
 
+## Distribution (Executive Order 001)
+
+- PyPI package: `forgebench==0.9.0` (`pip install forgebench`)
+- First-run check: `forgebench doctor`
+- GitHub Action: `run-checks: "true"` automatically enables PR worktree checkout
+- CI: `smoke-install` job builds the wheel and verifies install + doctor
+
 ## Required Before CAI-5 Done
 
 - CAI-7 Phase 1 dogfood accepted.

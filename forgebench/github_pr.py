@@ -446,6 +446,10 @@ def run_github_pr_review(
     repo = Path(repo_path)
     if not repo.exists() or not repo.is_dir():
         raise ReviewInputError(f"repo path does not exist or is not a directory: {repo}")
+    if run_checks and not checkout_pr:
+        raise GitHubPRError(
+            "run_checks requires checkout_pr so deterministic checks run against PR code, not the current checkout."
+        )
 
     ref = parse_pr_url(pr_url)
     out_dir = Path(output_dir) if output_dir else Path("forgebench-output") / f"pr-{ref.owner}-{ref.repo}-{ref.number}"
