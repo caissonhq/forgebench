@@ -1,0 +1,44 @@
+{
+  "name": "vscode-forgebench",
+  "displayName": "ForgeBench",
+  "description": "Run ForgeBench merge-risk review from VS Code (scaffold).",
+  "version": "0.1.0",
+  "publisher": "caissonhq",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onCommand:forgebench.reviewDiff",
+    "onCommand:forgebench.openReport",
+    "onCommand:forgebench.exportDashboard"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "forgebench.reviewDiff",
+        "title": "ForgeBench: Review Diff"
+      },
+      {
+        "command": "forgebench.openReport",
+        "title": "ForgeBench: Open Report"
+      },
+      {
+        "command": "forgebench.exportDashboard",
+        "title": "ForgeBench: Export Policy Dashboard"
+      }
+    ]
+  },
+  "scripts": {
+    "compile": "tsc -p .",
+    "watch": "tsc -watch -p ."
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "@types/vscode": "^1.85.0",
+    "typescript": "^5.4.0"
+  }
+}

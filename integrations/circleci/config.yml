@@ -1,0 +1,36 @@
+# ForgeBench merge-risk review for CircleCI pull requests.
+# Merge relevant jobs into your .circleci/config.yml.
+
+version: 2.1
+
+jobs:
+  forgebench:
+    docker:
+      - image: cimg/python:3.12
+    steps:
+      - checkout
+      - run:
+          name: Install ForgeBench
+          command: |
+            python -m pip install --upgrade pip
+            pip install forgebench
+            forgebench doctor
+      - run:
+          name: Review PR diff
+          command: |
+            forgebench review-pr "${CIRCLE_PULL_REQUEST}" \
+              --repo . \
+              --guardrails forgebench.yml \
+              --checkout-pr \
+              --run-checks
+      - store_artifacts:
+          path: forgebench-output
+          destination: forgebench-output
+
+workflows:
+  forgebench_review:
+    jobs:
+      - forgebench:
+          filters:
+            branches:
+              ignore: main

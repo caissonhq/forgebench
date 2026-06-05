@@ -1,0 +1,30 @@
+# ForgeBench merge-risk review for GitLab merge requests.
+# Copy into your repo as .gitlab-ci.yml or include from a shared template.
+
+stages:
+  - review
+
+variables:
+  PIP_DISABLE_PIP_VERSION_CHECK: "1"
+
+forgebench:
+  stage: review
+  image: python:3.12-slim
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+  before_script:
+    - python -m pip install --upgrade pip
+    - pip install forgebench
+    - forgebench doctor
+  script:
+    - |
+      forgebench review-pr "${CI_MERGE_REQUEST_PROJECT_URL}/-/merge_requests/${CI_MERGE_REQUEST_IID}" \
+        --repo . \
+        --guardrails forgebench.yml \
+        --checkout-pr \
+        --run-checks
+  artifacts:
+    when: always
+    paths:
+      - forgebench-output/
+    expire_in: 14 days

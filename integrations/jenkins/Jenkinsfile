@@ -1,0 +1,37 @@
+// ForgeBench merge-risk review for Jenkins multibranch / PR builds.
+// Requires CHANGE_URL (GitHub) or equivalent PR URL in environment.
+
+pipeline {
+  agent any
+
+  stages {
+    stage('Setup') {
+      steps {
+        sh 'python3 -m pip install --upgrade pip'
+        sh 'pip install forgebench'
+        sh 'forgebench doctor'
+      }
+    }
+
+    stage('ForgeBench Review') {
+      when {
+        expression { env.CHANGE_URL != null && env.CHANGE_URL.trim() }
+      }
+      steps {
+        sh '''
+          forgebench review-pr "${CHANGE_URL}" \
+            --repo . \
+            --guardrails forgebench.yml \
+            --checkout-pr \
+            --run-checks
+        '''
+      }
+    }
+  }
+
+  post {
+    always {
+      archiveArtifacts artifacts: 'forgebench-output/**', allowEmptyArchive: true
+    }
+  }
+}
