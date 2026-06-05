@@ -2,6 +2,32 @@
 
 Use this as a concise Lovable update prompt for the public alpha site. Do not imply hosted SaaS, OAuth, or the full 8-reviewer set.
 
+## EO-006 marketing refresh (2026-06-05)
+
+Full home page copy: [docs/marketing-home.md](docs/marketing-home.md)
+
+Add or refresh:
+
+- **Team & Enterprise** section — shared `forgebench.yml` layers (`extends`, `include`, `FORGEBENCH_ORG_POLICY`), link [docs/team-enterprise.md](docs/team-enterprise.md)
+- **Policy dashboard skeleton** — local `forgebench dashboard` HTML export; frame as preview/skeleton, not hosted SaaS
+- **CI integrations grid** — GitHub Action (existing) + GitLab CI, CircleCI, Jenkins → [docs/ci-integrations.md](docs/ci-integrations.md)
+- **IDE integrations** — Cursor/MCP (existing) + VS Code & JetBrains scaffolds → [docs/ide-integrations.md](docs/ide-integrations.md)
+- **Public roadmap** — link [ROADMAP.md](ROADMAP.md) in nav/footer
+- **Contribute** — link [CONTRIBUTING.md](CONTRIBUTING.md), golden-case issue template, community process
+
+Visual polish:
+
+- Three-column value props: posture / guardrails / agent loop
+- Integration logo row (GitHub, GitLab, CircleCI, Jenkins, Cursor, VS Code)
+- Sample report carousel: synthetic + 3 EO-002 anonymized reports
+- Benchmark callout with `forgebench benchmark` CTA
+
+Still do not claim:
+
+- Hosted policy dashboard SaaS (skeleton export only)
+- OAuth or GitHub App for core review
+- Numeric safety score or auto-merge
+
 ## EO-005 additions (2026-06-05)
 
 - Add a **Merge Risk Benchmark** page using [docs/merge-risk-benchmark.md](docs/merge-risk-benchmark.md)

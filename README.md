@@ -25,8 +25,8 @@ ForgeBench does not prove code is safe. It highlights merge risk before AI-gener
 
 ## What ForgeBench Is Not
 
-- Not a web app or dashboard.
-- Not a hosted service.
+- Not a hosted web app or SaaS dashboard (local policy dashboard export only).
+- Not a hosted review service.
 - Not a generic eval platform.
 - Not a GitHub App or hosted PR review service.
 - Not an automatic PR commenter unless `--post-comment` is explicitly passed.
@@ -726,6 +726,27 @@ forgebench feedback export --out forgebench-output/beta-feedback.json
 
 See [docs/beta-launch.md](docs/beta-launch.md).
 
+## Team and Enterprise policy
+
+Shared org policy layers:
+
+```bash
+export FORGEBENCH_ORG_POLICY=./org-policy/forgebench-org.yml
+forgebench review --repo . --diff ./patch.diff --task ./task.md --guardrails forgebench.yml
+forgebench dashboard --repo .
+```
+
+Repo files can use `extends` and `include` to merge shared policy. Examples: [examples/org-policy](examples/org-policy). Docs: [docs/team-enterprise.md](docs/team-enterprise.md).
+
+## CI and IDE integrations
+
+| Platform | Doc / scaffold |
+|----------|----------------|
+| GitHub Actions | [action/README.md](action/README.md) |
+| GitLab / CircleCI / Jenkins | [docs/ci-integrations.md](docs/ci-integrations.md) |
+| Cursor + MCP | [docs/cursor-integration.md](docs/cursor-integration.md) |
+| VS Code / JetBrains | [docs/ide-integrations.md](docs/ide-integrations.md) |
+
 ## Cursor and MCP integrations
 
 Project rule: [.cursor/rules/forgebench-review.mdc](.cursor/rules/forgebench-review.mdc)
@@ -745,6 +766,12 @@ Publishable benchmark content: [docs/merge-risk-benchmark.md](docs/merge-risk-be
 ```bash
 forgebench benchmark --cases examples/golden_cases
 ```
+
+## Public roadmap and contributing
+
+- Roadmap: [ROADMAP.md](ROADMAP.md)
+- Contributing: [CONTRIBUTING.md](CONTRIBUTING.md)
+- Marketing home copy: [docs/marketing-home.md](docs/marketing-home.md)
 
 ## GitHub Marketplace Action
 
@@ -816,4 +843,4 @@ See `SITE_SYNC_NOTES.md` for the Lovable update prompt that keeps the public alp
 - LLM review is opt-in and advisory. The command provider can run any command you configure, so only use it with trusted local commands.
 - GitHub PR intake depends on the local `gh` CLI and network/auth state. It is not a GitHub App.
 - ForgeBench does not understand full program behavior.
-- Current output is local files unless `--post-comment` is explicitly passed. There is no hosted service, dashboard, or built-in external LLM call.
+- Current output is local files unless `--post-comment` is explicitly passed. There is no hosted review service or built-in external LLM call. `forgebench dashboard` exports a local policy preview skeleton only.

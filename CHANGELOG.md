@@ -10,6 +10,11 @@
 
 ## Unreleased
 
+- EO-006 (team): Shared policy layers via `extends`, `include`, and `FORGEBENCH_ORG_POLICY`; `team` metadata and `policy_sources` in review output.
+- EO-006 (dashboard): `forgebench dashboard` local policy dashboard skeleton (HTML + JSON manifest).
+- EO-006 (integrations): GitLab CI, CircleCI, and Jenkins recipes; VS Code and JetBrains IDE plugin scaffolds.
+- EO-006 (community): Public [ROADMAP.md](ROADMAP.md), contribution process refresh, GitHub issue/PR templates.
+- EO-006 (marketing): [docs/marketing-home.md](docs/marketing-home.md) and EO-006 [SITE_SYNC_NOTES.md](SITE_SYNC_NOTES.md) refresh.
 - EO-005 (integrations): Cursor review rule, MCP server, and `forgebench repair` for review → paste repair prompt workflow.
 - EO-005 (benchmark): Merge Risk Benchmark page and `forgebench benchmark` CLI over the golden corpus.
 - EO-005 (marketplace): GitHub Marketplace listing prep for the ForgeBench Action.

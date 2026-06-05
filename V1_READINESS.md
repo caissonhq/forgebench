@@ -28,6 +28,10 @@ ForgeBench does not prove code is safe. It highlights merge risk before AI-gener
 - Local-only feedback logging, dogfood feedback summaries, and guardrail tuning suggestions.
 - Golden corpus calibration with posture distribution, finding-kind counts, and review-lens fire-rate summaries.
 - Synthetic, human-approved sample reports for first-run UX.
+- Shared policy layers (`extends`, `include`, `FORGEBENCH_ORG_POLICY`) for Team/Enterprise guardrails.
+- Local policy dashboard skeleton export via `forgebench dashboard`.
+- CI recipes for GitLab, CircleCI, and Jenkins; IDE plugin scaffolds for VS Code and JetBrains.
+- Public roadmap and community contribution process.
 
 ## Evidence Hierarchy
 
@@ -70,7 +74,7 @@ Regression Hunter is the first narrow Phase 2 lens. It only checks for potential
 
 - No hosted service.
 - No GitHub App or OAuth flow.
-- No dashboard.
+- No hosted dashboard SaaS (local policy dashboard export skeleton only).
 - No billing.
 - No auto-fix.
 - No auto-merge.
@@ -90,6 +94,7 @@ Regression Hunter is the first narrow Phase 2 lens. It only checks for potential
 - EO-002 (2026-06-05): 10 real agent PRs dogfooded; 3 anonymized reports in `examples/real_reports/`; 10 `dogfood_*` golden cases added (47 total calibration cases).
 - EO-004 (2026-06-05): OpenAI-compatible LLM provider, `FORGEBENCH_LLM_COMMAND` env default, Dependency Watcher v0, Repo Convention Reviewer, improved Test Skeptic, `review_scope` monorepo path filters, richer repair prompts.
 - EO-005 (2026-06-05): Cursor rule + MCP server, Merge Risk Benchmark page, GitHub Marketplace Action prep, beta structured feedback export and `forgebench repair`.
+- EO-006 (2026-06-05): Shared policy layers, `forgebench dashboard` skeleton, GitLab/CircleCI/Jenkins CI recipes, VS Code/JetBrains scaffolds, public roadmap and contribution templates.
 - EO-003 (2026-06-05): SARIF output, GitHub Check Run annotations, `forgebench validate`, Security Reviewer v0, and `docs/trust-model.md`.
 - EO-002 generic-mode noise fixes: suppress markdown/agent-policy `ui_copy_changed`, exclude package/tsconfig/Rust-only persistence misfires.
 - Labeled false-positive rate in generic mode: **63.2%** on EO-002 findings before EO-003 noise fixes (dominated by `ui_copy_changed` on markdown/agent-policy PRs).
