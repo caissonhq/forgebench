@@ -88,6 +88,7 @@ Regression Hunter is the first narrow Phase 2 lens. It only checks for potential
 - LLM-assisted lenses are limited to Test Skeptic v2 and optional Regression Hunter refinement when `--llm-review` is configured.
 - The GitHub Action wrapper packages the local CLI for workflows. It is not a hosted GitHub App.
 - EO-002 (2026-06-05): 10 real agent PRs dogfooded; 3 anonymized reports in `examples/real_reports/`; 10 `dogfood_*` golden cases added (47 total calibration cases).
+- EO-004 (2026-06-05): Dependency Watcher v0, Repo Convention Reviewer, and improved Test Skeptic heuristic signals.
 - EO-003 (2026-06-05): SARIF output, GitHub Check Run annotations, `forgebench validate`, Security Reviewer v0, and `docs/trust-model.md`.
 - EO-002 generic-mode noise fixes: suppress markdown/agent-policy `ui_copy_changed`, exclude package/tsconfig/Rust-only persistence misfires.
 - Labeled false-positive rate in generic mode: **63.2%** on EO-002 findings before EO-003 noise fixes (dominated by `ui_copy_changed` on markdown/agent-policy PRs).
@@ -113,9 +114,9 @@ Regression Hunter is the first narrow Phase 2 lens. It only checks for potential
 ## Deferred To Phase 2 Reviewers
 
 - Security Reviewer beyond v0 pattern matching (dataflow, dependency CVEs, sandboxed execution).
-- Dependency Watcher as a standalone reviewer.
+- Dependency Watcher beyond v0 manifest heuristics (CVE lookup, license policy).
 - Broader regression analysis beyond load-bearing assertion removal.
-- Repo Convention Reviewer.
+- Repo Convention Reviewer beyond debug/TODO pattern matching.
 - Any fuller reviewer/persona system.
 
 ## Recommended Next Dogfood Plan

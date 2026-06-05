@@ -20,6 +20,8 @@ CONTRACT_KEEPER = "contract_keeper"
 PRODUCT_GUARDRAIL_REVIEWER = "product_guardrail_reviewer"
 REGRESSION_HUNTER = "regression_hunter"
 SECURITY_REVIEWER = "security_reviewer"
+DEPENDENCY_WATCHER = "dependency_watcher"
+REPO_CONVENTION_REVIEWER = "repo_convention_reviewer"
 
 
 @dataclass(frozen=True)
@@ -39,6 +41,8 @@ __all__ = [
     "PRODUCT_GUARDRAIL_REVIEWER",
     "REGRESSION_HUNTER",
     "SECURITY_REVIEWER",
+    "DEPENDENCY_WATCHER",
+    "REPO_CONVENTION_REVIEWER",
     "ReviewerContext",
     "SCOPE_AUDITOR",
     "TEST_SKEPTIC",

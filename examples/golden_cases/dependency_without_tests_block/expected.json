@@ -4,7 +4,10 @@
   "expected_posture": "BLOCK",
   "required_finding_ids": ["dependency_surface_changed"],
   "allowed_extra_finding_ids": [
-    "scope_auditor_task_scope_expansion"
+    "scope_auditor_task_scope_expansion",
+    "dependency_watcher_manifest_without_tests",
+    "dependency_watcher_major_version_bump",
+    "dependency_watcher_new_runtime_dependency"
   ],
   "forbidden_finding_ids": ["deleted_tests", "tests_failed"],
   "allow_unlisted_findings": false,

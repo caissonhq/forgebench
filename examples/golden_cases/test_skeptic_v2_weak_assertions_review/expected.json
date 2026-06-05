@@ -8,7 +8,8 @@
     "test_skeptic_v2_weak_assertion_semantics"
   ],
   "allowed_extra_finding_ids": [
-    "test_skeptic_weak_test_signal"
+    "test_skeptic_weak_test_signal",
+    "test_skeptic_setup_only_test_changes"
   ],
   "required_reviewer_ids": [
     "test_skeptic_v2"

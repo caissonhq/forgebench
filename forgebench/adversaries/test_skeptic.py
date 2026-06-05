@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from pathlib import PurePosixPath
+
 from forgebench.adversaries.models import ReviewerContext, TEST_SKEPTIC
 from forgebench.models import Confidence, EvidenceType, Finding, Severity, SpecializedReviewerResult, SpecializedReviewerStatus
 
@@ -18,6 +20,20 @@ ASSERTION_TOKENS = (
     "assertequal",
     "asserttrue",
     "assertfalse",
+    "mock(",
+    "patch(",
+    "raises(",
+)
+
+SETUP_ONLY_TOKENS = (
+    "import ",
+    "from ",
+    "@pytest",
+    "@mock",
+    "fixture",
+    "setup",
+    "teardown",
+    "#",
 )
 
 
@@ -31,6 +47,7 @@ def review(context: ReviewerContext) -> SpecializedReviewerResult:
 
     if "implementation_without_tests" in existing_ids:
         referenced.append("implementation_without_tests")
+        uncovered = _source_files_without_paired_tests(context, source_files, test_files)
         findings.append(
             Finding(
                 id="test_skeptic_missing_behavior_coverage",
@@ -42,12 +59,13 @@ def review(context: ReviewerContext) -> SpecializedReviewerResult:
                 severity=Severity.MEDIUM,
                 confidence=Confidence.LOW if generic_mode else Confidence.MEDIUM,
                 evidence_type=EvidenceType.REVIEWER,
-                files=source_files,
+                files=uncovered or source_files,
                 evidence=[
                     "Static finding implementation_without_tests is present.",
                     "No likely test file changed with the source behavior change.",
                 ]
-                + [f"Source file changed without test coverage: {path}" for path in source_files[:8]],
+                + [f"Source file changed without test coverage: {path}" for path in (uncovered or source_files)[:8]]
+                + _paired_test_hints(uncovered or source_files),
                 explanation=(
                     "The patch changes likely implementation files without a corresponding test update. "
                     "In generic mode this is a coverage-review prompt, not proof that behavior lacks tests."
@@ -90,6 +108,28 @@ def review(context: ReviewerContext) -> SpecializedReviewerResult:
             )
         )
 
+    setup_only_tests = _setup_only_test_files(context, test_files)
+    if source_files and setup_only_tests:
+        findings.append(
+            Finding(
+                id="test_skeptic_setup_only_test_changes",
+                title="Test files changed with setup-only lines",
+                severity=Severity.ADVISORY,
+                confidence=Confidence.LOW,
+                evidence_type=EvidenceType.REVIEWER,
+                files=setup_only_tests,
+                evidence=[
+                    "Test file added lines appear to be imports, fixtures, or comments without assertion tokens.",
+                ]
+                + [f"Setup-only test change: {path}" for path in setup_only_tests[:8]],
+                explanation=(
+                    "Test files changed alongside source files, but added lines look like scaffolding rather than behavior assertions."
+                ),
+                suggested_fix="Add assertions that prove the changed source behavior, not just test scaffolding.",
+                reviewer=TEST_SKEPTIC,
+            )
+        )
+
     if "deleted_tests" in existing_ids:
         referenced.append("deleted_tests")
     if "tests_assertions_removed_without_replacement" in existing_ids:
@@ -115,6 +155,49 @@ def review(context: ReviewerContext) -> SpecializedReviewerResult:
     )
 
 
+def _source_files_without_paired_tests(context: ReviewerContext, source_files: list[str], test_files: list[str]) -> list[str]:
+    if not source_files:
+        return []
+    test_set = {path.replace("\\", "/") for path in test_files}
+    uncovered: list[str] = []
+    for source in source_files:
+        candidates = _likely_test_paths_for_source(source)
+        if not test_set.intersection(candidates):
+            uncovered.append(source)
+    return sorted(uncovered)
+
+
+def _likely_test_paths_for_source(source_path: str) -> set[str]:
+    normalized = source_path.replace("\\", "/")
+    path = PurePosixPath(normalized)
+    stem = path.stem
+    parent = str(path.parent)
+    candidates = {
+        f"{parent}/test_{stem}.py",
+        f"{parent}/tests/test_{stem}.py",
+        f"{parent}/{stem}_test.py",
+        f"{parent}/{stem}.test.ts",
+        f"{parent}/{stem}.test.tsx",
+        f"{parent}/{stem}.spec.ts",
+        f"{parent}/{stem}.spec.tsx",
+        f"{parent}/__tests__/{stem}.ts",
+        f"{parent}/__tests__/{stem}.tsx",
+    }
+    if parent != ".":
+        candidates.add(f"tests/test_{stem}.py")
+        candidates.add(f"test/test_{stem}.py")
+    return candidates
+
+
+def _paired_test_hints(source_files: list[str]) -> list[str]:
+    hints: list[str] = []
+    for source in source_files[:4]:
+        likely = sorted(_likely_test_paths_for_source(source))[:2]
+        if likely:
+            hints.append(f"Likely test paths for {source}: {', '.join(likely)}")
+    return hints
+
+
 def _weak_test_files(context: ReviewerContext) -> list[str]:
     weak: list[str] = []
     for changed_file in context.diff.files:
@@ -124,6 +207,21 @@ def _weak_test_files(context: ReviewerContext) -> list[str]:
         if not any(token in added for token in ASSERTION_TOKENS):
             weak.append(changed_file.path)
     return sorted(set(weak))
+
+
+def _setup_only_test_files(context: ReviewerContext, test_files: list[str]) -> list[str]:
+    if not test_files:
+        return []
+    setup_only: list[str] = []
+    for changed_file in context.diff.files:
+        if changed_file.path not in test_files or not changed_file.is_test or not changed_file.added_lines:
+            continue
+        added = "\n".join(changed_file.added_lines).lower()
+        if any(token in added for token in ASSERTION_TOKENS):
+            continue
+        if all(any(marker in line.lower() for marker in SETUP_ONLY_TOKENS) or not line.strip() for line in changed_file.added_lines):
+            setup_only.append(changed_file.path)
+    return sorted(set(setup_only))
 
 
 def _list_signal(context: ReviewerContext, key: str) -> list[str]:
