@@ -10,6 +10,8 @@ from typing import Any
 
 DEFAULT_FEEDBACK_LOG = Path("forgebench-output") / "feedback.jsonl"
 VALID_FEEDBACK_STATUSES = {"accepted", "dismissed", "wrong"}
+VALID_FEEDBACK_POSTURES = {"BLOCK", "REVIEW", "LOW_CONCERN"}
+VALID_AGENT_TOOLS = {"cursor", "codex", "claude", "copilot", "other"}
 
 
 class FeedbackError(ValueError):
@@ -34,21 +36,36 @@ def append_feedback(
     kind: str | None = None,
     repo_name: str | None = None,
     source: str | None = None,
+    posture: str | None = None,
+    agent_tool: str | None = None,
+    workflow: str | None = None,
+    finding_count: int | None = None,
+    review_command: str | None = None,
 ) -> Path:
     normalized_uid = uid.strip()
     if not normalized_uid:
         raise FeedbackError("finding UID is required.")
     if status not in VALID_FEEDBACK_STATUSES:
         raise FeedbackError("status must be one of: accepted, dismissed, wrong.")
+    if posture is not None and posture not in VALID_FEEDBACK_POSTURES:
+        raise FeedbackError("posture must be one of: BLOCK, REVIEW, LOW_CONCERN.")
+    if agent_tool is not None and agent_tool not in VALID_AGENT_TOOLS:
+        raise FeedbackError("agent_tool must be one of: cursor, codex, claude, copilot, other.")
+    if finding_count is not None and finding_count < 0:
+        raise FeedbackError("finding_count must be zero or positive.")
 
     path = Path(feedback_log) if feedback_log else DEFAULT_FEEDBACK_LOG
     path.parent.mkdir(parents=True, exist_ok=True)
+    structured_fields = any(
+        value is not None
+        for value in (posture, agent_tool, workflow, finding_count, review_command)
+    )
     payload: dict[str, Any] = {
         "uid": normalized_uid,
         "status": status,
         "note": note or "",
         "ts": datetime.now(timezone.utc).isoformat(),
-        "fb_version": 1,
+        "fb_version": 2 if structured_fields else 1,
     }
     if kind:
         payload["kind"] = kind
@@ -56,6 +73,16 @@ def append_feedback(
         payload["repo"] = repo_name
     if source:
         payload["source"] = source
+    if posture:
+        payload["posture"] = posture
+    if agent_tool:
+        payload["agent_tool"] = agent_tool
+    if workflow:
+        payload["workflow"] = workflow
+    if finding_count is not None:
+        payload["finding_count"] = finding_count
+    if review_command:
+        payload["review_command"] = review_command
 
     with path.open("a", encoding="utf-8") as handle:
         handle.write(json.dumps(payload, sort_keys=True) + "\n")
@@ -104,6 +131,37 @@ def summarize_feedback(feedback_logs: list[str | Path]) -> FeedbackSummary:
         missing_kind_count=missing_kind_count,
         malformed_count=malformed_count,
     )
+
+
+def export_feedback_bundle(
+    feedback_logs: list[str | Path],
+    *,
+    repo_name: str | None = None,
+    source: str = "forgebench-beta",
+) -> dict[str, Any]:
+    entries, malformed_count, missing_logs = _load_feedback_entries(feedback_logs)
+    summary = summarize_feedback(feedback_logs)
+    return {
+        "export_version": 1,
+        "source": source,
+        "repo": repo_name,
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "summary": {
+            "total": summary.total,
+            "status_counts": summary.status_counts,
+            "kind_counts": {
+                status: dict(counter) for status, counter in summary.kind_counts.items()
+            },
+            "missing_kind_count": summary.missing_kind_count,
+            "malformed_count": summary.malformed_count + malformed_count,
+            "missing_logs": missing_logs,
+        },
+        "entries": entries,
+        "share_instructions": (
+            "This bundle is local-only. Share it manually via a GitHub issue or email if you want "
+            "ForgeBench beta feedback reviewed. No network upload is performed automatically."
+        ),
+    }
 
 
 def format_feedback_summary(summary: FeedbackSummary) -> str:

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 import sys
 from pathlib import Path
 
@@ -8,7 +9,7 @@ from forgebench import __version__
 from forgebench.calibration import format_calibration_result, run_calibration
 from forgebench.doctor import format_doctor_report, run_doctor
 from forgebench.benchmark import build_benchmark_snapshot, format_benchmark_markdown
-from forgebench.feedback import FeedbackError, append_feedback, format_feedback_summary, suggest_guardrails, summarize_feedback
+from forgebench.feedback import FeedbackError, append_feedback, export_feedback_bundle, format_feedback_summary, suggest_guardrails, summarize_feedback
 from forgebench.mcp_server import run_mcp_server
 from forgebench.github_pr import GitHubPRError, GitHubPRReviewResult, run_github_pr_review
 from forgebench.init import InitError, write_starter_guardrails
@@ -210,6 +211,21 @@ def _run_calibrate(args: argparse.Namespace) -> int:
 
 
 def _run_feedback(args: argparse.Namespace) -> int:
+    if args.export:
+        bundle = export_feedback_bundle(
+            [args.feedback_log],
+            repo_name=args.repo_name,
+            source=args.source or "forgebench-beta",
+        )
+        if args.out:
+            output = Path(args.out)
+            output.parent.mkdir(parents=True, exist_ok=True)
+            output.write_text(json.dumps(bundle, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+            print(f"ForgeBench feedback export written to {output}.")
+        else:
+            print(json.dumps(bundle, indent=2, sort_keys=True))
+        return 0
+
     if args.suggest_guardrails:
         suggestions = suggest_guardrails([args.feedback_log])
         if args.out:
@@ -242,6 +258,11 @@ def _run_feedback(args: argparse.Namespace) -> int:
             kind=args.kind,
             repo_name=args.repo_name,
             source=args.source,
+            posture=args.posture,
+            agent_tool=args.agent,
+            workflow=args.workflow,
+            finding_count=args.finding_count,
+            review_command=args.review_command,
         )
     except FeedbackError as exc:
         _fail(str(exc))
@@ -336,7 +357,13 @@ def _build_parser() -> argparse.ArgumentParser:
     feedback.add_argument("--feedback-log", required=False, default="forgebench-output/feedback.jsonl", help="Local JSONL feedback log path.")
     feedback.add_argument("--summarize", action="store_true", help="Summarize a local feedback JSONL log.")
     feedback.add_argument("--suggest-guardrails", action="store_true", help="Suggest forgebench.yml tuning from local feedback.")
-    feedback.add_argument("--out", required=False, help="Optional path to write guardrail suggestions Markdown.")
+    feedback.add_argument("--export", action="store_true", help="Export structured beta feedback bundle as JSON.")
+    feedback.add_argument("--posture", required=False, choices=["BLOCK", "REVIEW", "LOW_CONCERN"], help="Optional review posture for structured beta feedback.")
+    feedback.add_argument("--agent", required=False, choices=["cursor", "codex", "claude", "copilot", "other"], help="Optional coding agent label for structured beta feedback.")
+    feedback.add_argument("--workflow", required=False, help="Optional workflow label, such as review_then_repair.")
+    feedback.add_argument("--finding-count", type=int, required=False, help="Optional finding count from the reviewed report.")
+    feedback.add_argument("--review-command", required=False, help="Optional command used to produce the reviewed report.")
+    feedback.add_argument("--out", required=False, help="Optional output path for export, suggestions, or other write modes.")
 
     benchmark = subparsers.add_parser("benchmark", help="Run the Merge Risk Benchmark and print publishable summary Markdown.")
     benchmark.add_argument("--cases", required=False, default="examples/golden_cases", help="Golden cases directory.")

@@ -717,6 +717,15 @@ Generate a Markdown dogfood summary from one or more feedback logs:
 python3 scripts/dogfood_summary.py forgebench-output/feedback.jsonl
 ```
 
+Structured beta feedback export:
+
+```bash
+forgebench feedback fnd_example --status dismissed --kind ui_copy_changed --agent cursor --posture REVIEW
+forgebench feedback export --out forgebench-output/beta-feedback.json
+```
+
+See [docs/beta-launch.md](docs/beta-launch.md).
+
 ## Cursor and MCP integrations
 
 Project rule: [.cursor/rules/forgebench-review.mdc](.cursor/rules/forgebench-review.mdc)

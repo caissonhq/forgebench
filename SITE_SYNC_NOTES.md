@@ -2,6 +2,14 @@
 
 Use this as a concise Lovable update prompt for the public alpha site. Do not imply hosted SaaS, OAuth, or the full 8-reviewer set.
 
+## EO-005 additions (2026-06-05)
+
+- Add a **Merge Risk Benchmark** page using [docs/merge-risk-benchmark.md](docs/merge-risk-benchmark.md)
+- Add **Cursor integration** callout linking to [docs/cursor-integration.md](docs/cursor-integration.md) and the review → repair paste workflow
+- Add **Public beta** section from [docs/beta-launch.md](docs/beta-launch.md)
+- Add **GitHub Action** marketplace CTA pointing to [action/README.md](action/README.md)
+- Mention MCP server for IDE tool integrations ([docs/mcp-server.md](docs/mcp-server.md))
+
 ## Lovable Prompt
 
 Update the ForgeBench public alpha site to reflect the current CLI alpha.

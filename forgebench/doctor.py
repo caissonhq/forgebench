@@ -81,6 +81,8 @@ def format_doctor_report(report: DoctorReport) -> str:
         lines.append("Ready for a first local review.")
         lines.append("Next: forgebench review-pr PR_URL")
         lines.append("      forgebench init --repo . --out forgebench.yml")
+        lines.append("Beta: forgebench repair --out forgebench-output   # paste prompt into Cursor/Codex")
+        lines.append("      docs/beta-launch.md")
     return "\n".join(lines)
 
 

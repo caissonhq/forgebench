@@ -10,7 +10,7 @@ import unittest
 from unittest.mock import patch
 
 from forgebench.cli import main
-from forgebench.feedback import FeedbackError, append_feedback, suggest_guardrails, summarize_feedback
+from forgebench.feedback import FeedbackError, append_feedback, export_feedback_bundle, suggest_guardrails, summarize_feedback
 
 
 class FeedbackTests(unittest.TestCase):
@@ -185,6 +185,48 @@ class FeedbackTests(unittest.TestCase):
 
         self.assertIn("Missing feedback logs:", suggestions)
         self.assertIn("Malformed feedback lines skipped: 1", suggestions)
+
+    def test_structured_feedback_uses_version_two(self) -> None:
+        with TemporaryDirectory() as tmp:
+            path = Path(tmp) / "feedback.jsonl"
+            append_feedback(
+                "fnd_beta",
+                status="dismissed",
+                feedback_log=path,
+                kind="ui_copy_changed",
+                posture="REVIEW",
+                agent_tool="cursor",
+                workflow="review_then_repair",
+                finding_count=3,
+            )
+            entry = _read_entries(path)[0]
+
+        self.assertEqual(entry["fb_version"], 2)
+        self.assertEqual(entry["posture"], "REVIEW")
+        self.assertEqual(entry["agent_tool"], "cursor")
+        self.assertEqual(entry["finding_count"], 3)
+
+    def test_export_feedback_bundle_includes_summary_and_entries(self) -> None:
+        with TemporaryDirectory() as tmp:
+            path = Path(tmp) / "feedback.jsonl"
+            append_feedback("fnd_one", status="accepted", feedback_log=path, kind="tests_failed")
+            bundle = export_feedback_bundle([path], repo_name="demo-repo")
+
+        self.assertEqual(bundle["export_version"], 1)
+        self.assertEqual(bundle["repo"], "demo-repo")
+        self.assertEqual(bundle["summary"]["total"], 1)
+        self.assertEqual(len(bundle["entries"]), 1)
+        self.assertIn("share_instructions", bundle)
+
+    def test_invalid_posture_is_rejected(self) -> None:
+        with TemporaryDirectory() as tmp:
+            with self.assertRaises(FeedbackError):
+                append_feedback(
+                    "fnd_bad",
+                    status="accepted",
+                    feedback_log=Path(tmp) / "feedback.jsonl",
+                    posture="MAYBE",
+                )
 
     def test_cli_suggest_guardrails_writes_only_when_out_is_passed(self) -> None:
         with TemporaryDirectory() as tmp:
