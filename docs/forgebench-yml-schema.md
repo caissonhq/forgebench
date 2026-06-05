@@ -41,6 +41,17 @@ Do not run checks from an untrusted PR-head `forgebench.yml`. Prefer the base-br
 - Default: `[]`
 - Purpose: Added-line substring matches that should create high-confidence guardrail findings.
 
+### `review_scope`
+
+- Type: mapping
+- Default: `{}`
+- Supported children:
+  - `include_paths`: list of glob patterns. Only changed files matching at least one pattern are reviewed.
+  - `exclude_paths`: list of glob patterns. Changed files matching any pattern are excluded after include filtering.
+- Purpose: Scope reviews to one workspace in monorepos and reduce noise from unrelated packages.
+
+When no `review_scope` is configured, ForgeBench still detects multiple package roots and reports a monorepo hint in review output.
+
 ### `checks`
 
 - Type: mapping

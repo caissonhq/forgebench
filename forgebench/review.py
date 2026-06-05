@@ -13,6 +13,7 @@ from forgebench.diff_parser import parse_diff_file
 from forgebench.guardrails import GuardrailsParseError, evaluate_guardrails, load_guardrails
 from forgebench.llm_config import resolve_llm_config
 from forgebench.llm_review import apply_llm_posture, build_review_bundle, llm_review_not_run, llm_review_skipped, run_llm_review
+from forgebench.path_filter import apply_review_scope
 from forgebench.models import Finding, ForgeBenchReport, Guardrails, LLMReviewerConfig, PRCheckoutInfo
 from forgebench.policy import apply_guardrails_policy
 from forgebench.posture import determine_posture
@@ -67,10 +68,12 @@ def run_review(
         guardrails = load_guardrails(guardrails_file)
     except GuardrailsParseError as exc:
         raise ReviewInputError(str(exc)) from exc
+    diff_summary, path_filter_meta = apply_review_scope(diff_summary, guardrails)
     deterministic_checks = run_configured_checks(repo, guardrails) if run_checks else checks_not_run()
 
     deterministic_findings = findings_from_check_results(deterministic_checks.results)
     static_findings, static_signals = run_static_checks(diff_summary)
+    static_signals.update(path_filter_meta)
     guardrail_findings, guardrail_hits = evaluate_guardrails(diff_summary, guardrails)
     findings = _dedupe_findings(deterministic_findings + static_findings + guardrail_findings)
     findings, static_signals, policy_decision = apply_guardrails_policy(diff_summary, findings, static_signals, guardrails)

@@ -27,6 +27,7 @@ KNOWN_TOP_LEVEL_KEYS = {
     "protected_behavior",
     "risk_files",
     "forbidden_patterns",
+    "review_scope",
     "checks",
     "check_timeout_seconds",
     "policy",
@@ -49,6 +50,7 @@ def parse_guardrails(text: str) -> Guardrails:
     _validate_guardrails_payload(payload)
     risk_files = _as_dict(payload.get("risk_files"))
     checks_payload = _as_dict(payload.get("checks"))
+    review_scope = _as_dict(payload.get("review_scope"))
 
     return Guardrails(
         project=_optional_string(payload.get("project")),
@@ -56,6 +58,8 @@ def parse_guardrails(text: str) -> Guardrails:
         risk_files_high=_string_list(risk_files.get("high")),
         risk_files_medium=_string_list(risk_files.get("medium")),
         forbidden_patterns=_string_list(payload.get("forbidden_patterns")),
+        review_scope_include_paths=_string_list(review_scope.get("include_paths")),
+        review_scope_exclude_paths=_string_list(review_scope.get("exclude_paths")),
         checks=_checks_dict(checks_payload, include_custom=False),
         custom_checks=_checks_dict(_as_dict(checks_payload.get("custom")), include_custom=True),
         checks_present="checks" in payload,
@@ -290,6 +294,7 @@ def _unknown_key_warnings(payload: dict[str, object]) -> list[str]:
 
 def _validate_guardrails_payload(payload: dict[str, object]) -> None:
     _require_mapping_or_none(payload, "risk_files")
+    _require_mapping_or_none(payload, "review_scope")
     _require_mapping_or_none(payload, "checks")
     _require_mapping_or_none(payload, "policy")
 

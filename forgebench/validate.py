@@ -132,6 +132,15 @@ def _lint_parsed_guardrails(guardrails, report: ValidationReport, *, strict: boo
                 )
             )
 
+    if guardrails.review_scope_include_paths and guardrails.review_scope_exclude_paths:
+        report.issues.append(
+            ValidationIssue(
+                "warning",
+                "review_scope sets both include_paths and exclude_paths; include_paths is applied before exclude_paths.",
+                "review_scope",
+            )
+        )
+
     if strict:
         _lint_raw_shape(guardrails_path=report.path, report=report)
 
@@ -158,6 +167,15 @@ def _lint_raw_shape(*, guardrails_path: Path, report: ValidationReport) -> None:
                     report.issues.append(
                         ValidationIssue("error", f"risk_files.{child} must be a list.", f"risk_files.{child}")
                     )
+
+    review_scope = payload.get("review_scope")
+    if review_scope is not None and isinstance(review_scope, dict):
+        for child in ("include_paths", "exclude_paths"):
+            value = review_scope.get(child)
+            if value is not None and not isinstance(value, list):
+                report.issues.append(
+                    ValidationIssue("error", f"review_scope.{child} must be a list.", f"review_scope.{child}")
+                )
 
     checks = payload.get("checks")
     if checks is not None and isinstance(checks, dict):

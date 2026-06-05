@@ -247,6 +247,8 @@ class Guardrails:
     risk_files_high: list[str] = field(default_factory=list)
     risk_files_medium: list[str] = field(default_factory=list)
     forbidden_patterns: list[str] = field(default_factory=list)
+    review_scope_include_paths: list[str] = field(default_factory=list)
+    review_scope_exclude_paths: list[str] = field(default_factory=list)
     checks: dict[str, str | None] = field(default_factory=dict)
     custom_checks: dict[str, str | None] = field(default_factory=dict)
     checks_present: bool = False
