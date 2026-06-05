@@ -240,6 +240,20 @@ class CliTests(unittest.TestCase):
             self.assertEqual(result, 0)
             self.assertIn("Repair this patch.", stdout.getvalue())
 
+    def test_dashboard_exports_policy_preview(self) -> None:
+        with TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "forgebench.yml").write_text("project: CLI Dashboard\n", encoding="utf-8")
+            out_dir = root / "dashboard"
+            stdout = StringIO()
+            with redirect_stdout(stdout):
+                result = main(["dashboard", "--repo", str(root), "--out", str(out_dir)])
+
+            self.assertEqual(result, 0)
+            self.assertIn("policy dashboard exported", stdout.getvalue().lower())
+            self.assertTrue((out_dir / "index.html").exists())
+            self.assertTrue((out_dir / "policy-manifest.json").exists())
+
     def test_review_pr_run_checks_requires_checkout_pr(self) -> None:
         stderr = StringIO()
 

@@ -15,6 +15,7 @@ from forgebench.github_pr import GitHubPRError, GitHubPRReviewResult, run_github
 from forgebench.init import InitError, write_starter_guardrails
 from forgebench.models import ForgeBenchReport
 from forgebench.review import ReviewInputError, run_review
+from forgebench.dashboard import DashboardExportError, export_policy_dashboard
 from forgebench.validate import format_validation_report, validate_guardrails_file
 
 
@@ -36,6 +37,9 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.command == "validate":
         return _run_validate(args)
+
+    if args.command == "dashboard":
+        return _run_dashboard(args)
 
     if args.command == "benchmark":
         return _run_benchmark(args)
@@ -198,6 +202,23 @@ def _run_validate(args: argparse.Namespace) -> int:
     report = validate_guardrails_file(path, strict=args.strict)
     print(format_validation_report(report))
     return report.exit_code
+
+
+def _run_dashboard(args: argparse.Namespace) -> int:
+    try:
+        result = export_policy_dashboard(
+            args.repo,
+            guardrails_path=args.guardrails,
+            output_dir=args.out,
+        )
+    except DashboardExportError as exc:
+        _fail(str(exc))
+    print("ForgeBench policy dashboard exported.")
+    print(f"- HTML: {result.index_path}")
+    print(f"- Manifest: {result.manifest_path}")
+    if result.guardrails_path:
+        print(f"- Guardrails: {result.guardrails_path}")
+    return 0
 
 
 def _run_calibrate(args: argparse.Namespace) -> int:
@@ -388,6 +409,15 @@ def _build_parser() -> argparse.ArgumentParser:
     validate.add_argument("--repo", required=False, default=".", help="Repository path. Defaults to current directory.")
     validate.add_argument("--file", required=False, default="forgebench.yml", help="Guardrails file to validate.")
     validate.add_argument("--strict", action="store_true", help="Treat unknown top-level keys as errors.")
+
+    dashboard = subparsers.add_parser("dashboard", help="Export a local policy dashboard skeleton from forgebench.yml.")
+    dashboard.add_argument("--repo", required=False, default=".", help="Repository path. Defaults to current directory.")
+    dashboard.add_argument("--guardrails", required=False, help="Optional path to forgebench.yml.")
+    dashboard.add_argument(
+        "--out",
+        required=False,
+        help="Output directory. Defaults to ./forgebench-output/policy-dashboard/.",
+    )
 
     return parser
 
