@@ -41,6 +41,12 @@ In GitHub → **Watch** → Custom:
 
 In repo **Settings → Notifications**, disable email for Dependabot if using auto-merge.
 
+## Known manual steps
+
+- **GitHub Pages**: Repo Settings → Pages → Source: GitHub Actions (or let `docs.yml` deploy job use `enablement: true`)
+- **PyPI / release secrets**: Configure for tagged releases
+- **HOMEBREW_TAP_TOKEN**, **VSCE_PAT**: Optional; workflows skip push/publish when unset
+
 ## Local CI parity
 
 ```bash
