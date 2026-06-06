@@ -4,7 +4,15 @@ ForgeBench reviews AI-generated diffs before they hit main.
 
 Status key: **Done** · **In progress** · **Planned** · **Exploring**
 
-Last updated: 2026-06-05 (EO-010)
+Last updated: 2026-06-05 (EO-011)
+
+## EO-011 — Enterprise Readiness & Compliance (Done)
+
+- **Security hardening**: Trusted guardrails for `--run-checks`, repo-root path confinement, webhook secret + attestation, HTTP/MCP body limits, shell-free LLM commands
+- **Compliance**: Expanded controls matrix, evidence mapping, tamper-evident audit chain (`forgebench audit verify`), data retention CLI
+- **Supply chain**: pip-audit workflow, SBOM artifact, dependabot, `requirements-lock.txt`
+- **Self-hosted / air-gapped**: Docker Compose + Helm skeleton, [docs/air-gapped.md](docs/air-gapped.md)
+- **RBAC + observability**: Policy service admin/readonly tokens, structured JSON logging, OTEL/Sentry hook env vars
 
 ## EO-010 — World-Class Delivery & Adoption (Done)
 

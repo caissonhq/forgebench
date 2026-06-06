@@ -10,6 +10,10 @@
 
 ## Unreleased
 
+- EO-011 (security): Trusted guardrails enforcement for `review-pr --run-checks`, repo-root policy path confinement, required webhook secrets, signed posture attestation, HTTP/MCP body limits, shell-free LLM command provider.
+- EO-011 (compliance): Tamper-evident audit chain (`forgebench audit verify`), data retention (`forgebench data retention`), expanded SOC 2 controls and evidence mapping.
+- EO-011 (enterprise): Policy service RBAC tokens, structured JSON logging, Docker Compose + Helm deploy skeletons, air-gapped install guide.
+- EO-011 (supply chain): pip-audit CI workflow, SBOM generation, dependabot, `requirements-lock.txt`.
 - EO-010 (IDE): Production-grade VS Code extension v1.0.0 (`forgebenchRunner`, policy test, SARIF) and JetBrains Kotlin plugin with Gradle build.
 - EO-010 (GitHub App): Self-hosted org policy enforcement kit — `forgebench github-app manifest|enforce|serve`, webhook handler, check-run output.
 - EO-010 (security): SOC 2-style readiness pack — controls matrix, audit prep checklist, SOC 2 overview in `docs/security/`.
