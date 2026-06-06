@@ -46,8 +46,10 @@ Deterministic failures are never downgraded. Optional LLM/Grok layers are adviso
 ```bash
 pip install forgebench
 forgebench doctor
+forgebench demo
+forgebench status
 forgebench review-pr https://github.com/org/repo/pull/42
-forgebench init --repo . --out forgebench.yml
+forgebench init --enterprise --yes
 forgebench policy test --tests examples/policy_tests
 ```
 

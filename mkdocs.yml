@@ -1,0 +1,61 @@
+site_name: ForgeBench
+site_description: Adversarial pre-merge QA for coding-agent output
+site_url: https://forgebench.dev
+repo_url: https://github.com/caissonhq/forgebench
+repo_name: caissonhq/forgebench
+edit_uri: edit/main/site-docs/
+
+theme:
+  name: material
+  palette:
+    - scheme: default
+      primary: deep purple
+      accent: amber
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - scheme: slate
+      primary: deep purple
+      accent: amber
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.expand
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+
+plugins:
+  - search
+
+nav:
+  - Home: index.md
+  - Quickstart: quickstart.md
+  - CLI Reference: cli-reference.md
+  - Troubleshooting: troubleshooting.md
+  - Onboarding:
+      - Demo script: onboarding/demo-script.md
+      - New user checklist: onboarding/checklist.md
+  - IDE Integrations:
+      - VS Code: ide/vscode.md
+      - JetBrains: ide/jetbrains.md
+  - Enterprise:
+      - Init wizard: enterprise/init.md
+      - Team policy: enterprise/team-policy.md
+  - API:
+      - MCP server: api/mcp.md
+      - Report schema: api/report-schema.md
+
+markdown_extensions:
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+  - toc:
+      permalink: true
+
+docs_dir: site-docs

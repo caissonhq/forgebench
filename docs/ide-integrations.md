@@ -1,6 +1,6 @@
 # IDE Integrations
 
-ForgeBench integrates with editors through local CLI workflows, MCP, and lightweight plugin scaffolds.
+ForgeBench integrates with editors through local CLI workflows, MCP, and production IDE extensions.
 
 ## Cursor
 
@@ -15,15 +15,17 @@ forgebench review --repo . --diff ./patch.diff --task ./task.md --guardrails for
 forgebench repair --out forgebench-output
 ```
 
-## VS Code extension scaffold
+## VS Code extension
 
-Starter extension: [integrations/vscode-forgebench/](../integrations/vscode-forgebench/)
+Production extension: [integrations/vscode-forgebench/](../integrations/vscode-forgebench/) (v1.1.0)
 
-Planned commands:
+Features:
 
-- `forgebench.reviewDiff` — run review on active diff + task file
-- `forgebench.openReport` — open `forgebench-report.md`
-- `forgebench.exportDashboard` — run `forgebench dashboard`
+- **Findings sidebar** — posture and findings from the latest report
+- **Onboarding wizard** — doctor → demo → status → init
+- **Status bar** — live posture with color cues
+- **Repair prompt** — open and copy to clipboard
+- Commands: review, demo, status, doctor, validate, policy test, enterprise init, dashboards
 
 Install for local development:
 
@@ -31,20 +33,27 @@ Install for local development:
 cd integrations/vscode-forgebench
 npm install
 npm run compile
-code --install-extension .
 ```
 
-## JetBrains plugin scaffold
+Press F5 in VS Code to launch Extension Development Host.
 
-Starter plugin: [integrations/jetbrains-forgebench/](../integrations/jetbrains-forgebench/)
+## JetBrains plugin
 
-Planned actions:
+Production plugin: [integrations/jetbrains-forgebench/](../integrations/jetbrains-forgebench/)
 
-- Run ForgeBench review on selected patch and task files
-- Open latest Markdown report
-- Export policy dashboard skeleton
+Features:
 
-The scaffold documents Gradle setup and intended action wiring. Full marketplace publish is deferred to the public roadmap.
+- **Tool window** — demo, status, repair prompt viewer
+- **Onboarding wizard** — doctor → demo → status checklist
+- **Settings** — guardrails path, output dir, run checks
+- Actions: review, validate, init/enterprise, policy test, dashboard export
+
+```bash
+cd integrations/jetbrains-forgebench
+./gradlew buildPlugin
+```
+
+Set `FORGEBENCH_BIN` if the CLI is not on PATH.
 
 ## MCP tools (all IDEs)
 
@@ -58,7 +67,14 @@ When `forgebench mcp` is configured, compatible clients can call:
 Set org policy in IDE terminals or devcontainer env:
 
 ```bash
-export FORGEBENCH_ORG_POLICY=/path/to/forgebench-org.yml
+export FORGEBENCH_ORG_POLICY=/opt/forgebench/org/forgebench-org.yml
+forgebench review-pr "$PR_URL" --guardrails forgebench.yml --checkout-pr --run-checks
 ```
 
-See [team-enterprise.md](team-enterprise.md).
+Generate a team starter kit:
+
+```bash
+forgebench init --enterprise --yes
+```
+
+Docs site: `mkdocs serve` (see [site-docs/](../site-docs/)).

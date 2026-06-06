@@ -30,7 +30,8 @@ ForgeBench does not prove code is safe. It highlights merge risk before AI-gener
 - Synthetic, human-approved sample reports for first-run UX.
 - Shared policy layers (`extends`, `include`, `FORGEBENCH_ORG_POLICY`) for Team/Enterprise guardrails.
 - Local policy dashboard skeleton export via `forgebench dashboard`.
-- CI recipes for GitLab, CircleCI, and Jenkins; production-grade VS Code extension and JetBrains plugin.
+- CI recipes for GitLab, CircleCI, and Jenkins; production-grade VS Code extension and JetBrains plugin with onboarding wizards, findings sidebar/tool window, and repair prompts.
+- EO-012 (2026-06-05): Professional UX — `forgebench demo`, `forgebench status`, `forgebench init --enterprise`, rich CLI output with `--explain`, doctor onboarding checklist, MkDocs Material docs site (`mkdocs.yml` + `site-docs/`).
 - Self-hosted GitHub App kit for org-level policy enforcement (`forgebench github-app`).
 - SOC 2-style security documentation pack (`docs/security/`) with controls matrix and evidence mapping.
 - Enterprise security hardening (EO-011): path confinement, trusted guardrails for checks, webhook attestation, RBAC, tamper-evident audit chain, data retention.
@@ -106,6 +107,7 @@ Regression Hunter is the first narrow Phase 2 lens. It only checks for potential
 - EO-007 (2026-06-05): Tree-sitter/stdlib AST semantic diff, Behavioral Skeptic, mutation plan skeleton, multi-model LLM ensemble, prove-it mode skeleton.
 - EO-008 (2026-06-05): Opt-in anonymized telemetry, PR outcomes in Merge Risk Benchmark, Review Arena leaderboard, feedback v3, golden case generation from feedback, `forgebench benchmark-dashboard`.
 - EO-011 (2026-06-05): Enterprise readiness — security hardening (H1–H4, M1/M4/M5/M6), tamper-evident audit, RBAC, air-gapped deploy skeletons, pip-audit/SBOM CI, data retention.
+- EO-012 (2026-06-05): VS Code sidebar + onboarding wizard; JetBrains tool window + settings; demo script and GIF capture guide; enterprise init generates org policy, CI, and team onboarding docs.
 - EO-010 (2026-06-05): Production IDE extensions, self-hosted GitHub App org enforcement, SOC 2 readiness pack, marketing/Early Access docs, contribution program, pricing tiers.
 - EO-009 (2026-06-05): FPL v1, `forgebench policy test/simulate/verify/serve`, formal verification hooks, Grok API integration, policy audit log, and policy versioning.
 - EO-003 (2026-06-05): SARIF output, GitHub Check Run annotations, `forgebench validate`, Security Reviewer v0, and `docs/trust-model.md`.

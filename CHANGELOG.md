@@ -10,6 +10,10 @@
 
 ## Unreleased
 
+- EO-012 (UX): `forgebench demo`, `forgebench status`, rich CLI output, global `--explain` flag, doctor onboarding checklist.
+- EO-012 (enterprise): `forgebench init --enterprise` wizard — org policy, GitHub Actions workflow, trusted CI guardrails, team onboarding docs.
+- EO-012 (IDE): VS Code findings sidebar, onboarding wizard, repair prompt clipboard, status bar posture colors; JetBrains tool window, settings, onboarding/status/repair/init actions.
+- EO-012 (docs): MkDocs Material site (`mkdocs.yml`, `site-docs/`), demo video script, onboarding GIF guide.
 - EO-011 (security): Trusted guardrails enforcement for `review-pr --run-checks`, repo-root policy path confinement, required webhook secrets, signed posture attestation, HTTP/MCP body limits, shell-free LLM command provider.
 - EO-011 (compliance): Tamper-evident audit chain (`forgebench audit verify`), data retention (`forgebench data retention`), expanded SOC 2 controls and evidence mapping.
 - EO-011 (enterprise): Policy service RBAC tokens, structured JSON logging, Docker Compose + Helm deploy skeletons, air-gapped install guide.

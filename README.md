@@ -47,7 +47,14 @@ Verify your local install and tooling:
 forgebench doctor
 ```
 
-`forgebench doctor` checks Python, the installed package, git, optional GitHub CLI auth, and a writable `forgebench-output/` directory. Fix any failed checks before running PR review.
+`forgebench doctor` checks Python, the installed package, git, optional GitHub CLI auth, a writable `forgebench-output/` directory, and an onboarding checklist (guardrails, CI workflow, demo). Fix any failed checks before running PR review.
+
+Try a one-command guided demo (no guardrails or network required):
+
+```bash
+forgebench demo
+forgebench status
+```
 
 First run a PR review with generic heuristics:
 
@@ -66,6 +73,14 @@ forgebench init \
 ```
 
 `forgebench init` defaults to `--preset auto` and inspects local manifest files such as `pyproject.toml`, `package.json`, `Cargo.toml`, and `Package.swift` to suggest safe check commands. It does not run package managers, `git log`, `gh`, or network calls. Edit `protected_behavior` and `forbidden_patterns` yourself before relying on project-specific guardrails.
+
+Enterprise team starter kit (org policy, CI workflow, onboarding docs):
+
+```bash
+forgebench init --enterprise --yes
+```
+
+Documentation site (MkDocs Material): `mkdocs serve` after `pip install mkdocs-material`. See [site-docs/](site-docs/).
 
 Review a GitHub PR and run configured checks against a temporary PR worktree:
 
