@@ -1,0 +1,42 @@
+name: Security
+
+on:
+  push:
+  pull_request:
+  schedule:
+    - cron: "0 6 * * 1"
+
+jobs:
+  pip-audit:
+    name: pip-audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install package and audit tooling
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e .
+          pip install pip-audit cyclonedx-bom
+      - name: Run pip-audit
+        run: pip-audit
+
+  sbom:
+    name: Generate SBOM
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Build wheel and SBOM
+        run: |
+          python -m pip install --upgrade pip build cyclonedx-bom
+          python -m build
+          cyclonedx-py environment -o sbom.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: forgebench-sbom
+          path: sbom.json

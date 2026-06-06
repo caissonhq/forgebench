@@ -1,0 +1,48 @@
+services:
+  policy-service:
+    image: forgebench:local
+    build:
+      context: ..
+      dockerfile: action/Dockerfile
+    command:
+      - forgebench
+      - policy
+      - serve
+      - --host
+      - "0.0.0.0"
+      - --port
+      - "8791"
+      - --repo
+      - /workspace
+    environment:
+      FORGEBENCH_ALLOW_INSECURE_BIND: "1"
+      FORGEBENCH_POLICY_ADMIN_TOKEN: ${FORGEBENCH_POLICY_ADMIN_TOKEN}
+      FORGEBENCH_POLICY_READONLY_TOKEN: ${FORGEBENCH_POLICY_READONLY_TOKEN:-}
+      FORGEBENCH_LOG_LEVEL: INFO
+    volumes:
+      - ${FORGEBENCH_WORKSPACE:-.}:/workspace:ro
+    ports:
+      - "8791:8791"
+
+  github-app:
+    image: forgebench:local
+    command:
+      - forgebench
+      - github-app
+      - serve
+      - --host
+      - "0.0.0.0"
+      - --port
+      - "8792"
+      - --config
+      - /workspace/examples/github-app/org-enforcement.json
+    environment:
+      FORGEBENCH_ALLOW_INSECURE_BIND: "1"
+      FORGEBENCH_GITHUB_WEBHOOK_SECRET: ${FORGEBENCH_GITHUB_WEBHOOK_SECRET}
+      FORGEBENCH_LOG_LEVEL: INFO
+    volumes:
+      - ${FORGEBENCH_WORKSPACE:-.}:/workspace:ro
+    ports:
+      - "8792:8792"
+    depends_on:
+      - policy-service

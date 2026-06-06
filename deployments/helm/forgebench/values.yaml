@@ -1,0 +1,25 @@
+image:
+  repository: forgebench
+  tag: "0.9.0"
+  pullPolicy: IfNotPresent
+
+policyService:
+  enabled: true
+  port: 8791
+  repoMountPath: /workspace
+  adminTokenSecretName: forgebench-policy-admin
+  readonlyTokenSecretName: forgebench-policy-readonly
+
+githubApp:
+  enabled: true
+  port: 8792
+  webhookSecretName: forgebench-github-webhook
+  orgEnforcementConfig: /workspace/examples/github-app/org-enforcement.json
+
+offline:
+  disableExternalCalls: true
+
+observability:
+  logLevel: INFO
+  otelEndpoint: ""
+  sentryDsn: ""

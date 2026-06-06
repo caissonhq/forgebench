@@ -1,0 +1,39 @@
+{{- if .Values.policyService.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "forgebench.fullname" . }}-policy
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: {{ include "forgebench.fullname" . }}-policy
+  template:
+    metadata:
+      labels:
+        app: {{ include "forgebench.fullname" . }}-policy
+    spec:
+      containers:
+        - name: policy
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command: ["forgebench", "policy", "serve", "--host", "0.0.0.0", "--port", "{{ .Values.policyService.port }}", "--repo", "{{ .Values.policyService.repoMountPath }}"]
+          env:
+            - name: FORGEBENCH_ALLOW_INSECURE_BIND
+              value: "1"
+            - name: FORGEBENCH_LOG_LEVEL
+              value: {{ .Values.observability.logLevel | quote }}
+            - name: FORGEBENCH_POLICY_ADMIN_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.policyService.adminTokenSecretName }}
+                  key: token
+            - name: FORGEBENCH_POLICY_READONLY_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.policyService.readonlyTokenSecretName }}
+                  key: token
+                  optional: true
+          ports:
+            - containerPort: {{ .Values.policyService.port }}
+{{- end }}
