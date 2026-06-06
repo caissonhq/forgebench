@@ -4,7 +4,16 @@ ForgeBench reviews AI-generated diffs before they hit main.
 
 Status key: **Done** · **In progress** · **Planned** · **Exploring**
 
-Last updated: 2026-06-05 (EO-008)
+Last updated: 2026-06-05 (EO-009)
+
+## EO-009 — Policy & Verification Platform (Done)
+
+- **FPL v1**: `.fpl` policy language compiling into `forgebench.yml` policy (`fpl:` reference)
+- **Policy tests**: `forgebench policy test` over `examples/policy_tests/`
+- **Simulation**: `forgebench policy simulate` for fast posture/suppression checks
+- **Verification**: Formal-ish local hooks + optional Grok API (`forgebench policy verify --grok`)
+- **Audit + versions**: `forgebench-output/policy-audit.jsonl` and `policy-versions.jsonl`
+- **Self-hosted service**: `forgebench policy serve` HTTP skeleton on localhost
 
 ## EO-008 — Data Flywheel & Trust at Scale (Done)
 

@@ -10,6 +10,10 @@
 
 ## Unreleased
 
+- EO-009 (FPL): ForgeBench Policy Language v1 — line-oriented DSL compiling into guardrails policy.
+- EO-009 (testing): `forgebench policy test` simulation framework with `examples/policy_tests/`.
+- EO-009 (verification): Formal-ish verification hooks and optional Grok API policy verification.
+- EO-009 (platform): Policy audit JSONL, version fingerprints, and self-hosted policy service skeleton.
 - EO-008 (telemetry): Opt-in local-only anonymized telemetry via `forgebench telemetry` and `FORGEBENCH_TELEMETRY=1`.
 - EO-008 (benchmark): Merge Risk Benchmark expanded with anonymized real PR outcomes (`examples/benchmark_outcomes/`).
 - EO-008 (arena): Review Arena leaderboard from calibration + PR outcomes.

@@ -99,6 +99,7 @@ Regression Hunter is the first narrow Phase 2 lens. It only checks for potential
 - EO-006 (2026-06-05): Shared policy layers, `forgebench dashboard` skeleton, GitLab/CircleCI/Jenkins CI recipes, VS Code/JetBrains scaffolds, public roadmap and contribution templates.
 - EO-007 (2026-06-05): Tree-sitter/stdlib AST semantic diff, Behavioral Skeptic, mutation plan skeleton, multi-model LLM ensemble, prove-it mode skeleton.
 - EO-008 (2026-06-05): Opt-in anonymized telemetry, PR outcomes in Merge Risk Benchmark, Review Arena leaderboard, feedback v3, golden case generation from feedback, `forgebench benchmark-dashboard`.
+- EO-009 (2026-06-05): FPL v1, `forgebench policy test/simulate/verify/serve`, formal verification hooks, Grok API integration, policy audit log, and policy versioning.
 - EO-003 (2026-06-05): SARIF output, GitHub Check Run annotations, `forgebench validate`, Security Reviewer v0, and `docs/trust-model.md`.
 - EO-002 generic-mode noise fixes: suppress markdown/agent-policy `ui_copy_changed`, exclude package/tsconfig/Rust-only persistence misfires.
 - Labeled false-positive rate in generic mode: **63.2%** on EO-002 findings before EO-003 noise fixes (dominated by `ui_copy_changed` on markdown/agent-policy PRs).
