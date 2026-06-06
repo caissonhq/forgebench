@@ -1,0 +1,37 @@
+# Reference consumer workflow — teams copy via `forgebench init --enterprise`.
+# This source repo runs primary CI in ci.yml; this workflow is manual/dogfood only.
+
+name: ForgeBench (consumer template)
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - "forgebench/**"
+      - "forgebench.yml"
+      - ".github/workflows/forgebench.yml"
+
+permissions:
+  contents: read
+  pull-requests: write
+  checks: write
+
+jobs:
+  merge-risk-review:
+    name: ForgeBench merge-risk review
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch'
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: pyproject.toml
+
+      - name: Install ForgeBench from source
+        run: pip install -e ".[dev]"
+
+      - name: Run calibration smoke
+        run: python -m forgebench calibrate --cases examples/golden_cases

@@ -2,6 +2,8 @@
 
 ForgeBench CI/CD status after the stabilization round (2026-06-06).
 
+**Source repo note:** Primary CI is `ci.yml`. The `forgebench.yml` workflow is a **reference consumer template** (manual dispatch); customer repos enable it via `forgebench init --enterprise`.
+
 ## Workflows
 
 | Workflow | Trigger | Purpose |
@@ -50,7 +52,7 @@ In repo **Settings → Notifications**, disable email for Dependabot if using au
 ## Local CI parity
 
 ```bash
-pip install -e . pytest
+pip install -e ".[dev]"
 python -m pytest -q
 python -m forgebench calibrate --cases examples/golden_cases
 bash scripts/smoke_install.sh
@@ -58,3 +60,18 @@ python -m forgebench doctor
 pip install pip-audit && pip-audit
 mkdocs build --strict
 ```
+
+## Production-ready checklist (GitHub settings)
+
+| Item | Status | Action |
+|------|--------|--------|
+| `main` CI green | ✅ | Required checks: CI / Python 3.12, PyPI wheel smoke |
+| Open PRs / stale branches | ✅ | Zero open; only `main` on remote |
+| Dependabot | ✅ | Weekly grouped updates + auto-merge workflow |
+| GitHub Pages deploy | ⏸ | Settings → Pages → GitHub Actions; set `PAGES_DEPLOY=true` |
+| Auto-merge | 🟡 | Settings → General → Allow auto-merge (recommended) |
+| Branch protection | 🟡 | Require CI checks before merge on `main` |
+| Release secrets | 🟡 | PyPI OIDC, `HOMEBREW_TAP_TOKEN`, `VSCE_PAT` when publishing |
+| Repository secrets | 🟡 | Never commit; use GitHub Secrets / Variables |
+
+See [forgebench-onboarding.md](forgebench-onboarding.md) for contributor setup.

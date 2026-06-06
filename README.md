@@ -919,6 +919,10 @@ Release workflow:
 
 ForgeBench is distributed under the [Apache License 2.0](LICENSE).
 
+## Development & CI
+
+Contributors: `pip install -e ".[dev]"` · `python -m pytest -q` · `forgebench doctor` · [docs/ci-health.md](docs/ci-health.md) · [docs/forgebench-onboarding.md](docs/forgebench-onboarding.md)
+
 ## V1 Readiness
 
 See `V1_READINESS.md` for the current V1 readiness assessment, evidence hierarchy, Phase 1 reviewer scope, known limitations, and what remains before CAI-5 should be considered done.

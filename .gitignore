@@ -15,6 +15,7 @@ site/
 
 forgebench-output/
 forgebench-calibration-output/
+forgebench-benchmark-output/
 dogfood_runs/*
 !dogfood_runs/eo002-2026-06-05/
 !dogfood_runs/eo002-2026-06-05/**
