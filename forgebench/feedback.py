@@ -424,3 +424,6 @@ def _feedback_files_for_kind(kind: str, entries: list[dict[str, Any]]) -> list[s
 def _looks_like_asset_path(path: str) -> bool:
     lower = path.replace("\\", "/").lower()
     return lower.endswith((".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg", ".ico", ".icns")) or "assets.xcassets/" in lower
+
+
+
