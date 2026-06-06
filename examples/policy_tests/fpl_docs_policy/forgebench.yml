@@ -1,0 +1,3 @@
+project: ForgeBench FPL Docs Policy
+policy_version: 1.0.0
+fpl: ../../fpl/docs_policy.fpl

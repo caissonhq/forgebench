@@ -257,6 +257,10 @@ class Guardrails:
     warnings: list[str] = field(default_factory=list)
     sources: list[str] = field(default_factory=list)
     team: str | None = None
+    policy_version: str | None = None
+    fpl_version: str | None = None
+    fpl_name: str | None = None
+    fpl_compiled_from: str | None = None
 
 
 @dataclass(frozen=True)

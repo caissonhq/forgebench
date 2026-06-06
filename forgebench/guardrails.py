@@ -34,6 +34,12 @@ KNOWN_TOP_LEVEL_KEYS = {
     "extends",
     "include",
     "team",
+    "fpl",
+    "policy_fpl",
+    "policy_version",
+    "fpl_compiled_from",
+    "fpl_version",
+    "fpl_name",
 }
 
 
@@ -74,6 +80,10 @@ def guardrails_from_payload(payload: dict[str, object]) -> Guardrails:
         policy=_parse_policy(_as_dict(payload.get("policy"))),
         warnings=warnings,
         team=_optional_string(team_payload.get("name")) or _optional_string(payload.get("team")),
+        policy_version=_optional_string(payload.get("policy_version")),
+        fpl_version=_optional_string(payload.get("fpl_version")),
+        fpl_name=_optional_string(payload.get("fpl_name")),
+        fpl_compiled_from=_optional_string(payload.get("fpl_compiled_from")),
     )
 
 

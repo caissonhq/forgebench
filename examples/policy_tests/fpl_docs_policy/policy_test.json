@@ -1,0 +1,11 @@
+{
+  "name": "fpl_docs_policy",
+  "guardrails": "forgebench.yml",
+  "diff": "../../golden_cases/docs_only_policy_low_concern/patch.diff",
+  "expect": {
+    "posture": "LOW_CONCERN",
+    "suppressed_findings": ["ui_copy_changed"],
+    "posture_ceiling": "LOW_CONCERN",
+    "active_categories": ["docs"]
+  }
+}

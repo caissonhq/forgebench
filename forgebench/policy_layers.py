@@ -55,6 +55,7 @@ def _load_merged_payload(path: Path, *, _depth: int = 0, _seen: set[Path] | None
 
     raw_payload = _parse_file_payload(resolved)
     current = _payload_without_directives(raw_payload)
+    current = _merge_fpl_payload(current, resolved.parent)
     sources = [_portable_source_path(resolved)]
     base_paths = _layer_paths(raw_payload, resolved.parent)
     merged: dict[str, Any] = {}
@@ -64,6 +65,15 @@ def _load_merged_payload(path: Path, *, _depth: int = 0, _seen: set[Path] | None
         sources.extend(base_sources)
     merged = _merge_payload_dicts(merged, current)
     return merged, sources
+
+
+def _merge_fpl_payload(payload: dict[str, Any], base_dir: Path) -> dict[str, Any]:
+    try:
+        from forgebench.fpl.loader import merge_fpl_into_payload
+
+        return merge_fpl_into_payload(payload, base_dir)
+    except Exception as exc:
+        raise GuardrailsParseError(str(exc)) from exc
 
 
 def _parse_file_payload(path: Path) -> dict[str, Any]:
@@ -146,6 +156,10 @@ def _merge_guardrails(base: Guardrails, overlay: Guardrails) -> Guardrails:
         warnings=_merge_lists(base.warnings, overlay.warnings),
         sources=_merge_lists(base.sources, overlay.sources),
         team=overlay.team or base.team,
+        policy_version=overlay.policy_version or base.policy_version,
+        fpl_version=overlay.fpl_version or base.fpl_version,
+        fpl_name=overlay.fpl_name or base.fpl_name,
+        fpl_compiled_from=overlay.fpl_compiled_from or base.fpl_compiled_from,
     )
 
 
@@ -181,6 +195,10 @@ def _with_sources(guardrails: Guardrails, sources: list[str]) -> Guardrails:
         warnings=guardrails.warnings,
         sources=unique_sources,
         team=guardrails.team,
+        policy_version=guardrails.policy_version,
+        fpl_version=guardrails.fpl_version,
+        fpl_name=guardrails.fpl_name,
+        fpl_compiled_from=guardrails.fpl_compiled_from,
     )
 
 

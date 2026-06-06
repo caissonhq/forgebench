@@ -1,0 +1,9 @@
+# ForgeBench Policy Language (FPL) v1 example — docs-only calibration policy
+version 1.0.0
+name docs-policy
+
+category docs paths README.md docs/** **/*.md severity advisory
+advisory_only README.md docs/** **/*.md
+
+suppress ui_copy_changed paths README.md docs/** **/*.md reason "Docs-only copy changes are not merge-risk relevant."
+ceiling docs_only_changes posture LOW_CONCERN reason "Docs-only changes should not escalate above LOW_CONCERN unless a blocker is present."
