@@ -3,9 +3,24 @@
   <name>ForgeBench</name>
   <vendor email="hello@forgebench.dev" url="https://forgebench.dev">ForgeBench</vendor>
   <description><![CDATA[
-    Professional merge-risk review for AI-generated diffs via the ForgeBench CLI.
-    Tool window panel, onboarding wizard, repair prompts, status, and enterprise init.
+    <p>Merge-risk review for AI-generated diffs — powered by the local ForgeBench CLI.</p>
+    <ul>
+      <li>Findings tool window with posture summary</li>
+      <li>Onboarding wizard (doctor, demo, status)</li>
+      <li>Review diff + task, open reports and repair prompts</li>
+      <li>Validate guardrails, policy tests, enterprise init</li>
+    </ul>
+    <p>Requires <code>forgebench</code> on PATH. Install: <code>pipx install forgebench</code></p>
+    <p><a href="https://forgebench.dev/docs/installation/">Installation guide</a></p>
   ]]></description>
+  <change-notes><![CDATA[
+    <ul>
+      <li>1.2 — Marketplace listing polish, install guidance links</li>
+      <li>1.1 — Onboarding wizard, status, enterprise init</li>
+      <li>1.0 — Initial tool window and review actions</li>
+    </ul>
+  ]]></change-notes>
+  <tags>code-review,ai,merge-risk,quality,guardrails</tags>
   <depends>com.intellij.modules.platform</depends>
   <extensions defaultExtensionNs="com.intellij">
     <toolWindow id="ForgeBench"

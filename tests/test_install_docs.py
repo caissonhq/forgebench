@@ -19,6 +19,13 @@ class InstallDocsTests(unittest.TestCase):
         self.assertIn("--guardrails forgebench.yml", readme)
         self.assertIn("pipx install forgebench", readme)
         self.assertIn("brew install forgebench", readme)
+        self.assertIn("forgebench install", readme)
+
+    def test_installation_doc_site_exists(self) -> None:
+        doc = (ROOT / "site-docs" / "installation.md").read_text(encoding="utf-8")
+        self.assertIn("pipx install forgebench", doc)
+        self.assertIn("forgebench install", doc)
+        self.assertIn("Binary", doc)
 
     def test_readme_mentions_generic_mode_presets_and_feedback_suggestions(self) -> None:
         readme = (ROOT / "README.md").read_text(encoding="utf-8")

@@ -4,7 +4,15 @@ ForgeBench reviews AI-generated diffs before they hit main.
 
 Status key: **Done** · **In progress** · **Planned** · **Exploring**
 
-Last updated: 2026-06-06 (EO-014)
+Last updated: 2026-06-06 (EO-015)
+
+## EO-015 — Marketplace & Distribution Excellence (Done)
+
+- **Unified install**: `forgebench install` (guide, methods, completions, upgrade) with environment detection
+- **Release artifacts**: Binary `.tar.gz` bundles per OS/arch, macOS `.pkg`, Homebrew tap automation workflow
+- **Doctor**: Install method detection, pipx recommendation, upgrade path across pip/pipx/brew/binary
+- **Marketplace kits**: VS Code 1.2 (icon, keywords, MARKETPLACE.md), JetBrains plugin.xml polish, GitHub Marketplace listing doc
+- **Docs**: `site-docs/installation.md`, README badges + comparison table, enhanced pip metadata
 
 ## EO-014 — Adoption Velocity (Done)
 

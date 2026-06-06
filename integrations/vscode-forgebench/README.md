@@ -1,12 +1,14 @@
 # ForgeBench VS Code Extension
 
-Production-grade local integration for the ForgeBench CLI.
+Production-grade local integration for the ForgeBench CLI — findings sidebar, onboarding wizard, and repair prompts.
+
+[![VS Code Marketplace](https://img.shields.io/badge/Marketplace-caissonhq.forgebench-007ACC)](https://marketplace.visualstudio.com/items?itemName=caissonhq.forgebench)
 
 ## Requirements
 
 - VS Code 1.85+
-- `forgebench` on `PATH` (`pip install forgebench`)
-- Optional: `forgebench doctor` to verify install
+- `forgebench` on `PATH` (`pipx install forgebench` recommended)
+- Verify: `forgebench doctor --checklist`
 
 ## Commands
 

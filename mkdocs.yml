@@ -33,6 +33,7 @@ plugins:
 
 nav:
   - Home: index.md
+  - Installation: installation.md
   - Quickstart: quickstart.md
   - Install methods: ../docs/install-methods.md
   - Presets gallery: ../docs/presets-gallery.md

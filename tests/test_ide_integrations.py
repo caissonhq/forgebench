@@ -13,7 +13,8 @@ JETBRAINS = ROOT / "integrations" / "jetbrains-forgebench"
 class IDEIntegrationTests(unittest.TestCase):
     def test_vscode_extension_is_production_grade(self) -> None:
         package = json.loads((VSCODE / "package.json").read_text(encoding="utf-8"))
-        self.assertEqual(package["version"], "1.1.0")
+        self.assertEqual(package["version"], "1.2.0")
+        self.assertIn("icon", package)
         commands = {item["command"] for item in package["contributes"]["commands"]}
         self.assertIn("forgebench.reviewDiff", commands)
         self.assertIn("forgebench.policyTest", commands)

@@ -62,7 +62,7 @@ forgebench review-pr https://github.com/org/repo/pull/42 --guardrails .github/fo
 forgebench policy test --tests examples/policy_tests
 ```
 
-Install options: [install-methods.md](install-methods.md) · Presets: [presets-gallery.md](presets-gallery.md) · Design partners: [design-partner.md](design-partner.md)
+Install: `forgebench install` · [Installation guide](https://forgebench.dev/docs/installation/) · [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=caissonhq.forgebench) · Presets: [presets-gallery.md](presets-gallery.md) · Design partners: [design-partner.md](design-partner.md)
 
 ## Pricing
 

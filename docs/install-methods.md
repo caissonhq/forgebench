@@ -2,21 +2,41 @@
 
 ForgeBench is a local CLI. Pick the install path that fits your environment.
 
-## pip (recommended)
-
 ```bash
-pip install forgebench
-forgebench doctor
+forgebench install          # detect platform & recommend best method
+forgebench install methods  # full comparison table
 ```
 
-## pipx (isolated CLI)
+See the [Installation & Getting Started](https://forgebench.dev/docs/installation/) guide on the docs site.
+
+## Comparison
+
+| Method | One-command install | Best for | Upgrade |
+|--------|---------------------|----------|---------|
+| **pipx** | `pipx install forgebench` | Solo developers | `pipx upgrade forgebench` |
+| **pip** | `pip install forgebench` | CI, Docker, venvs | `pip install --upgrade forgebench` |
+| **Homebrew** | `brew tap caissonhq/tap && brew install forgebench` | macOS/Linux workstations | `brew upgrade forgebench` |
+| **Binary** | GitHub Releases `.tar.gz` | Air-gapped / no pip | Replace bundle |
+| **macOS .pkg** | GitHub Releases `.pkg` | Enterprise Mac fleets | Re-run installer |
+| **VS Code** | Marketplace `caissonhq.forgebench` | IDE sidebar (CLI required) | Extension auto-update |
+| **JetBrains** | Marketplace plugin | IntelliJ/PyCharm (CLI required) | Plugin update |
+| **Source** | `pip install -e .` | Contributors | `git pull && pip install -e .` |
+
+## pipx (recommended for CLI)
 
 ```bash
 pipx install forgebench
 forgebench quickstart
 ```
 
-## Homebrew (macOS / Linux)
+## pip
+
+```bash
+pip install forgebench
+forgebench doctor --checklist
+```
+
+## Homebrew
 
 ```bash
 brew tap caissonhq/tap
@@ -24,42 +44,36 @@ brew install forgebench
 forgebench doctor
 ```
 
-The formula template lives in `packaging/homebrew/forgebench.rb` and is updated on each release.
+Formula auto-updated via `.github/workflows/homebrew-tap.yml` on each release.
 
-## From source (contributors)
+## Binary bundle
+
+Official per-platform `.tar.gz` artifacts are attached to [GitHub Releases](https://github.com/caissonhq/forgebench/releases). Built by `scripts/build_binary_bundle.py` in CI.
+
+## macOS .pkg
+
+macOS `.pkg` installers are built on release (see `packaging/macos/build_pkg.sh`).
+
+## Shell completions
 
 ```bash
-git clone https://github.com/caissonhq/forgebench.git
-cd forgebench
-python3 -m pip install -e .
-forgebench doctor
+eval "$(forgebench install completions --shell bash)"
+eval "$(forgebench install completions --shell zsh)"
 ```
 
-## VS Code extension
+## IDE extensions
 
-Install **ForgeBench** from the VS Code Marketplace (search "ForgeBench") or build from `integrations/vscode/`.
+- **VS Code**: [Marketplace listing](https://marketplace.visualstudio.com/items?itemName=caissonhq.forgebench) · `integrations/vscode-forgebench/MARKETPLACE.md`
+- **JetBrains**: `docs/jetbrains-marketplace-listing.md`
 
-The release workflow in `.github/workflows/vscode-marketplace.yml` publishes on tagged releases.
+## GitHub App (self-hosted)
 
-## JetBrains plugin
-
-Build from `integrations/jetbrains/` or install from the JetBrains Marketplace when listed.
-
-## Docker / CI
-
-See [GitHub Action](github-action.md) and `Dockerfile` for containerized PR review.
+Not a hosted service — deploy in your infrastructure. See [GitHub Marketplace listing](github-marketplace-listing.md).
 
 ## First run
 
 ```bash
-forgebench quickstart          # solo developers
-forgebench team init           # engineering teams (Team license)
-forgebench init --enterprise   # full enterprise kit
-```
-
-## Verify
-
-```bash
+forgebench quickstart
 forgebench doctor --checklist
-forgebench status
+forgebench team init           # teams (Team license)
 ```

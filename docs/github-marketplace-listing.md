@@ -1,106 +1,61 @@
-# GitHub Marketplace listing prep — ForgeBench Action
+# GitHub Marketplace — ForgeBench App Listing
 
-Use this document when submitting `caissonhq/forgebench` to the GitHub Marketplace.
+Self-hosted GitHub App for org-level merge-risk policy enforcement.
 
-## Listing summary
+## Listing metadata
 
 | Field | Value |
 |-------|-------|
-| Name | ForgeBench |
-| Category | Code quality |
-| Subcategory | Testing (or Code review) |
-| Tagline | Review AI-generated PR diffs before merge |
-| Pricing | Free |
-| Verified creator | caissonhq |
+| **Name** | ForgeBench |
+| **Tagline** | Merge-risk gates for AI-generated pull requests |
+| **Category** | Code quality · Security · CI/CD |
+| **Pricing** | Free (self-hosted infrastructure) |
 
-## Short description (max ~100 chars)
+## Description (short)
 
-Review AI-generated pull request diffs for merge risk before they reach main.
+ForgeBench adds merge-risk review and org policy enforcement to AI-assisted development workflows. Deploy the webhook receiver in your infrastructure — no hosted code review service required.
 
-## Full description
+## Description (full)
 
-ForgeBench is a local-first merge-risk reviewer for AI-generated code changes.
+ForgeBench reviews AI-generated diffs before merge and can gate pull requests based on merge posture (`BLOCK`, `REVIEW`, `LOW_CONCERN`).
 
-The GitHub Action wraps the ForgeBench CLI in Docker. On each pull request it can:
+**What you get**
 
-- Fetch the PR diff and original task context through the local `gh` CLI inside the runner
-- Run deterministic static review, guardrails policy, and heuristic review lenses
-- Optionally run configured build/test/lint checks against a temporary PR worktree
-- Write Markdown, JSON, SARIF, repair prompt, and PR-comment artifacts
-- Optionally post a PR comment or GitHub Check Run when explicitly enabled
+- Self-hosted GitHub App webhook receiver (`forgebench github-app serve`)
+- Auto-configuration on installation (org enforcement defaults)
+- Trusted CI guardrails via `forgebench team init`
+- Check Run integration and signed posture attestation
 
-ForgeBench classifies merge posture as `BLOCK`, `REVIEW`, or `LOW_CONCERN`. It does not prove code is safe and does not auto-merge.
+**Permissions (minimum)**
 
-### Safe defaults
+- `checks: write` — post Check Runs
+- `pull_requests: read` — PR metadata
+- `contents: read` — default branch policy files
+- `metadata: read`
 
-- PR comments are **off** unless `post-comment: true`
-- Check Runs are **off** unless `post-check-run: true`
-- `run-checks: true` automatically adds `--checkout-pr` so checks run against PR code
-- Missing `forgebench.yml` falls back to generic review rules with visible guidance
+**Events**
 
-### Requirements
+`pull_request`, `check_run`, `installation`, `organization`
 
-- `GH_TOKEN` or `GITHUB_TOKEN` with PR read access
-- Optional `forgebench.yml` in the repository
+## Screenshots (capture before submit)
 
-## Example workflow
+1. `forgebench team init` terminal output
+2. GitHub Check Run with ForgeBench posture
+3. `forgebench doctor --checklist` adoption view
+4. VS Code findings sidebar
 
-```yaml
-name: ForgeBench
-on:
-  pull_request:
-    types: [opened, synchronize, reopened]
+## Logo
 
-permissions:
-  contents: read
-  pull-requests: write
-  checks: write
+`https://forgebench.dev/assets/forgebench-logo.svg` (128×128 PNG export for upload)
 
-jobs:
-  forgebench:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: caissonhq/forgebench@v0.9.0
-        with:
-          run-checks: "true"
-          post-comment: "false"
-```
+## Setup URL
 
-## Branding assets checklist
+`https://forgebench.dev/docs/github-app-listing.md`
 
-- [ ] Repository social preview image (1280×640)
-- [ ] Action icon (square, high contrast)
-- [ ] Screenshot of PR comment or Check Run annotations
-- [ ] Link to https://forgebench.dev
-- [ ] Link to synthetic sample reports in `examples/sample_report/`
+## Submit checklist
 
-## Marketplace metadata files
-
-| File | Purpose |
-|------|---------|
-| `action/action.yml` | Action manifest |
-| `action/README.md` | Marketplace-facing action README |
-| `README.md` | Repository overview |
-| `SECURITY.md` | Trust boundaries |
-| `docs/trust-model.md` | Deterministic vs advisory evidence |
-
-## Pre-submission verification
-
-```bash
-forgebench doctor
-python3 -m pytest tests/test_github_action.py -q
-```
-
-Confirm Docker image builds in CI and `action/entrypoint.sh` sets outputs:
-
-- `posture`
-- `report-path`
-- `pr-comment-path`
-- `sarif-path`
-
-## Support and privacy
-
-- No ForgeBench-hosted telemetry in the Action
-- Feedback remains local unless users export and share it manually
-- Issues: https://github.com/caissonhq/forgebench/issues
+- [ ] Export manifest: `forgebench github-app manifest --out manifest.json`
+- [ ] Deploy webhook receiver with `FORGEBENCH_GITHUB_WEBHOOK_SECRET`
+- [ ] Pilot repo has `.github/forgebench.yml` on default branch
+- [ ] Run `forgebench github-app enforce --config org-enforcement.json --posture REVIEW`
+- [ ] Upload screenshots and logo to Marketplace listing

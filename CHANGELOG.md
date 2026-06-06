@@ -10,6 +10,11 @@
 
 ## Unreleased
 
+- EO-015 (distribution): `forgebench install` guidance command (detect environment, methods table, shell completions, upgrade path).
+- EO-015 (releases): Official binary `.tar.gz` bundles, macOS `.pkg` installer, Homebrew tap automation workflow.
+- EO-015 (doctor): Install method detection, pipx recommendation, upgrade path hints across distribution channels.
+- EO-015 (marketplace): VS Code extension 1.2 listing polish (icon, keywords, MARKETPLACE.md), JetBrains plugin.xml, GitHub Marketplace listing doc.
+- EO-015 (docs): World-class `site-docs/installation.md`, README install badges and comparison table, pip metadata improvements.
 - EO-014 (adoption): `forgebench quickstart`, `forgebench team init`, `forgebench init --team`, `forgebench presets list|install|export`, `forgebench share-report`, `forgebench feedback --suggest`.
 - EO-014 (doctor): `forgebench doctor --checklist` adoption success checklist and personalized next-step recommendations.
 - EO-014 (analytics): Milestone events (`first_review`, `first_team_init`, `first_paid_feature`, etc.) via local adoption state + product analytics.

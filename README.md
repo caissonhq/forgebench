@@ -1,5 +1,10 @@
 # ForgeBench
 
+[![PyPI](https://img.shields.io/pypi/v/forgebench.svg)](https://pypi.org/project/forgebench/)
+[![Python](https://img.shields.io/pypi/pyversions/forgebench.svg)](https://pypi.org/project/forgebench/)
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
+[![VS Code](https://img.shields.io/badge/VS%20Code-Marketplace-007ACC?logo=visualstudiocode)](https://marketplace.visualstudio.com/items?itemName=caissonhq.forgebench)
+
 ForgeBench reviews AI-generated diffs before they hit main.
 
 Adversarial pre-merge QA for coding-agent output.
@@ -35,15 +40,21 @@ ForgeBench does not prove code is safe. It highlights merge risk before AI-gener
 
 ## Quickstart
 
-Install ForgeBench (pick one):
+Not sure which install path? Run:
 
 ```bash
-pip install forgebench          # recommended
-pipx install forgebench         # isolated CLI
-brew tap caissonhq/tap && brew install forgebench   # macOS/Linux
+forgebench install    # after any install method — or see table below
 ```
 
-See [docs/install-methods.md](docs/install-methods.md) for VS Code extension, source install, and CI options.
+| Method | Command | Best for |
+|--------|---------|----------|
+| **pipx** | `pipx install forgebench` | Solo developers (recommended) |
+| **pip** | `pip install forgebench` | CI, Docker, project venvs |
+| **Homebrew** | `brew tap caissonhq/tap && brew install forgebench` | macOS / Linux workstations |
+| **Binary** | [GitHub Releases](https://github.com/caissonhq/forgebench/releases) `.tar.gz` | Air-gapped / no pip |
+| **VS Code** | Marketplace: `caissonhq.forgebench` | IDE sidebar (CLI required) |
+
+Full guide: [docs/install-methods.md](docs/install-methods.md) · [Installation docs](https://forgebench.dev/docs/installation/)
 
 **Solo developers** — one guided flow (~2 minutes):
 

@@ -1,24 +1,46 @@
 {
   "name": "forgebench",
   "displayName": "ForgeBench",
-  "description": "Professional merge-risk review for AI-generated diffs — sidebar, onboarding, and repair prompts.",
-  "version": "1.1.0",
+  "description": "Merge-risk review for AI-generated diffs — findings sidebar, onboarding wizard, repair prompts, and SARIF.",
+  "version": "1.2.0",
   "publisher": "caissonhq",
   "license": "Apache-2.0",
-
+  "icon": "media/icon.png",
+  "galleryBanner": {
+    "color": "#4c1d95",
+    "theme": "dark"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/caissonhq/forgebench.git",
+    "directory": "integrations/vscode-forgebench"
+  },
+  "bugs": {
+    "url": "https://github.com/caissonhq/forgebench/issues"
+  },
+  "homepage": "https://forgebench.dev/docs/ide/vscode/",
+  "qna": "https://github.com/caissonhq/forgebench/discussions",
   "engines": {
     "vscode": "^1.85.0"
   },
   "categories": [
     "Linters",
-    "Other"
+    "Other",
+    "Testing"
   ],
   "keywords": [
     "code review",
     "ai",
     "merge risk",
     "forgebench",
-    "onboarding"
+    "onboarding",
+    "cursor",
+    "copilot",
+    "codex",
+    "sarif",
+    "guardrails",
+    "pull request",
+    "quality assurance"
   ],
   "activationEvents": [
     "onStartupFinished"
