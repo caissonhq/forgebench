@@ -23,6 +23,12 @@ class LLMConfigTests(unittest.TestCase):
         self.assertEqual(config.provider, "command")
         self.assertEqual(config.command, "python reviewer.py")
 
+    def test_parses_ensemble_models_from_env(self) -> None:
+        with mock.patch.dict(os.environ, {"FORGEBENCH_LLM_ENSEMBLE_MODELS": "model-a,model-b"}, clear=False):
+            config = resolve_llm_config(enabled=True, provider="mock")
+
+        self.assertEqual(config.ensemble_models, ["gpt-4o-mini", "model-a", "model-b"])
+
     def test_explicit_provider_overrides_env_inference(self) -> None:
         with mock.patch.dict(
             os.environ,

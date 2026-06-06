@@ -130,6 +130,14 @@ def run_llm_review(config: LLMReviewerConfig, bundle: str, existing_findings: li
 
 
 def run_llm_json(config: LLMReviewerConfig, bundle: str) -> LLMJSONResult:
+    if config.enabled and len(config.ensemble_models) > 1:
+        from forgebench.llm_ensemble import run_ensemble_json
+
+        return run_ensemble_json(config, bundle)
+    return _run_llm_json_once(config, bundle)
+
+
+def _run_llm_json_once(config: LLMReviewerConfig, bundle: str) -> LLMJSONResult:
     if not config.enabled:
         return LLMJSONResult(enabled=False, provider=None, status=LLMReviewStatus.SKIPPED)
     provider_name = config.provider or ("command" if config.command else None)
