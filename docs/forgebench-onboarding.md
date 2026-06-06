@@ -17,7 +17,7 @@ Primary CI is `.github/workflows/ci.yml` (pytest, calibration, wheel smoke). Con
 
 ## Guardrails
 
-Root `forgebench.yml` dogfoods the tool on this codebase. Edit `checks.test` or policy paths as needed.
+This source repo intentionally has **no root `forgebench.yml`** so calibration and generic-mode tests stay green. Trusted CI template: `.github/forgebench.yml`.
 
 ## Docs & health
 

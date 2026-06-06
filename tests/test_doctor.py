@@ -37,7 +37,11 @@ class DoctorTests(unittest.TestCase):
                 or "forgebench presets" in text
             )
         else:
-            self.assertTrue("forgebench review" in text or "forgebench quickstart" in text)
+            self.assertTrue(
+                "forgebench review" in text
+                or "forgebench quickstart" in text
+                or "forgebench doctor --checklist" in text
+            )
 
     def test_cli_doctor_exits_zero_when_core_checks_pass(self) -> None:
         stdout = StringIO()

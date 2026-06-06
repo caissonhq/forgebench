@@ -1,0 +1,15 @@
+# Trusted CI guardrails template for consumer repos (see forgebench init --enterprise).
+# The ForgeBench source repo keeps generic-mode tests green — no root forgebench.yml.
+
+project: forgebench-dev
+protected_behavior: []
+forbidden_patterns: []
+risk_files:
+  high: []
+  medium: []
+checks:
+  build: null
+  test: python3 -m pytest -q
+  lint: null
+  typecheck: null
+check_timeout_seconds: 120
