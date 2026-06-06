@@ -4,7 +4,16 @@ ForgeBench reviews AI-generated diffs before they hit main.
 
 Status key: **Done** · **In progress** · **Planned** · **Exploring**
 
-Last updated: 2026-06-05 (EO-009)
+Last updated: 2026-06-05 (EO-010)
+
+## EO-010 — World-Class Delivery & Adoption (Done)
+
+- **IDE extensions v1**: Production-grade VS Code extension (`forgebenchRunner`, diff review, policy test, SARIF) and JetBrains plugin (Kotlin actions + Gradle build)
+- **GitHub App kit**: Self-hosted org policy enforcement — `forgebench github-app manifest|enforce|serve`, webhook handler, check-run output
+- **SOC 2 readiness pack**: `docs/security/` controls matrix, audit prep checklist, SOC 2 overview
+- **Marketing refresh**: Early Access positioning in [docs/marketing-home.md](docs/marketing-home.md)
+- **Public roadmap + contribution program**: [contribution-program.md](docs/contribution-program.md), refreshed [CONTRIBUTING.md](CONTRIBUTING.md)
+- **Early Access launch prep**: [docs/early-access.md](docs/early-access.md), [docs/pricing.md](docs/pricing.md)
 
 ## EO-009 — Policy & Verification Platform (Done)
 
@@ -57,8 +66,9 @@ Last updated: 2026-06-05 (EO-009)
 | Item | Notes |
 |------|-------|
 | Hosted policy dashboard v1 | Wire skeleton to org inventory + adoption status (opt-in telemetry TBD) |
-| VS Code marketplace publish | Harden extension scaffold, diff picker UX |
-| JetBrains plugin alpha | Kotlin actions for review + report |
+| VS Code marketplace publish | Package v1.0.0 extension; diff picker UX polish |
+| JetBrains Marketplace publish | Package Kotlin plugin; sign and list |
+| GitHub App hosted option | Managed webhook receiver (self-hosted kit ships in EO-010) |
 | GitLab / CircleCI shared templates | Publish reusable template repos |
 | Policy lint in CI | `--strict` gate on shared org policy repos |
 

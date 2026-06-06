@@ -1,91 +1,92 @@
-# ForgeBench — Marketing Home (EO-006 refresh)
+# ForgeBench — Marketing Home (EO-010 Early Access)
 
-Use this page copy for the public site (Lovable / forgebench.dev). Local-first. Evidence-backed. No hosted SaaS claims.
+Technical positioning for forgebench.dev. **Merge-risk governance for AI-generated code** — local-first, evidence-backed, honest about limits.
 
 ## Hero
 
-**ForgeBench reviews AI-generated diffs before they hit main.**
+**Would a serious engineer merge this AI-generated diff?**
 
-SWE-Bench asks whether an agent solved a task. ForgeBench asks whether a serious engineer would merge the diff.
+ForgeBench answers that question before code reaches `main`. Not agent task completion. Not vibe scores. **Cited merge posture** with a repair loop your agents can act on.
 
-[Get started](#quickstart) · [See a sample report](#sample-reports) · [Public roadmap](../ROADMAP.md)
+[Start free](#quickstart) · [Early Access](#early-access) · [Security pack](#security) · [Roadmap](../ROADMAP.md)
 
-## Value pillars
+## Why teams adopt ForgeBench
 
-1. **Merge posture, not vibes** — `BLOCK`, `REVIEW`, or `LOW_CONCERN` with cited evidence
-2. **Repo-aware guardrails** — shared `forgebench.yml`, org policy layers, monorepo scope filters
-3. **Agent loop friendly** — Markdown report, JSON, SARIF, repair prompt for Cursor / Codex / Claude
-4. **CI anywhere** — GitHub Actions, GitLab CI, CircleCI, Jenkins recipes
-5. **Calibrated honesty** — Merge Risk Benchmark over 47+ golden cases; real anonymized dogfood reports
+| Problem | ForgeBench response |
+|---------|---------------------|
+| Agents ship broad diffs fast | Posture: `BLOCK` / `REVIEW` / `LOW_CONCERN` with evidence |
+| Generic linters miss task drift | Scope Auditor + guardrails policy (FPL v1) |
+| "LGTM" on AI code | Merge Risk Benchmark — 47+ golden cases + real PR outcomes |
+| Policy sprawl in monorepos | Org layers + self-hosted GitHub App enforcement |
+| Audit asks "how do you gate AI merges?" | SOC2-style control matrix + policy audit JSONL |
 
-## How it works
+## Architecture (local-first)
 
 ```mermaid
-flowchart LR
-  A[Task + Diff] --> B[Deterministic checks]
-  B --> C[Static signals]
-  C --> D[Guardrails policy]
-  D --> E[Heuristic lenses]
-  E --> F[Optional LLM advisory]
-  F --> G[Posture + repair prompt]
+flowchart TB
+  subgraph dev [Developer / CI]
+    A[Task + Diff] --> B[forgebench review]
+    B --> C[Posture + SARIF + repair prompt]
+  end
+  subgraph policy [Policy plane]
+    D[forgebench.yml / FPL] --> E[policy test + simulate]
+    E --> F[audit + version fingerprints]
+  end
+  subgraph org [Optional self-hosted]
+    G[GitHub App webhook] --> H[org enforcement check]
+  end
+  B --> D
+  B --> G
 ```
 
-Evidence hierarchy: deterministic → static → guardrails → lenses → optional LLM. Deterministic failures are never downgraded.
+Deterministic failures are never downgraded. Optional LLM/Grok layers are advisory.
 
 ## Quickstart
 
 ```bash
 pip install forgebench
 forgebench doctor
-forgebench review-pr https://github.com/org/repo/pull/1
+forgebench review-pr https://github.com/org/repo/pull/42
 forgebench init --repo . --out forgebench.yml
+forgebench policy test --tests examples/policy_tests
 ```
 
-## Team & Enterprise (local-first)
+## Early Access
 
-- Layer org policy with `extends`, `include`, or `FORGEBENCH_ORG_POLICY`
-- Export a **policy dashboard skeleton**: `forgebench dashboard`
-- Validate shared policy in CI: `forgebench validate --strict`
+Team and Enterprise packages add **adoption infrastructure**, not hosted code review:
 
-Details: [team-enterprise.md](team-enterprise.md)
+- Production **VS Code** and **JetBrains** extensions
+- **Self-hosted GitHub App** manifest + org policy enforcement
+- **SOC2-style** security documentation for procurement
+- Priority support for shared policy rollouts
+
+Details: [early-access.md](early-access.md) · [pricing.md](pricing.md)
 
 ## Integrations
 
-| Surface | Link |
-|---------|------|
-| GitHub Action | [action/README.md](../action/README.md) |
-| GitLab / CircleCI / Jenkins | [ci-integrations.md](ci-integrations.md) |
-| Cursor + MCP | [cursor-integration.md](cursor-integration.md) |
-| VS Code / JetBrains scaffolds | [ide-integrations.md](ide-integrations.md) |
+| Surface | Status |
+|---------|--------|
+| CLI + MCP + Cursor | GA (beta) |
+| GitHub Action | GA |
+| VS Code extension | EA v1.0 |
+| JetBrains plugin | EA v1.0 |
+| Self-hosted GitHub App | EA kit |
+| FPL + policy tests | GA |
+| GitLab / CircleCI / Jenkins | Recipes |
 
-## Review lenses (Phase 1)
+## Security
 
-- Scope Auditor
-- Test Skeptic (+ optional LLM v2 when triggered)
-- Contract Keeper
-- Product / Guardrail Reviewer
-- Dependency Watcher v0
-- Repo Convention Reviewer
-- Security Reviewer v0
-- Regression Hunter (narrow Phase 2)
-
-Lenses route attention. They do not approve merges or assign numeric scores.
-
-## Sample reports
-
-- Synthetic first-run examples: [examples/sample_report](../examples/sample_report)
-- Real anonymized dogfood (EO-002): [examples/real_reports](../examples/real_reports)
-- Merge Risk Benchmark: [merge-risk-benchmark.md](merge-risk-benchmark.md)
-
-## Public beta
-
-Structured local feedback export for dogfood teams. See [beta-launch.md](beta-launch.md).
+- [Trust model](trust-model.md)
+- [SOC 2 readiness](security/soc2-readiness.md)
+- [Controls matrix](security/controls-matrix.md)
+- [Audit prep checklist](security/audit-prep-checklist.md)
 
 ## Community
 
-- [ROADMAP.md](../ROADMAP.md) — what ships next
-- [CONTRIBUTING.md](../CONTRIBUTING.md) — golden cases, PRs, calibration
+- [Contribution program](contribution-program.md)
+- [CONTRIBUTING.md](../CONTRIBUTING.md)
+- Merge Risk Benchmark: [merge-risk-benchmark.md](merge-risk-benchmark.md)
 
-## Footer disclaimer
+## Footer
 
 ForgeBench does not prove code is safe. It highlights merge risk before AI-generated code reaches main.

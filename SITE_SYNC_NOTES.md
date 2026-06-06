@@ -2,6 +2,23 @@
 
 Use this as a concise Lovable update prompt for the public alpha site. Do not imply hosted SaaS, OAuth, or the full 8-reviewer set.
 
+## EO-010 additions (2026-06-05)
+
+Full home page copy: [docs/marketing-home.md](docs/marketing-home.md) (Early Access refresh)
+
+Add or refresh:
+
+- **Early Access** section — [docs/early-access.md](docs/early-access.md), pricing tiers [docs/pricing.md](docs/pricing.md)
+- **IDE extensions v1** — VS Code marketplace-ready extension + JetBrains plugin; link [docs/ide-integrations.md](docs/ide-integrations.md)
+- **GitHub App (self-hosted)** — org policy enforcement kit; link `examples/github-app/`, `forgebench github-app`
+- **Security pack** — SOC 2 readiness overview, controls matrix, audit prep → [docs/security/](docs/security/)
+- **Contribution program** — [docs/contribution-program.md](docs/contribution-program.md)
+
+Still do not claim:
+
+- ForgeBench operates a hosted GitHub App for customer code (self-hosted kit only)
+- SOC 2 certification achieved (readiness pack only)
+
 ## EO-007 additions (2026-06-05)
 
 - Add **Semantic analysis** section from [docs/semantic-analysis.md](docs/semantic-analysis.md)
