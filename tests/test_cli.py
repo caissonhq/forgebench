@@ -254,6 +254,14 @@ class CliTests(unittest.TestCase):
             self.assertTrue((out_dir / "index.html").exists())
             self.assertTrue((out_dir / "policy-manifest.json").exists())
 
+    def test_policy_test_command_passes_examples(self) -> None:
+        root = Path(__file__).resolve().parents[1]
+        stdout = StringIO()
+        with redirect_stdout(stdout):
+            result = main(["policy", "test", "--tests", str(root / "examples" / "policy_tests"), "--repo", str(root), "--no-audit"])
+        self.assertEqual(result, 0)
+        self.assertIn("Passed:", stdout.getvalue())
+
     def test_telemetry_status_command(self) -> None:
         stdout = StringIO()
         with redirect_stdout(stdout):

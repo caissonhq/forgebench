@@ -21,6 +21,7 @@ from forgebench.review import ReviewInputError, run_review
 from forgebench.dashboard import DashboardExportError, export_policy_dashboard
 from forgebench.mutation import build_mutation_plan
 from forgebench.prove_it import behavioral_from_static_signals, export_prove_it_plan, load_report_for_prove_it
+from forgebench.policy_cli import add_policy_subparser, run_policy_command
 from forgebench.validate import format_validation_report, validate_guardrails_file
 
 
@@ -54,6 +55,9 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.command == "telemetry":
         return _run_telemetry(args)
+
+    if args.command == "policy":
+        return run_policy_command(args)
 
     if args.command == "repair":
         return _run_repair(args)
@@ -656,6 +660,8 @@ def _build_parser() -> argparse.ArgumentParser:
         required=False,
         help="Output directory. Defaults to ./forgebench-output/policy-dashboard/.",
     )
+
+    add_policy_subparser(subparsers)
 
     return parser
 
