@@ -22,6 +22,7 @@ REGRESSION_HUNTER = "regression_hunter"
 SECURITY_REVIEWER = "security_reviewer"
 DEPENDENCY_WATCHER = "dependency_watcher"
 REPO_CONVENTION_REVIEWER = "repo_convention_reviewer"
+BEHAVIORAL_SKEPTIC = "behavioral_skeptic"
 
 
 @dataclass(frozen=True)
@@ -43,6 +44,7 @@ __all__ = [
     "SECURITY_REVIEWER",
     "DEPENDENCY_WATCHER",
     "REPO_CONVENTION_REVIEWER",
+    "BEHAVIORAL_SKEPTIC",
     "ReviewerContext",
     "SCOPE_AUDITOR",
     "TEST_SKEPTIC",

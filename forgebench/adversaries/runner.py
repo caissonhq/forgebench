@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 
+from forgebench.adversaries.behavioral_skeptic import review as behavioral_skeptic_review
 from forgebench.adversaries.contract_keeper import review as contract_keeper_review
 from forgebench.adversaries.dependency_watcher import review as dependency_watcher_review
 from forgebench.adversaries.lenses import regression_hunter, test_skeptic_v2
@@ -30,6 +31,7 @@ REVIEWERS: tuple[Reviewer, ...] = (
     security_reviewer_review,
     dependency_watcher_review,
     repo_convention_review,
+    behavioral_skeptic_review,
 )
 
 
