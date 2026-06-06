@@ -1,0 +1,13 @@
+{
+  "name": "docs_suppress_ui_copy",
+  "guardrails": "../../golden_cases/docs_only_policy_low_concern/forgebench.yml",
+  "diff": "../../golden_cases/docs_only_policy_low_concern/patch.diff",
+  "task": "../../golden_cases/docs_only_policy_low_concern/task.md",
+  "expect": {
+    "posture": "LOW_CONCERN",
+    "suppressed_findings": ["ui_copy_changed"],
+    "posture_ceiling": "LOW_CONCERN",
+    "active_categories": ["docs"],
+    "formal_must_pass": true
+  }
+}
