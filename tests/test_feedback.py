@@ -228,6 +228,41 @@ class FeedbackTests(unittest.TestCase):
                     posture="MAYBE",
                 )
 
+    def test_structured_feedback_v3_fields(self) -> None:
+        with TemporaryDirectory() as tmp:
+            path = Path(tmp) / "feedback.jsonl"
+            append_feedback(
+                "fnd_v3",
+                status="dismissed",
+                feedback_log=path,
+                kind="ui_copy_changed",
+                severity="low",
+                confidence="medium",
+                files=["docs/README.md"],
+                expected_posture="LOW_CONCERN",
+                outcome_label="false_positive",
+                reviewer_lens="Product / Guardrail Reviewer",
+                case_slug="feedback_dismissed_ui_copy_changed",
+            )
+            entry = _read_entries(path)[0]
+        self.assertEqual(entry["fb_version"], 3)
+        self.assertEqual(entry["outcome_label"], "false_positive")
+        self.assertEqual(entry["files"], ["docs/README.md"])
+
+    def test_export_bundle_uses_v3_schema_when_present(self) -> None:
+        with TemporaryDirectory() as tmp:
+            path = Path(tmp) / "feedback.jsonl"
+            append_feedback(
+                "fnd_v3",
+                status="wrong",
+                feedback_log=path,
+                kind="broad_file_surface",
+                outcome_label="false_positive",
+            )
+            bundle = export_feedback_bundle([path])
+        self.assertEqual(bundle["export_version"], 2)
+        self.assertEqual(bundle["schema_version"], "3.0.0")
+
     def test_cli_suggest_guardrails_writes_only_when_out_is_passed(self) -> None:
         with TemporaryDirectory() as tmp:
             path = Path(tmp) / "feedback.jsonl"

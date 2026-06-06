@@ -9,9 +9,20 @@ from typing import Any
 
 
 DEFAULT_FEEDBACK_LOG = Path("forgebench-output") / "feedback.jsonl"
+FEEDBACK_SCHEMA_VERSION = "3.0.0"
 VALID_FEEDBACK_STATUSES = {"accepted", "dismissed", "wrong"}
 VALID_FEEDBACK_POSTURES = {"BLOCK", "REVIEW", "LOW_CONCERN"}
 VALID_AGENT_TOOLS = {"cursor", "codex", "claude", "copilot", "other"}
+VALID_FEEDBACK_SEVERITIES = {"low", "medium", "high", "critical"}
+VALID_FEEDBACK_CONFIDENCE = {"low", "medium", "high"}
+VALID_OUTCOME_LABELS = {
+    "false_positive",
+    "true_positive",
+    "missed_concern",
+    "noise",
+    "calibration_gap",
+    "other",
+}
 
 
 class FeedbackError(ValueError):
@@ -41,6 +52,13 @@ def append_feedback(
     workflow: str | None = None,
     finding_count: int | None = None,
     review_command: str | None = None,
+    severity: str | None = None,
+    confidence: str | None = None,
+    files: list[str] | None = None,
+    expected_posture: str | None = None,
+    outcome_label: str | None = None,
+    reviewer_lens: str | None = None,
+    case_slug: str | None = None,
 ) -> Path:
     normalized_uid = uid.strip()
     if not normalized_uid:
@@ -53,19 +71,47 @@ def append_feedback(
         raise FeedbackError("agent_tool must be one of: cursor, codex, claude, copilot, other.")
     if finding_count is not None and finding_count < 0:
         raise FeedbackError("finding_count must be zero or positive.")
+    if severity is not None and severity not in VALID_FEEDBACK_SEVERITIES:
+        raise FeedbackError("severity must be one of: low, medium, high, critical.")
+    if confidence is not None and confidence not in VALID_FEEDBACK_CONFIDENCE:
+        raise FeedbackError("confidence must be one of: low, medium, high.")
+    if expected_posture is not None and expected_posture not in VALID_FEEDBACK_POSTURES:
+        raise FeedbackError("expected_posture must be one of: BLOCK, REVIEW, LOW_CONCERN.")
+    if outcome_label is not None and outcome_label not in VALID_OUTCOME_LABELS:
+        raise FeedbackError(
+            "outcome_label must be one of: false_positive, true_positive, missed_concern, noise, calibration_gap, other."
+        )
 
     path = Path(feedback_log) if feedback_log else DEFAULT_FEEDBACK_LOG
     path.parent.mkdir(parents=True, exist_ok=True)
-    structured_fields = any(
+    v2_fields = any(
         value is not None
         for value in (posture, agent_tool, workflow, finding_count, review_command)
     )
+    v3_fields = any(
+        value is not None
+        for value in (
+            severity,
+            confidence,
+            files,
+            expected_posture,
+            outcome_label,
+            reviewer_lens,
+            case_slug,
+        )
+    )
+    if v3_fields:
+        fb_version = 3
+    elif v2_fields:
+        fb_version = 2
+    else:
+        fb_version = 1
     payload: dict[str, Any] = {
         "uid": normalized_uid,
         "status": status,
         "note": note or "",
         "ts": datetime.now(timezone.utc).isoformat(),
-        "fb_version": 2 if structured_fields else 1,
+        "fb_version": fb_version,
     }
     if kind:
         payload["kind"] = kind
@@ -83,6 +129,20 @@ def append_feedback(
         payload["finding_count"] = finding_count
     if review_command:
         payload["review_command"] = review_command
+    if severity:
+        payload["severity"] = severity
+    if confidence:
+        payload["confidence"] = confidence
+    if files:
+        payload["files"] = [str(item) for item in files if str(item).strip()]
+    if expected_posture:
+        payload["expected_posture"] = expected_posture
+    if outcome_label:
+        payload["outcome_label"] = outcome_label
+    if reviewer_lens:
+        payload["reviewer_lens"] = reviewer_lens
+    if case_slug:
+        payload["case_slug"] = case_slug
 
     with path.open("a", encoding="utf-8") as handle:
         handle.write(json.dumps(payload, sort_keys=True) + "\n")
@@ -141,8 +201,10 @@ def export_feedback_bundle(
 ) -> dict[str, Any]:
     entries, malformed_count, missing_logs = _load_feedback_entries(feedback_logs)
     summary = summarize_feedback(feedback_logs)
+    has_v3 = any(int(entry.get("fb_version") or 1) >= 3 for entry in entries)
     return {
-        "export_version": 1,
+        "export_version": 2 if has_v3 else 1,
+        "schema_version": FEEDBACK_SCHEMA_VERSION if has_v3 else "2.0.0",
         "source": source,
         "repo": repo_name,
         "generated_at": datetime.now(timezone.utc).isoformat(),
