@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: ForgeBench version (e.g. 0.9.0)
+        description: ForgeBench version (e.g. 1.0.0)
         required: true
 
 permissions:
@@ -17,7 +17,7 @@ jobs:
     name: Generate and publish Homebrew formula
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Resolve version
         id: ver
         run: |
@@ -39,12 +39,13 @@ jobs:
           sed -e "s/VERSION_PLACEHOLDER/${VERSION}/g" -e "s/SHA256_PLACEHOLDER/${SHA256}/g" \
             packaging/homebrew/forgebench.rb > forgebench.rb
           cat forgebench.rb
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: homebrew-formula
           path: forgebench.rb
+          retention-days: 30
       - name: Push to homebrew-tap
-        if: secrets.HOMEBREW_TAP_TOKEN != ''
+        if: ${{ secrets.HOMEBREW_TAP_TOKEN != '' }}
         env:
           TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
         run: |

@@ -1,0 +1,36 @@
+name: Dependabot auto-merge
+
+on:
+  pull_request:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  auto-merge:
+    name: Auto-merge safe Dependabot bumps
+    runs-on: ubuntu-latest
+    if: github.actor == 'dependabot[bot]'
+    steps:
+      - name: Fetch Dependabot metadata
+        uses: dependabot/fetch-metadata@v2
+        id: metadata
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Enable auto-merge for GitHub Actions (minor/patch)
+        if: >-
+          steps.metadata.outputs.package-ecosystem == 'github_actions' &&
+          steps.metadata.outputs.update-type != 'version-update:semver-major'
+        run: gh pr merge --auto --squash "${{ github.event.pull_request.html_url }}"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Enable auto-merge for pip (patch only)
+        if: >-
+          steps.metadata.outputs.package-ecosystem == 'pip' &&
+          steps.metadata.outputs.update-type == 'version-update:semver-patch'
+        run: gh pr merge --auto --squash "${{ github.event.pull_request.html_url }}"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -2,7 +2,15 @@ name: CI
 
 on:
   push:
+    branches: [main]
   pull_request:
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
 
 jobs:
   test:
@@ -15,20 +23,22 @@ jobs:
 
     steps:
       - name: Check out repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python-version }}
+          cache: pip
+          cache-dependency-path: pyproject.toml
 
       - name: Install package
         run: |
           python -m pip install --upgrade pip
-          pip install -e .
+          pip install -e ".[dev]"
 
       - name: Run tests
-        run: PYTHONDONTWRITEBYTECODE=1 python -m unittest discover -s tests
+        run: PYTHONDONTWRITEBYTECODE=1 python -m pytest -q
 
       - name: Run calibration
         run: PYTHONDONTWRITEBYTECODE=1 python -m forgebench calibrate --cases examples/golden_cases
@@ -38,12 +48,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Check out repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: "3.12"
+          cache: pip
+          cache-dependency-path: pyproject.toml
 
       - name: Build wheel and sdist
         run: |
@@ -61,4 +73,14 @@ jobs:
           /tmp/forgebench-smoke-venv/bin/forgebench --version
           /tmp/forgebench-smoke-venv/bin/forgebench --help
           /tmp/forgebench-smoke-venv/bin/forgebench doctor
-          /tmp/forgebench-smoke-venv/bin/python -c "import forgebench; assert forgebench.__version__ == '0.9.0'"
+          /tmp/forgebench-smoke-venv/bin/python - <<'PY'
+          import re
+          from pathlib import Path
+          import forgebench
+          expected = re.search(
+              r'^version\s*=\s*"([^"]+)"',
+              Path("pyproject.toml").read_text(encoding="utf-8"),
+              re.MULTILINE,
+          ).group(1)
+          assert forgebench.__version__ == expected, f"{forgebench.__version__} != {expected}"
+          PY

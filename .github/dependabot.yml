@@ -4,14 +4,42 @@ updates:
     directory: /
     schedule:
       interval: weekly
+      day: monday
+      time: "09:00"
+      timezone: America/Los_Angeles
     groups:
       forgebench-runtime:
         patterns:
           - pyyaml
           - tree-sitter*
-    open-pull-requests-limit: 10
+        update-types:
+          - minor
+          - patch
+    open-pull-requests-limit: 5
+    labels:
+      - dependencies
+    commit-message:
+      prefix: chore
+      include: scope
 
   - package-ecosystem: github-actions
     directory: /
     schedule:
       interval: weekly
+      day: monday
+      time: "09:00"
+      timezone: America/Los_Angeles
+    groups:
+      github-actions-minor-patch:
+        patterns:
+          - "*"
+        update-types:
+          - minor
+          - patch
+    open-pull-requests-limit: 5
+    labels:
+      - dependencies
+      - github-actions
+    commit-message:
+      prefix: chore
+      include: scope
