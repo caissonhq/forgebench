@@ -13,9 +13,12 @@ class InstallDocsTests(unittest.TestCase):
 
         self.assertIn("pip install forgebench", readme)
         self.assertIn("forgebench doctor", readme)
+        self.assertIn("forgebench quickstart", readme)
         self.assertIn("forgebench review-pr PR_URL", readme)
         self.assertIn("forgebench init", readme)
         self.assertIn("--guardrails forgebench.yml", readme)
+        self.assertIn("pipx install forgebench", readme)
+        self.assertIn("brew install forgebench", readme)
 
     def test_readme_mentions_generic_mode_presets_and_feedback_suggestions(self) -> None:
         readme = (ROOT / "README.md").read_text(encoding="utf-8")

@@ -34,6 +34,8 @@ plugins:
 nav:
   - Home: index.md
   - Quickstart: quickstart.md
+  - Install methods: ../docs/install-methods.md
+  - Presets gallery: ../docs/presets-gallery.md
   - CLI Reference: cli-reference.md
   - Troubleshooting: troubleshooting.md
   - Onboarding:
@@ -46,6 +48,8 @@ nav:
       - Init wizard: enterprise/init.md
       - Team policy: enterprise/team-policy.md
       - Pricing & licensing: enterprise/pricing.md
+      - GitHub App listing: ../docs/github-app-listing.md
+      - Design partners: ../docs/design-partner.md
   - Go-to-Market:
       - Sales one-pager: ../docs/sales/one-pager.md
       - Competitive matrix: ../docs/sales/competitive-matrix.md

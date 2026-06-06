@@ -30,9 +30,14 @@ class DoctorTests(unittest.TestCase):
         self.assertIn("ForgeBench doctor", text)
         self.assertTrue("demo" in text.lower() or "onboarding" in text.lower())
         if report.has_warnings:
-            self.assertIn("forgebench review --repo", text)
+            self.assertTrue(
+                "forgebench review" in text
+                or "forgebench quickstart" in text
+                or "forgebench init" in text
+                or "forgebench presets" in text
+            )
         else:
-            self.assertIn("forgebench review-pr PR_URL", text)
+            self.assertTrue("forgebench review" in text or "forgebench quickstart" in text)
 
     def test_cli_doctor_exits_zero_when_core_checks_pass(self) -> None:
         stdout = StringIO()
@@ -63,6 +68,13 @@ class DoctorTests(unittest.TestCase):
         repo_check = next(check for check in report.checks if check.name == "repo")
         self.assertEqual(repo_check.status, DoctorStatus.WARN)
         self.assertIn("not a git repo", repo_check.message)
+
+    def test_cli_doctor_checklist_flag(self) -> None:
+        stdout = StringIO()
+        with redirect_stdout(stdout):
+            result = main(["doctor", "--checklist", "--repo", str(Path.cwd())])
+        self.assertEqual(result, 0)
+        self.assertIn("Adoption success checklist", stdout.getvalue())
 
 
 if __name__ == "__main__":

@@ -33,6 +33,7 @@ ForgeBench does not prove code is safe. It highlights merge risk before AI-gener
 - CI recipes for GitLab, CircleCI, and Jenkins; production-grade VS Code extension and JetBrains plugin with onboarding wizards, findings sidebar/tool window, and repair prompts.
 - EO-012 (2026-06-05): Professional UX — `forgebench demo`, `forgebench status`, `forgebench init --enterprise`, rich CLI output with `--explain`, doctor onboarding checklist, MkDocs Material docs site (`mkdocs.yml` + `site-docs/`).
 - EO-013 (2026-06-05): Go-to-market — `forgebench license` (activate/check/status/report), product analytics (`forgebench analytics`), usage dashboard, quota hooks, release automation (multi-platform wheels, SBOM, attestations, Homebrew formula, VS Code Marketplace workflow), sales + customer success kits.
+- EO-014 (2026-06-06): Adoption velocity — `forgebench quickstart`, `forgebench team init`, presets gallery (`forgebench presets`), `forgebench share-report`, doctor adoption checklist, milestone analytics, GitHub App install auto-config, install-methods + design-partner docs, GitHub Discussions templates.
 - Self-hosted GitHub App kit for org-level policy enforcement (`forgebench github-app`).
 - SOC 2-style security documentation pack (`docs/security/`) with controls matrix and evidence mapping.
 - Enterprise security hardening (EO-011): path confinement, trusted guardrails for checks, webhook attestation, RBAC, tamper-evident audit chain, data retention.

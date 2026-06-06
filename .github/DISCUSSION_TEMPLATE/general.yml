@@ -1,0 +1,13 @@
+title: General discussion
+labels: ["discussion"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Questions, show-and-tell, or Design Partner intake. See docs/design-partner.md.
+  - type: textarea
+    id: body
+    attributes:
+      label: Message
+    validations:
+      required: true

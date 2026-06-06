@@ -286,6 +286,15 @@ class FeedbackTests(unittest.TestCase):
             self.assertTrue(output.exists())
             self.assertIn("guardrail suggestions written", stdout.getvalue())
 
+    def test_cli_feedback_suggest_feature_template(self) -> None:
+        stdout = StringIO()
+        with redirect_stdout(stdout):
+            code = main(["feedback", "--suggest", "--note", "Better Slack export"])
+        self.assertEqual(code, 0)
+        self.assertIn("ForgeBench feature suggestion", stdout.getvalue())
+        self.assertIn("Better Slack export", stdout.getvalue())
+        self.assertIn("discussions", stdout.getvalue())
+
 
 def _read_entries(path: Path) -> list[dict[str, object]]:
     return [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]

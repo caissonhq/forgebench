@@ -35,25 +35,42 @@ ForgeBench does not prove code is safe. It highlights merge risk before AI-gener
 
 ## Quickstart
 
-Install ForgeBench:
+Install ForgeBench (pick one):
 
 ```bash
-pip install forgebench
+pip install forgebench          # recommended
+pipx install forgebench         # isolated CLI
+brew tap caissonhq/tap && brew install forgebench   # macOS/Linux
 ```
 
-Verify your local install and tooling:
+See [docs/install-methods.md](docs/install-methods.md) for VS Code extension, source install, and CI options.
+
+**Solo developers** — one guided flow (~2 minutes):
 
 ```bash
-forgebench doctor
+forgebench quickstart
 ```
 
-`forgebench doctor` checks Python, the installed package, git, optional GitHub CLI auth, a writable `forgebench-output/` directory, and an onboarding checklist (guardrails, CI workflow, demo). Fix any failed checks before running PR review.
+Verify install and track adoption milestones:
+
+```bash
+forgebench doctor --checklist
+```
+
+`forgebench doctor` checks Python, the installed package, git, optional GitHub CLI auth, a writable `forgebench-output/` directory, and recommends next steps. Fix any failed checks before running PR review.
 
 Try a one-command guided demo (no guardrails or network required):
 
 ```bash
 forgebench demo
 forgebench status
+```
+
+Install a curated guardrail preset:
+
+```bash
+forgebench presets list
+forgebench presets install python
 ```
 
 First run a PR review with generic heuristics:
@@ -74,10 +91,29 @@ forgebench init \
 
 `forgebench init` defaults to `--preset auto` and inspects local manifest files such as `pyproject.toml`, `package.json`, `Cargo.toml`, and `Package.swift` to suggest safe check commands. It does not run package managers, `git log`, `gh`, or network calls. Edit `protected_behavior` and `forbidden_patterns` yourself before relying on project-specific guardrails.
 
-Enterprise team starter kit (org policy, CI workflow, onboarding docs):
+**Engineering teams** — interactive team wizard (org policy, CI, GitHub App notes, onboarding docs):
+
+```bash
+forgebench team init
+# or: forgebench init --team --yes
+```
+
+Enterprise starter kit (same output, enterprise naming):
 
 ```bash
 forgebench init --enterprise --yes
+```
+
+Share a review with stakeholders:
+
+```bash
+forgebench share-report --out forgebench-output
+```
+
+Suggest a feature (opens GitHub Discussions template):
+
+```bash
+forgebench feedback --suggest --note "Your idea title"
 ```
 
 Documentation site (MkDocs Material): `mkdocs serve` after `pip install mkdocs-material`. See [site-docs/](site-docs/).

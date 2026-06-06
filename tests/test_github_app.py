@@ -61,6 +61,28 @@ class GitHubAppTests(unittest.TestCase):
         assert result.enforcement is not None
         self.assertEqual(result.enforcement.posture, "REVIEW")
 
+    def test_webhook_auto_configures_installation(self) -> None:
+        from tempfile import TemporaryDirectory
+
+        with TemporaryDirectory() as tmp:
+            result = handle_github_webhook(
+                {
+                    "_event_type": "installation",
+                    "action": "created",
+                    "installation": {
+                        "id": 4242,
+                        "app_id": 1,
+                        "target_type": "Organization",
+                        "account": {"login": "acme-corp"},
+                    },
+                },
+                install_output_dir=tmp,
+            )
+            self.assertTrue(result.handled)
+            self.assertIn("4242", result.message)
+            enforcement = __import__("pathlib").Path(tmp) / "installation-4242" / "org-enforcement.json"
+            self.assertTrue(enforcement.exists())
+
     def test_webhook_handles_signed_attestation(self) -> None:
         secret = "webhook-secret-12345678"
         signature = sign_attestation(

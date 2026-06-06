@@ -4,7 +4,16 @@ ForgeBench reviews AI-generated diffs before they hit main.
 
 Status key: **Done** · **In progress** · **Planned** · **Exploring**
 
-Last updated: 2026-06-05 (EO-013)
+Last updated: 2026-06-06 (EO-014)
+
+## EO-014 — Adoption Velocity (Done)
+
+- **Magic onboarding**: `forgebench quickstart`, `forgebench team init`, `forgebench init --team`, improved enterprise wizard
+- **Presets gallery**: `forgebench presets list|install|export` with bundled python/node/nextjs presets
+- **Viral sharing**: `forgebench share-report` HTML export, preset export bundles
+- **Success optimization**: `forgebench doctor --checklist`, post-review next actions, milestone analytics
+- **Distribution**: Install methods docs (pip/pipx/Homebrew/VS Code), GitHub App listing metadata, install auto-config
+- **Community**: GitHub Discussions templates, `forgebench feedback --suggest`, Design Partner program page
 
 ## EO-013 — Go-to-Market, Observability & Scale (Done)
 

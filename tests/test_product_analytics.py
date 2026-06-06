@@ -48,6 +48,15 @@ class ProductAnalyticsTests(unittest.TestCase):
                 with self.assertRaises(ProductAnalyticsError):
                     record_product_event("upload_raw_diffs", {})
 
+    def test_milestone_reached_event(self) -> None:
+        with TemporaryDirectory() as tmp, _env_analytics_on():
+            flag = Path(tmp) / ".product-analytics-enabled"
+            log = Path(tmp) / "product-analytics.jsonl"
+            with _patch_paths(flag, log):
+                record_product_event("milestone_reached", {"milestone": "first_demo"})
+                bundle = export_product_analytics_bundle(log_path=log)
+            self.assertEqual(bundle["events"][0]["event_type"], "milestone_reached")
+
     def test_analytics_dashboard_export(self) -> None:
         with TemporaryDirectory() as tmp:
             out = Path(tmp) / "dashboard"

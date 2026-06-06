@@ -10,6 +10,11 @@
 
 ## Unreleased
 
+- EO-014 (adoption): `forgebench quickstart`, `forgebench team init`, `forgebench init --team`, `forgebench presets list|install|export`, `forgebench share-report`, `forgebench feedback --suggest`.
+- EO-014 (doctor): `forgebench doctor --checklist` adoption success checklist and personalized next-step recommendations.
+- EO-014 (analytics): Milestone events (`first_review`, `first_team_init`, `first_paid_feature`, etc.) via local adoption state + product analytics.
+- EO-014 (GitHub App): Public listing metadata, installation auto-configuration on webhook `installation` events.
+- EO-014 (distribution): Install methods docs (pip, pipx, Homebrew, VS Code), presets gallery, design partner program, GitHub Discussions templates.
 - EO-013 (GTM): `forgebench license` commands — activate, check, status, report with HMAC keys and seat enforcement.
 - EO-013 (analytics): `forgebench analytics` product telemetry (opt-in, separate from review telemetry); self-hosted usage dashboard.
 - EO-013 (quotas): Tier-based daily limits for Grok verify, cloud export, policy serve (Enterprise).

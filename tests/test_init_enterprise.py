@@ -73,6 +73,25 @@ class EnterpriseInitTests(unittest.TestCase):
                 (Path(tmp) / "org-policy" / "forgebench-org.yml").resolve(),
             )
 
+    def test_cli_init_team_alias(self) -> None:
+        with TemporaryDirectory() as tmp:
+            self._activate_team_license(tmp)
+            stdout = StringIO()
+            with redirect_stdout(stdout):
+                result = main(
+                    [
+                        "init",
+                        "--team",
+                        "--yes",
+                        "--repo",
+                        tmp,
+                        "--org-name",
+                        "Team Alias Org",
+                    ]
+                )
+            self.assertEqual(result, 0)
+            self.assertTrue((Path(tmp) / "org-policy" / "forgebench-org.yml").exists())
+
     def test_enterprise_init_refuses_overwrite_without_force(self) -> None:
         with TemporaryDirectory() as tmp:
             self._activate_team_license(tmp)

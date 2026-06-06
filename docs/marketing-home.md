@@ -43,15 +43,26 @@ Deterministic failures are never downgraded. Optional LLM/Grok layers are adviso
 
 ## Quickstart
 
+**Solo developer**
+
 ```bash
-pip install forgebench
-forgebench doctor
-forgebench demo
-forgebench status
-forgebench review-pr https://github.com/org/repo/pull/42
-forgebench init --enterprise --yes
+pip install forgebench   # or: pipx install forgebench
+forgebench quickstart
+forgebench doctor --checklist
+forgebench presets install python
+forgebench share-report --out forgebench-output
+```
+
+**Engineering team**
+
+```bash
+forgebench team init
+forgebench license activate FB-TEAM-...
+forgebench review-pr https://github.com/org/repo/pull/42 --guardrails .github/forgebench.yml --checkout-pr --run-checks
 forgebench policy test --tests examples/policy_tests
 ```
+
+Install options: [install-methods.md](install-methods.md) · Presets: [presets-gallery.md](presets-gallery.md) · Design partners: [design-partner.md](design-partner.md)
 
 ## Pricing
 

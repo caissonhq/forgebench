@@ -1,0 +1,40 @@
+title: Feature request
+labels: ["enhancement", "discussion"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for helping improve ForgeBench. Run `forgebench feedback --suggest` locally for a copy-paste template.
+  - type: input
+    id: title
+    attributes:
+      label: Summary
+      description: One-line description of the feature
+      placeholder: e.g. Slack notification when posture is BLOCK
+    validations:
+      required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What pain does this solve?
+    validations:
+      required: true
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed solution
+      description: What should ForgeBench do?
+    validations:
+      required: true
+  - type: dropdown
+    id: persona
+    attributes:
+      label: Primary user
+      options:
+        - Solo developer
+        - Engineering team
+        - Platform / DevEx
+        - Security / compliance
+    validations:
+      required: true
