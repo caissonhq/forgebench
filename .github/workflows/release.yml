@@ -49,7 +49,7 @@ jobs:
           VERSION="${GITHUB_REF_NAME#v}"
           BUNDLE=$(ls -d dist/forgebench-${VERSION}-darwin-* | head -1)
           bash packaging/macos/build_pkg.sh "$VERSION" "$BUNDLE" dist
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: binary-${{ matrix.os }}
           path: dist/forgebench-*
@@ -70,7 +70,7 @@ jobs:
           python-version: ${{ matrix.python-version }}
       - run: python -m pip install --upgrade pip build
       - run: python -m build
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: dist-${{ matrix.os }}-py${{ matrix.python-version }}
           path: dist/*
@@ -124,7 +124,7 @@ jobs:
           find artifacts -name 'forgebench-*.tar.gz' -exec cp {} dist/ \; 2>/dev/null || true
           find artifacts -name 'forgebench-*.pkg' -exec cp {} dist/ \; 2>/dev/null || true
           ls -la dist/
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: forgebench-release-bundle
           path: |
