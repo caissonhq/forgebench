@@ -64,6 +64,12 @@ def _run_enforce(args: argparse.Namespace) -> int:
 
 
 def _run_serve(args: argparse.Namespace) -> int:
+    from forgebench.licensing.quotas import LicenseRequired, require_feature
+
+    try:
+        require_feature("github_app_serve")
+    except LicenseRequired as exc:
+        _fail(str(exc))
     config = GitHubAppServiceConfig(
         host=args.host,
         port=args.port,

@@ -110,6 +110,12 @@ def _run_policy_compile(args: argparse.Namespace) -> int:
 
 
 def _run_policy_serve(args: argparse.Namespace) -> int:
+    from forgebench.licensing.quotas import LicenseRequired, require_feature
+
+    try:
+        require_feature("policy_serve")
+    except LicenseRequired as exc:
+        _fail(str(exc))
     guardrails = Path(args.guardrails) if args.guardrails else None
     config = PolicyServiceConfig(
         host=args.host,
@@ -157,6 +163,13 @@ def _run_policy_verify(args: argparse.Namespace) -> int:
 
     grok_result = None
     if args.grok:
+        from forgebench.licensing.quotas import LicenseRequired, consume_quota, require_feature
+
+        try:
+            require_feature("grok_verify")
+            consume_quota("grok_verify")
+        except (LicenseRequired, PermissionError) as exc:
+            _fail(str(exc))
         mock_response = None
         if args.grok_mock:
             mock_response = {

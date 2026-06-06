@@ -332,6 +332,20 @@ class CliTests(unittest.TestCase):
             self.assertEqual(result, 0)
             self.assertIn("demo complete", stdout.getvalue().lower())
 
+    def test_cli_analytics_status_command(self) -> None:
+        stdout = StringIO()
+        with redirect_stdout(stdout):
+            result = main(["analytics", "status"])
+        self.assertEqual(result, 0)
+        self.assertIn("enabled", stdout.getvalue().lower())
+
+    def test_cli_license_status_command(self) -> None:
+        stdout = StringIO()
+        with redirect_stdout(stdout):
+            result = main(["license", "status"])
+        self.assertEqual(result, 0)
+        self.assertIn("license status", stdout.getvalue().lower())
+
     def test_review_pr_run_checks_requires_checkout_pr(self) -> None:
         stderr = StringIO()
 

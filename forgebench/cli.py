@@ -35,11 +35,20 @@ from forgebench.prove_it import behavioral_from_static_signals, export_prove_it_
 from forgebench.github_app_cli import add_github_app_subparser, run_github_app_command
 from forgebench.policy_cli import add_policy_subparser, run_policy_command
 from forgebench.validate import format_validation_report, validate_guardrails_file
+from forgebench.licensing.cli import add_license_subparser, run_license_command
+from forgebench.analytics_cli import add_analytics_subparser, maybe_record_cli_command, run_analytics_command
 
 
 def main(argv: list[str] | None = None) -> int:
     parser = _build_parser()
     args = parser.parse_args(argv)
+    maybe_record_cli_command(getattr(args, "command", None))
+
+    if args.command == "license":
+        return run_license_command(args)
+
+    if args.command == "analytics":
+        return run_analytics_command(args)
 
     if args.command == "status":
         return _run_status(args)
@@ -117,6 +126,12 @@ def _run_doctor(args: argparse.Namespace) -> int:
 def _run_init(args: argparse.Namespace) -> int:
     try:
         if args.enterprise:
+            from forgebench.licensing.quotas import LicenseRequired, require_feature
+
+            try:
+                require_feature("init_enterprise")
+            except LicenseRequired as exc:
+                _fail(str(exc), explain=getattr(args, "explain", False))
             options = EnterpriseInitOptions(
                 org_name=args.org_name,
                 team_slug=args.team_slug,
@@ -845,6 +860,8 @@ def _build_parser() -> argparse.ArgumentParser:
 
     add_policy_subparser(subparsers)
     add_github_app_subparser(subparsers)
+    add_license_subparser(subparsers)
+    add_analytics_subparser(subparsers)
 
     return parser
 
