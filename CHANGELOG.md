@@ -10,6 +10,11 @@
 
 ## Unreleased
 
+- EO-007 (semantic): Tree-sitter/stdlib AST parsing for Python, TypeScript, and Rust with cross-file behavioral diff signals.
+- EO-007 (reviewer): Behavioral Skeptic lens for uncovered changed symbols.
+- EO-007 (mutation): `forgebench mutation plan` skeleton exporting mutation candidates from semantic diff.
+- EO-007 (ensemble): Multi-model LLM ensemble via `FORGEBENCH_LLM_ENSEMBLE_MODELS` and `--llm-ensemble`.
+- EO-007 (prove-it): `--prove-it` and `forgebench prove-it` skeleton for evidence checklist + mutation plan export.
 - EO-006 (team): Shared policy layers via `extends`, `include`, and `FORGEBENCH_ORG_POLICY`; `team` metadata and `policy_sources` in review output.
 - EO-006 (dashboard): `forgebench dashboard` local policy dashboard skeleton (HTML + JSON manifest).
 - EO-006 (integrations): GitLab CI, CircleCI, and Jenkins recipes; VS Code and JetBrains IDE plugin scaffolds.

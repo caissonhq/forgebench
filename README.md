@@ -726,6 +726,26 @@ forgebench feedback export --out forgebench-output/beta-feedback.json
 
 See [docs/beta-launch.md](docs/beta-launch.md).
 
+## Semantic analysis and prove-it mode
+
+AST-backed semantic diff for Python, TypeScript, and Rust. Optional tree-sitter grammars:
+
+```bash
+pip install "forgebench[semantic]"
+forgebench review --repo . --diff ./patch.diff --task ./task.md --prove-it
+forgebench prove-it --report forgebench-output/forgebench-report.json
+forgebench mutation plan --report forgebench-output/forgebench-report.json
+```
+
+Multi-model ensemble:
+
+```bash
+export FORGEBENCH_LLM_ENSEMBLE_MODELS=gpt-4o-mini,backup-model
+forgebench review ... --llm-review --llm-provider openai
+```
+
+Docs: [docs/semantic-analysis.md](docs/semantic-analysis.md)
+
 ## Team and Enterprise policy
 
 Shared org policy layers:

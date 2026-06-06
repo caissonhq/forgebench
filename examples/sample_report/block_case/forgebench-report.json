@@ -99,6 +99,12 @@
     "path_filter_excluded_paths": [],
     "monorepo_packages_detected": [],
     "monorepo_hint": null,
+    "semantic_analysis_enabled": false,
+    "semantic_parsers_used": [],
+    "changed_symbols": [],
+    "cross_file_behavior_edges": [],
+    "symbols_without_test_reference": [],
+    "semantic_warnings": [],
     "config_mode": "configured",
     "policy_sources": [
       "examples/sample_report/block_case/forgebench.yml"
@@ -223,6 +229,15 @@
         "error_message": null
       },
       {
+        "reviewer_id": "behavioral_skeptic",
+        "reviewer_name": "Behavioral Skeptic",
+        "status": "completed",
+        "summary": "No semantic symbol changes detected in supported languages.",
+        "findings": [],
+        "referenced_finding_ids": [],
+        "error_message": null
+      },
+      {
         "reviewer_id": "test_skeptic_v2",
         "reviewer_name": "Test Skeptic v2",
         "status": "skipped",
@@ -299,5 +314,5 @@
     "kept": false,
     "cleanup_error": null
   },
-  "generated_at": "2026-06-05T23:27:12+00:00"
+  "generated_at": "2026-06-06T01:13:35+00:00"
 }

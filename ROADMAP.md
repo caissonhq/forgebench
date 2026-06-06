@@ -4,7 +4,7 @@ ForgeBench reviews AI-generated diffs before they hit main.
 
 Status key: **Done** · **In progress** · **Planned** · **Exploring**
 
-Last updated: 2026-06-05 (EO-006)
+Last updated: 2026-06-05 (EO-007)
 
 ## Now — CLI alpha (Done)
 
@@ -16,6 +16,15 @@ Last updated: 2026-06-05 (EO-006)
 - Merge Risk Benchmark (`forgebench benchmark`)
 - OpenAI-compatible optional LLM provider
 - Public beta structured feedback export
+
+## EO-007 — Semantic Depth & Reasoning Engine (Done)
+
+- **AST parsing**: Python stdlib `ast` + optional tree-sitter for Python/TypeScript/Rust (`pip install forgebench[semantic]`)
+- **Cross-file behavioral diff**: changed symbols, test-reference edges, uncovered symbols in `static_signals`
+- **Behavioral Skeptic** reviewer lens
+- **Mutation testing skeleton**: `forgebench mutation plan`
+- **LLM ensemble**: multi-model merge via `FORGEBENCH_LLM_ENSEMBLE_MODELS`
+- **Prove-it mode skeleton**: `--prove-it`, `forgebench prove-it`
 
 ## EO-006 — World-Class Polish & Scale (Done)
 
@@ -39,6 +48,9 @@ Last updated: 2026-06-05 (EO-006)
 
 | Item | Notes |
 |------|-------|
+| Mutation runner integration | Wire skeleton to mutmut, cargo-mutants, Stryker in CI |
+| Prove-it execution | Run mutation + ensemble automatically, not export-only |
+| Full tree-sitter default | Ship grammars in core wheel or prebuilt language packs |
 | Security Reviewer v1 | Beyond pattern matching; sandboxed static probes |
 | Dependency Watcher v1 | CVE/license signals with local cache |
 | Broader regression lens | Still evidence-constrained; no numeric safety score |

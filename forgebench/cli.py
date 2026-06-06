@@ -16,6 +16,8 @@ from forgebench.init import InitError, write_starter_guardrails
 from forgebench.models import ForgeBenchReport
 from forgebench.review import ReviewInputError, run_review
 from forgebench.dashboard import DashboardExportError, export_policy_dashboard
+from forgebench.mutation import build_mutation_plan
+from forgebench.prove_it import behavioral_from_static_signals, export_prove_it_plan, load_report_for_prove_it
 from forgebench.validate import format_validation_report, validate_guardrails_file
 
 
@@ -52,6 +54,12 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.command == "review-pr":
         return _run_review_pr(args)
+
+    if args.command == "prove-it":
+        return _run_prove_it(args)
+
+    if args.command == "mutation":
+        return _run_mutation(args)
 
     if args.command != "review":
         parser.print_help()
@@ -100,11 +108,20 @@ def _run_review(args: argparse.Namespace) -> int:
             llm_timeout=args.llm_timeout,
             llm_max_diff_chars=args.llm_max_diff_chars,
             reviewers_enabled=not args.no_reviewers,
+            semantic_analysis=not args.no_semantic_analysis,
+            prove_it=args.prove_it,
+            llm_ensemble_models=_parse_ensemble_models(args.llm_ensemble),
+            llm_ensemble_strategy=args.llm_ensemble_strategy,
         )
     except ReviewInputError as exc:
         _fail(str(exc))
 
     _print_summary(result.report, result.written_paths, guardrails_explicit=bool(args.guardrails))
+    if "prove_it_plan" in result.written_paths:
+        print()
+        print("Prove-it artifacts:")
+        print(f"- {result.written_paths['prove_it_plan']}")
+        print(f"- {result.written_paths['prove_it_checklist']}")
     print()
     print(f"Paste repair prompt: forgebench repair --out {result.output_dir}")
     return 0
@@ -179,6 +196,9 @@ def _run_review_pr(args: argparse.Namespace) -> int:
             keep_worktree=args.keep_worktree,
             worktree_dir=args.worktree_dir,
             reviewers_enabled=not args.no_reviewers,
+            prove_it=args.prove_it,
+            llm_ensemble_models=_parse_ensemble_models(args.llm_ensemble),
+            llm_ensemble_strategy=args.llm_ensemble_strategy,
         )
     except (ReviewInputError, GitHubPRError) as exc:
         _fail(str(exc))
@@ -202,6 +222,41 @@ def _run_validate(args: argparse.Namespace) -> int:
     report = validate_guardrails_file(path, strict=args.strict)
     print(format_validation_report(report))
     return report.exit_code
+
+
+def _run_prove_it(args: argparse.Namespace) -> int:
+    report_path = Path(args.report)
+    if not report_path.exists():
+        _fail(f"report not found: {report_path}")
+    report = load_report_for_prove_it(report_path)
+    behavioral = behavioral_from_static_signals(report.static_signals)
+    if not behavioral.enabled:
+        _fail("Report has no semantic analysis signals. Re-run review without --no-semantic-analysis.")
+    result = export_prove_it_plan(
+        report=report,
+        behavioral=behavioral,
+        llm_config=None,
+        output_dir=args.out,
+    )
+    print("ForgeBench prove-it plan exported.")
+    print(f"- Plan: {result.plan_path}")
+    print(f"- Checklist: {result.checklist_path}")
+    return 0
+
+
+def _run_mutation(args: argparse.Namespace) -> int:
+    report_path = Path(args.report)
+    if not report_path.exists():
+        _fail(f"report not found: {report_path}")
+    report = load_report_for_prove_it(report_path)
+    behavioral = behavioral_from_static_signals(report.static_signals)
+    if not behavioral.changed_symbols:
+        _fail("Report has no changed symbols for mutation planning.")
+    result = build_mutation_plan(behavioral, output_dir=args.out)
+    print("ForgeBench mutation plan exported.")
+    print(f"- Plan: {result.plan_path}")
+    print(f"- Candidates: {result.candidate_count}")
+    return 0
 
 
 def _run_dashboard(args: argparse.Namespace) -> int:
@@ -333,6 +388,7 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     review.add_argument("--llm-timeout", type=int, default=60, help="LLM command timeout in seconds. Defaults to 60.")
     review.add_argument("--llm-max-diff-chars", type=int, default=20000, help="Maximum diff characters included in the LLM bundle.")
+    _add_semantic_llm_flags(review)
 
     review_pr = subparsers.add_parser("review-pr", help="Fetch a GitHub PR diff, run ForgeBench, and optionally post a PR comment.")
     review_pr.add_argument("pr_url", nargs="?", help="GitHub pull request URL.")
@@ -367,6 +423,16 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     review_pr.add_argument("--llm-timeout", type=int, default=60, help="LLM command timeout in seconds. Defaults to 60.")
     review_pr.add_argument("--llm-max-diff-chars", type=int, default=20000, help="Maximum diff characters included in the LLM bundle.")
+    _add_semantic_llm_flags(review_pr)
+
+    prove_it = subparsers.add_parser("prove-it", help="Export prove-it checklist and plan from a ForgeBench report.")
+    prove_it.add_argument("--report", required=False, default="forgebench-output/forgebench-report.json", help="Report JSON path.")
+    prove_it.add_argument("--out", required=False, default="forgebench-output/prove-it", help="Output directory.")
+
+    mutation = subparsers.add_parser("mutation", help="Export mutation testing plan skeleton from a ForgeBench report.")
+    mutation.add_argument("action", nargs="?", choices=["plan"], default="plan", help="Mutation action. Only plan is supported.")
+    mutation.add_argument("--report", required=False, default="forgebench-output/forgebench-report.json", help="Report JSON path.")
+    mutation.add_argument("--out", required=False, default="forgebench-output/mutation", help="Output directory.")
 
     feedback = subparsers.add_parser("feedback", help="Record or summarize local finding feedback.")
     feedback.add_argument("finding_uid", nargs="?", help="Stable finding UID, such as fnd_3a91c0e88d12.")
@@ -420,6 +486,37 @@ def _build_parser() -> argparse.ArgumentParser:
     )
 
     return parser
+
+
+def _add_semantic_llm_flags(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument(
+        "--llm-ensemble",
+        required=False,
+        help="Comma-separated OpenAI-compatible model list for ensemble review. Defaults to FORGEBENCH_LLM_ENSEMBLE_MODELS.",
+    )
+    parser.add_argument(
+        "--llm-ensemble-strategy",
+        required=False,
+        choices=["consensus", "first_success"],
+        help="Ensemble merge strategy. Defaults to FORGEBENCH_LLM_ENSEMBLE_STRATEGY or consensus.",
+    )
+    parser.add_argument(
+        "--prove-it",
+        action="store_true",
+        help="Export prove-it mode skeleton artifacts (mutation plan + evidence checklist).",
+    )
+    parser.add_argument(
+        "--no-semantic-analysis",
+        action="store_true",
+        help="Disable tree-sitter/AST semantic diff analysis.",
+    )
+
+
+def _parse_ensemble_models(raw: str | None) -> list[str] | None:
+    if not raw:
+        return None
+    models = [item.strip() for item in raw.split(",") if item.strip()]
+    return models or None
 
 
 def _fail(message: str) -> None:

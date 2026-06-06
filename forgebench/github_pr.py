@@ -453,6 +453,9 @@ def run_github_pr_review(
     keep_worktree: bool = False,
     worktree_dir: str | Path | None = None,
     reviewers_enabled: bool = True,
+    prove_it: bool = False,
+    llm_ensemble_models: list[str] | None = None,
+    llm_ensemble_strategy: str | None = None,
     client: GitHubPRClient | None = None,
 ) -> GitHubPRReviewResult:
     repo = Path(repo_path)
@@ -522,6 +525,9 @@ def run_github_pr_review(
         input_notes=input_notes,
         pr_checkout=checkout_info,
         reviewers_enabled=reviewers_enabled,
+        prove_it=prove_it,
+        llm_ensemble_models=llm_ensemble_models,
+        llm_ensemble_strategy=llm_ensemble_strategy,
     )
 
     if prepared_worktree is not None:

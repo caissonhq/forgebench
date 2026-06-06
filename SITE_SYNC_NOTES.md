@@ -2,6 +2,14 @@
 
 Use this as a concise Lovable update prompt for the public alpha site. Do not imply hosted SaaS, OAuth, or the full 8-reviewer set.
 
+## EO-007 additions (2026-06-05)
+
+- Add **Semantic analysis** section from [docs/semantic-analysis.md](docs/semantic-analysis.md)
+- Mention Behavioral Skeptic reviewer in lens list
+- Add prove-it mode skeleton CTA (`--prove-it`, mutation plan export)
+- Note optional `pip install forgebench[semantic]` for tree-sitter grammars
+- Mention multi-model LLM ensemble env var
+
 ## EO-006 marketing refresh (2026-06-05)
 
 Full home page copy: [docs/marketing-home.md](docs/marketing-home.md)

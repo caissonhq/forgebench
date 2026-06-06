@@ -19,6 +19,8 @@ from forgebench.models import Finding, ForgeBenchReport, Guardrails, LLMReviewer
 from forgebench.policy import apply_guardrails_policy
 from forgebench.posture import determine_posture
 from forgebench.report_writer import write_reports
+from forgebench.prove_it import export_prove_it_plan
+from forgebench.semantic import analyze_behavioral_diff, behavioral_signals
 from forgebench.static_checks import is_docs_or_agent_policy_path, run_static_checks
 
 
@@ -51,6 +53,10 @@ def run_review(
     input_notes: list[str] | None = None,
     pr_checkout: PRCheckoutInfo | None = None,
     reviewers_enabled: bool = True,
+    semantic_analysis: bool = True,
+    prove_it: bool = False,
+    llm_ensemble_models: list[str] | None = None,
+    llm_ensemble_strategy: str | None = None,
 ) -> ReviewResult:
     repo = Path(repo_path)
     diff = _resolve_input_path(Path(diff_path), repo)
@@ -75,6 +81,9 @@ def run_review(
     deterministic_findings = findings_from_check_results(deterministic_checks.results)
     static_findings, static_signals = run_static_checks(diff_summary)
     static_signals.update(path_filter_meta)
+    behavioral_summary = analyze_behavioral_diff(diff_summary) if semantic_analysis else None
+    if behavioral_summary is not None:
+        static_signals.update(behavioral_signals(behavioral_summary))
     guardrail_findings, guardrail_hits = evaluate_guardrails(diff_summary, guardrails)
     findings = _dedupe_findings(deterministic_findings + static_findings + guardrail_findings)
     findings, static_signals, policy_decision = apply_guardrails_policy(diff_summary, findings, static_signals, guardrails)
@@ -92,6 +101,8 @@ def run_review(
         timeout_seconds=llm_timeout,
         max_diff_chars=llm_max_diff_chars,
         mock_response=llm_mock_response,
+        ensemble_models=llm_ensemble_models,
+        ensemble_strategy=llm_ensemble_strategy,
     )
     if reviewers_enabled:
         specialized_reviewers = run_specialized_reviewers(
@@ -179,6 +190,15 @@ def run_review(
             "notes": list(input_notes or []) + list(guardrails.warnings),
         },
     )
+    if prove_it and behavioral_summary is not None:
+        prove_it_result = export_prove_it_plan(
+            report=report,
+            behavioral=behavioral_summary,
+            llm_config=llm_config,
+            output_dir=out_dir / "prove-it",
+        )
+        written["prove_it_plan"] = prove_it_result.plan_path
+        written["prove_it_checklist"] = prove_it_result.checklist_path
     return ReviewResult(
         report=report,
         written_paths=written,
