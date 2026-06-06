@@ -4,10 +4,11 @@ import argparse
 import json
 import sys
 
-from forgebench.licensing.keys import LicenseError
+from forgebench.licensing.keys import LicenseError, generate_license_key
 from forgebench.licensing.quotas import export_quota_report
 from forgebench.licensing.store import activate_and_store, format_license_status, license_path, load_license
-from forgebench.licensing.tiers import TIER_FEATURES, LicenseTier
+from forgebench.licensing.tiers import TIER_FEATURES, LicenseTier, parse_tier
+from forgebench.licensing.validation import validate_license
 from forgebench.product_analytics import record_product_event
 
 
@@ -25,6 +26,15 @@ def add_license_subparser(subparsers: argparse._SubParsersAction) -> None:
     report = license_sub.add_parser("report", help="Export usage and quota report for customer success.")
     report.add_argument("--out", required=False, help="Output JSON path.")
     report.add_argument("--json", action="store_true", help="Print JSON to stdout.")
+    verify = license_sub.add_parser("verify", help="Validate a license key (offline or online).")
+    verify.add_argument("key", nargs="?", help="License key to verify. Defaults to active license.")
+    verify.add_argument("--online", action="store_true", help="Contact license server for seat validation.")
+    verify.add_argument("--json", action="store_true", help="Emit JSON.")
+    upgrade = license_sub.add_parser("upgrade", help="Show upgrade path or issue a dev license key.")
+    upgrade.add_argument("--tier", choices=["team", "enterprise"], default="team")
+    upgrade.add_argument("--organization", default="ForgeBench Customer")
+    upgrade.add_argument("--seats", type=int, default=10)
+    upgrade.add_argument("--issue-dev-key", action="store_true", help="Generate a dev key (requires FORGEBENCH_LICENSE_SECRET).")
 
 
 def run_license_command(args: argparse.Namespace) -> int:
@@ -37,7 +47,11 @@ def run_license_command(args: argparse.Namespace) -> int:
         return _run_status(args)
     if action == "report":
         return _run_report(args)
-    print("license requires activate, check, status, or report.", file=sys.stderr)
+    if action == "verify":
+        return _run_verify(args)
+    if action == "upgrade":
+        return _run_upgrade(args)
+    print("license requires activate, check, status, report, verify, or upgrade.", file=sys.stderr)
     return 2
 
 
@@ -122,6 +136,64 @@ def _run_report(args: argparse.Namespace) -> int:
     elif args.json or not args.out:
         print(text, end="")
     record_product_event("license_report_exported", {"tier": record.tier.name.lower()})
+    return 0
+
+
+def _run_verify(args: argparse.Namespace) -> int:
+    key = args.key
+    if not key:
+        path = license_path()
+        if path.exists():
+            try:
+                payload = json.loads(path.read_text(encoding="utf-8"))
+                if isinstance(payload, dict):
+                    key = str(payload.get("key") or "")
+            except (json.JSONDecodeError, OSError):
+                key = ""
+    if not key:
+        print("No license key to verify. Pass a key or activate first.", file=sys.stderr)
+        return 2
+    result = validate_license(key, prefer_online=args.online)
+    payload = {
+        "valid": result.valid,
+        "source": result.source,
+        "message": result.message,
+        "online_response": result.online_response,
+    }
+    if result.payload:
+        payload["tier"] = result.payload.tier.name.lower()
+        payload["organization"] = result.payload.organization
+        payload["seats"] = result.payload.seats
+        payload["expires_at"] = result.payload.expires_at
+    if args.json:
+        print(json.dumps(payload, indent=2, sort_keys=True))
+    else:
+        print(result.message)
+        if result.payload:
+            print(f"Tier: {result.payload.tier.name.lower()} · Org: {result.payload.organization}")
+    return 0 if result.valid else 2
+
+
+def _run_upgrade(args: argparse.Namespace) -> int:
+    from forgebench.billing.upgrade import format_upgrade_prompt, tier_comparison_summary
+
+    if args.issue_dev_key:
+        tier = parse_tier(args.tier)
+        key = generate_license_key(
+            tier=args.tier,
+            organization=args.organization,
+            seats=args.seats,
+        )
+        print("Dev license key (store securely; not for production billing):")
+        print(key)
+        print("")
+        print(f"Activate: forgebench license activate {key}")
+        return 0
+    print(tier_comparison_summary())
+    print("")
+    print(format_upgrade_prompt("init_enterprise"))
+    print("")
+    print(f"Checkout: forgebench subscribe {args.tier} --seats {args.seats}")
     return 0
 
 

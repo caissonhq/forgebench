@@ -35,6 +35,7 @@ nav:
   - Home: index.md
   - Installation: installation.md
   - Install methods: install-methods.md
+  - Pricing: pricing.md
   - Quickstart: quickstart.md
   - Presets gallery: presets-gallery.md
   - CLI Reference: cli-reference.md
@@ -49,6 +50,8 @@ nav:
       - Init wizard: enterprise/init.md
       - Team policy: enterprise/team-policy.md
       - Pricing & licensing: enterprise/pricing.md
+      - Customer onboarding: enterprise/customer-onboarding.md
+
       - GitHub App listing: github-app-listing.md
       - Design partners: design-partner.md
       - Early access: early-access.md

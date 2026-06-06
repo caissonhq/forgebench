@@ -15,7 +15,9 @@ class QuotaExceeded(PermissionError):
 
 
 class LicenseRequired(PermissionError):
-    pass
+    def __init__(self, message: str, *, feature: str = "") -> None:
+        super().__init__(message)
+        self.feature = feature
 
 
 QUOTA_PATH = Path("forgebench-output") / "quota-usage.json"
@@ -49,17 +51,21 @@ class QuotaStatus:
 
 
 def require_feature(feature: str, *, record: LicenseRecord | None = None) -> LicenseRecord:
+    from forgebench.billing.upgrade import upgrade_cta
+
     current = record or load_license()
     if not current.valid and feature_requires_tier(feature) is not None:
         raise LicenseRequired(
             f"Feature '{feature}' requires a valid Team or Enterprise license. "
-            "Run: forgebench license activate <KEY>"
+            f"Run: forgebench license activate <KEY>\n{upgrade_cta(feature)}",
+            feature=feature,
         )
     if not has_feature(feature, record=current):
         required = feature_requires_tier(feature)
         raise LicenseRequired(
             f"Feature '{feature}' requires {required.name.lower() if required else 'team'} tier or higher. "
-            "See docs/pricing.md"
+            f"See docs/pricing.md\n{upgrade_cta(feature)}",
+            feature=feature,
         )
     _record_paid_feature_milestone(current)
     return current

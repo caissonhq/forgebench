@@ -51,6 +51,18 @@ from forgebench.policy_cli import add_policy_subparser, run_policy_command
 from forgebench.validate import format_validation_report, validate_guardrails_file
 from forgebench.licensing.cli import add_license_subparser, run_license_command
 from forgebench.analytics_cli import add_analytics_subparser, maybe_record_cli_command, run_analytics_command
+from forgebench.revenue_cli import (
+    add_billing_serve_subparser,
+    add_crm_subparser,
+    add_portal_subparser,
+    add_subscribe_subparser,
+    add_upgrade_subparser,
+    run_billing_serve_command,
+    run_crm_command,
+    run_portal_command,
+    run_subscribe_command,
+    run_upgrade_command,
+)
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -64,6 +76,21 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.command == "analytics":
         return run_analytics_command(args)
+
+    if args.command == "subscribe":
+        return run_subscribe_command(args)
+
+    if args.command == "upgrade":
+        return run_upgrade_command(args)
+
+    if args.command == "portal":
+        return run_portal_command(args)
+
+    if args.command == "crm":
+        return run_crm_command(args)
+
+    if args.command == "billing-serve":
+        return run_billing_serve_command(args)
 
     if args.command == "status":
         return _run_status(args)
@@ -1022,6 +1049,11 @@ def _build_parser() -> argparse.ArgumentParser:
     add_github_app_subparser(subparsers)
     add_license_subparser(subparsers)
     add_analytics_subparser(subparsers)
+    add_subscribe_subparser(subparsers)
+    add_upgrade_subparser(subparsers)
+    add_portal_subparser(subparsers)
+    add_crm_subparser(subparsers)
+    add_billing_serve_subparser(subparsers)
 
     return parser
 

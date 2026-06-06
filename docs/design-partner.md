@@ -39,4 +39,16 @@ Help shape ForgeBench while your team ships faster with AI-assisted development.
 - CI pass rate with `--run-checks`
 - Engineer NPS after first merge with ForgeBench
 
+## Converting to a paying customer
+
+After a successful pilot:
+
+1. Export pilot metrics: `forgebench license report`
+2. Present Team ROI and EA pricing: `forgebench subscribe team --seats N`
+3. Deliver license key and welcome: `forgebench crm welcome --organization "Your Team"`
+4. Update pipeline: `forgebench crm add "Your Team" --stage paid`
+5. Full checklist: `forgebench crm convert`
+
+See [customer-onboarding-playbook.md](customer-onboarding-playbook.md).
+
 See also [Early Access](early-access.md) and [Contribution Program](contribution-program.md).

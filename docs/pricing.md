@@ -33,6 +33,21 @@ ForgeBench core review stays **local and free forever**. Team and Enterprise tie
 | Grok policy verification quota | | 50/day | 1000/day |
 | SOC2 audit pack + dedicated onboarding | | | ✓ |
 
+## Purchase & subscribe
+
+```bash
+# Start Stripe checkout (Team subscription or Enterprise payment)
+forgebench subscribe team --seats 10 --email team@company.com --open
+
+# Upgrade path when hitting a paid feature
+forgebench upgrade --feature policy_serve
+
+# Customer portal — license, usage, quotas
+forgebench portal --open
+```
+
+Configure live billing with `STRIPE_SECRET_KEY`, `STRIPE_PRICE_TEAM_MONTHLY`, and `STRIPE_WEBHOOK_SECRET`.
+
 ## License management
 
 ```bash
@@ -42,10 +57,20 @@ forgebench license activate FB-TEAM-...
 # Check tier and feature access
 forgebench license status
 forgebench license check --feature policy_serve
+forgebench license verify --online   # optional seat check via license server
 
 # Customer success usage report (Team+)
 forgebench license report --out forgebench-output/license-report.json
 ```
+
+### Self-hosted license server
+
+```bash
+forgebench billing-serve license --port 8793
+export FORGEBENCH_LICENSE_SERVER_URL=http://127.0.0.1:8793
+```
+
+Seat activations are tracked server-side; customers can validate with `license verify --online`.
 
 License files are stored at `~/.config/forgebench/license.json` (override with `FORGEBENCH_LICENSE_PATH`).
 
@@ -78,6 +103,19 @@ No automatic cloud upload. Teams may export bundles manually for customer succes
 - No hosted review SaaS required for any tier
 - Enterprise GitHub App is **customer-hosted**
 - Annual billing and volume discounts: hello@forgebench.dev
+- Design Partner → paid conversion: `forgebench crm convert`
+
+## CRM & first customer
+
+```bash
+forgebench crm add "Acme Corp" --stage design_partner --seats 15
+forgebench crm welcome --organization "Acme Corp"
+forgebench crm checklist
+```
+
+Optional Linear sync: set `LINEAR_API_KEY` and `LINEAR_TEAM_ID`.
+
+See [customer-onboarding-playbook.md](customer-onboarding-playbook.md) and [revenue/REVENUE_READINESS_SCORECARD.md](revenue/REVENUE_READINESS_SCORECARD.md).
 
 ## Honest limits
 

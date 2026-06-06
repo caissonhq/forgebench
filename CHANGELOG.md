@@ -32,7 +32,7 @@ See [docs/launch/RELEASE_v1.0.0.md](docs/launch/RELEASE_v1.0.0.md) for full rele
 
 ## Unreleased
 
-_No changes yet._
+- EO-017 (revenue): Production licensing with online validation server, `license verify`/`upgrade`, Stripe checkout + webhook handler, `forgebench subscribe`/`upgrade`/`portal`/`crm`, customer portal dashboard, CRM pipeline + Linear sync, paid onboarding playbook, pricing page.
 
 ## Development history (pre-1.0)
 

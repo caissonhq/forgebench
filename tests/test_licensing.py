@@ -105,6 +105,27 @@ class LicensingTests(unittest.TestCase):
     def test_machine_id_is_stable_length(self) -> None:
         self.assertEqual(len(machine_id()), 16)
 
+    def test_cli_license_verify(self) -> None:
+        key = generate_license_key(tier="team", organization="VerifyCLI", seats=1)
+        stdout = StringIO()
+        with redirect_stdout(stdout):
+            result = main(["license", "verify", key, "--json"])
+        self.assertEqual(result, 0)
+        payload = json.loads(stdout.getvalue())
+        self.assertTrue(payload["valid"])
+
+    def test_upgrade_prompt_on_license_required(self) -> None:
+        with TemporaryDirectory() as tmp:
+            path = Path(tmp) / "license.json"
+            with _license_path(path):
+                try:
+                    require_feature("policy_serve")
+                except LicenseRequired as exc:
+                    self.assertIn("forgebench subscribe", str(exc))
+                    self.assertEqual(exc.feature, "policy_serve")
+                else:
+                    self.fail("expected LicenseRequired")
+
 
 class _PathPatch:
     def __init__(self, module, attr: str, value: Path, *, set_license_env: bool = False) -> None:

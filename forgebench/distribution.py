@@ -205,7 +205,7 @@ def render_shell_completion(shell: str) -> str:
     normalized = shell.strip().lower()
     commands = (
         "doctor quickstart demo status init review review-pr repair validate "
-        "feedback presets share-report install team license analytics telemetry "
+        "feedback presets share-report install team license subscribe upgrade portal crm analytics telemetry "
         "benchmark policy github-app calibrate dashboard prove-it mutation mcp"
     ).split()
     if normalized == "bash":
