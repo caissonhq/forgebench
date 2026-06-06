@@ -3,6 +3,13 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 
+from forgebench.benchmark_outcomes import (
+    DEFAULT_OUTCOMES_PATH,
+    PrOutcomesBundle,
+    PrOutcomesSummary,
+    load_pr_outcomes,
+    summarize_pr_outcomes,
+)
 from forgebench.calibration import CalibrationResult, run_calibration
 
 
@@ -14,6 +21,8 @@ class BenchmarkSnapshot:
     posture_distribution: dict[str, int]
     top_finding_kinds: dict[str, int]
     review_lens_fire_rate: dict[str, int]
+    pr_outcomes: PrOutcomesSummary | None = None
+    pr_outcomes_source: str | None = None
 
 
 def build_benchmark_snapshot(
@@ -21,16 +30,35 @@ def build_benchmark_snapshot(
     *,
     repo_path: str | Path = ".",
     output_dir: str | Path | None = None,
+    outcomes_path: str | Path | None = None,
 ) -> BenchmarkSnapshot:
     result = run_calibration(
         cases_dir=cases_dir,
         output_dir=output_dir or Path("forgebench-benchmark-output"),
         repo_path=repo_path,
     )
-    return snapshot_from_calibration(result)
+    outcomes_bundle: PrOutcomesBundle | None = None
+    if outcomes_path is not None:
+        outcomes_bundle = load_pr_outcomes(outcomes_path)
+    return snapshot_from_calibration(result, outcomes_bundle=outcomes_bundle)
 
 
-def snapshot_from_calibration(result: CalibrationResult) -> BenchmarkSnapshot:
+def load_default_pr_outcomes() -> PrOutcomesBundle | None:
+    if DEFAULT_OUTCOMES_PATH.exists():
+        return load_pr_outcomes(DEFAULT_OUTCOMES_PATH)
+    return None
+
+
+def snapshot_from_calibration(
+    result: CalibrationResult,
+    *,
+    outcomes_bundle: PrOutcomesBundle | None = None,
+) -> BenchmarkSnapshot:
+    pr_summary: PrOutcomesSummary | None = None
+    pr_source: str | None = None
+    if outcomes_bundle is not None:
+        pr_summary = summarize_pr_outcomes(outcomes_bundle)
+        pr_source = outcomes_bundle.source
     return BenchmarkSnapshot(
         case_count=len(result.cases),
         passed_count=result.passed_count,
@@ -38,6 +66,8 @@ def snapshot_from_calibration(result: CalibrationResult) -> BenchmarkSnapshot:
         posture_distribution=dict(result.posture_distribution),
         top_finding_kinds=dict(result.finding_kind_counts),
         review_lens_fire_rate=dict(result.review_lens_counts),
+        pr_outcomes=pr_summary,
+        pr_outcomes_source=pr_source,
     )
 
 
@@ -88,6 +118,29 @@ def format_benchmark_markdown(snapshot: BenchmarkSnapshot, *, cases_dir: str | P
             lines.append(f"- {lens}: {count}")
     else:
         lines.append("- none")
+    if snapshot.pr_outcomes is not None:
+        lines.extend(
+            [
+                "",
+                "## Real PR outcomes",
+                "",
+                f"- Anonymized PRs: **{snapshot.pr_outcomes.total_prs}**",
+                f"- Human posture agreement: **{snapshot.pr_outcomes.human_posture_agreement_rate * 100:.1f}%**",
+                f"- Reviewer fire rate: **{snapshot.pr_outcomes.reviewer_fire_rate * 100:.1f}%**",
+            ]
+        )
+        if snapshot.pr_outcomes.labeled_false_positive_rate is not None:
+            lines.append(
+                f"- Labeled false-positive rate (LOW_CONCERN findings): **{snapshot.pr_outcomes.labeled_false_positive_rate * 100:.1f}%**"
+            )
+        if snapshot.pr_outcomes_source:
+            lines.append(f"- Outcomes source: `{snapshot.pr_outcomes_source}`")
+        lines.extend(
+            [
+                "",
+                "PR outcomes are opt-in, anonymized dogfood labels. They complement golden-case calibration; they do not certify production safety.",
+            ]
+        )
     lines.extend(
         [
             "",

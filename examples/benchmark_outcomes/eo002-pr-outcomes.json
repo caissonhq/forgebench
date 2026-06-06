@@ -1,0 +1,98 @@
+{
+  "schema_version": "0.1.0",
+  "source": "eo002-dogfood-2026-06-05",
+  "description": "Anonymized real PR outcomes from EO-002 dogfood. Human agreement labels reflect reviewer judgment at dogfood time.",
+  "privacy_note": "Repo names and URLs are replaced with opaque case slugs. No author or org identifiers are stored.",
+  "outcomes": [
+    {
+      "case_slug": "dogfood_docs_pr_low_concern",
+      "forgebench_posture": "LOW_CONCERN",
+      "human_posture_agreement": "agree",
+      "pr_outcome": "merged",
+      "finding_count": 1,
+      "reviewer_fired": false
+    },
+    {
+      "case_slug": "dogfood_agent_security_tests_low_concern",
+      "forgebench_posture": "LOW_CONCERN",
+      "human_posture_agreement": "agree",
+      "pr_outcome": "merged",
+      "finding_count": 0,
+      "reviewer_fired": false
+    },
+    {
+      "case_slug": "dogfood_codex_env_setup_low_concern",
+      "forgebench_posture": "LOW_CONCERN",
+      "human_posture_agreement": "agree",
+      "pr_outcome": "merged",
+      "finding_count": 1,
+      "reviewer_fired": false
+    },
+    {
+      "case_slug": "dogfood_agent_policy_markdown_low_concern",
+      "forgebench_posture": "LOW_CONCERN",
+      "human_posture_agreement": "agree",
+      "pr_outcome": "merged",
+      "finding_count": 1,
+      "reviewer_fired": false
+    },
+    {
+      "case_slug": "dogfood_docs_task_script_scope_review",
+      "forgebench_posture": "REVIEW",
+      "human_posture_agreement": "agree",
+      "pr_outcome": "merged",
+      "finding_count": 3,
+      "reviewer_fired": true
+    },
+    {
+      "case_slug": "dogfood_codex_metrics_tests_low_concern",
+      "forgebench_posture": "LOW_CONCERN",
+      "human_posture_agreement": "agree",
+      "pr_outcome": "merged",
+      "finding_count": 0,
+      "reviewer_fired": false
+    },
+    {
+      "case_slug": "dogfood_cursor_ipc_refactor_low_concern",
+      "forgebench_posture": "LOW_CONCERN",
+      "human_posture_agreement": "agree",
+      "pr_outcome": "merged",
+      "finding_count": 2,
+      "reviewer_fired": false
+    },
+    {
+      "case_slug": "dogfood_codex_autocomplete_broad_review",
+      "forgebench_posture": "REVIEW",
+      "human_posture_agreement": "agree",
+      "pr_outcome": "merged",
+      "finding_count": 3,
+      "reviewer_fired": true
+    },
+    {
+      "case_slug": "dogfood_effect_refactor_broad_review",
+      "forgebench_posture": "REVIEW",
+      "human_posture_agreement": "agree",
+      "pr_outcome": "merged",
+      "finding_count": 4,
+      "reviewer_fired": true
+    },
+    {
+      "case_slug": "dogfood_rust_codex_routing_review",
+      "forgebench_posture": "REVIEW",
+      "human_posture_agreement": "agree",
+      "pr_outcome": "merged",
+      "finding_count": 2,
+      "reviewer_fired": false
+    }
+  ],
+  "summary": {
+    "total_prs": 10,
+    "human_posture_agreement_rate": 1.0,
+    "posture_distribution": {
+      "LOW_CONCERN": 6,
+      "REVIEW": 4,
+      "BLOCK": 0
+    },
+    "labeled_false_positive_rate": 0.632
+  }
+}
