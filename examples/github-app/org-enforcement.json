@@ -1,0 +1,11 @@
+{
+  "org_id": "acme-platform",
+  "policy_path": "examples/org-policy/forgebench-org.yml",
+  "required_policy_version": "1.0.0",
+  "audit_required": true,
+  "rules": {
+    "block_on_posture": "BLOCK",
+    "require_review_on_posture": "REVIEW",
+    "allow_low_concern": true
+  }
+}
