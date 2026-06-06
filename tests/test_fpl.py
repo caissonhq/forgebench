@@ -45,7 +45,11 @@ class FPLTests(unittest.TestCase):
         self.assertEqual(compiled["fpl_name"], "docs-policy")
 
     def test_merge_fpl_into_payload(self) -> None:
-        payload = merge_fpl_into_payload({"project": "demo", "fpl": str(FPL_EXAMPLE)}, ROOT)
+        payload = merge_fpl_into_payload(
+            {"project": "demo", "fpl": str(FPL_EXAMPLE.relative_to(ROOT))},
+            ROOT,
+            ROOT,
+        )
         self.assertIn("policy", payload)
         self.assertIn("fpl_compiled_from", payload)
 

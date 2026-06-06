@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Any
 
 from forgebench.review import ReviewInputError, run_review
+from forgebench.security.http_limits import MAX_MCP_BODY_BYTES
 
 
 PROTOCOL_VERSION = "2024-11-05"
@@ -208,9 +209,14 @@ def _read_message() -> dict[str, Any] | None:
             continue
         key, value = decoded.split(":", 1)
         headers[key.strip().lower()] = value.strip()
-    content_length = int(headers.get("content-length", "0"))
+    try:
+        content_length = int(headers.get("content-length", "0"))
+    except ValueError as exc:
+        raise MCPProtocolError("Invalid Content-Length header.") from exc
     if content_length <= 0:
         return None
+    if content_length > MAX_MCP_BODY_BYTES:
+        raise MCPProtocolError(f"MCP message exceeds limit of {MAX_MCP_BODY_BYTES} bytes.")
     body = sys.stdin.buffer.read(content_length)
     if not body:
         return None

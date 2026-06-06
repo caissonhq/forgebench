@@ -8,6 +8,7 @@ from pathlib import Path
 from forgebench.github_app.enforcement import enforce_org_policy, load_org_enforcement_config
 from forgebench.github_app.manifest import export_github_app_manifest
 from forgebench.github_app.server import GitHubAppServiceConfig, serve_github_app
+from forgebench.security.secrets import SecretValidationError
 
 
 def run_github_app_command(args: argparse.Namespace) -> int:
@@ -71,7 +72,10 @@ def _run_serve(args: argparse.Namespace) -> int:
     )
     print(f"ForgeBench GitHub App service listening on http://{args.host}:{args.port}")
     print("Endpoints: GET /health, GET /v1/manifest, POST /github-app/webhook")
-    serve_github_app(config)
+    try:
+        serve_github_app(config)
+    except SecretValidationError as exc:
+        _fail(str(exc))
     return 0
 
 
@@ -98,7 +102,11 @@ def add_github_app_subparser(subparsers: argparse._SubParsersAction) -> None:
     serve.add_argument("--host", required=False, default="127.0.0.1")
     serve.add_argument("--port", type=int, required=False, default=8792)
     serve.add_argument("--config", required=False, help="Org enforcement config JSON path.")
-    serve.add_argument("--webhook-secret", required=False, help="GitHub webhook secret for signature verification.")
+    serve.add_argument(
+        "--webhook-secret",
+        required=False,
+        help="GitHub webhook secret (or set FORGEBENCH_GITHUB_WEBHOOK_SECRET). Required.",
+    )
 
 
 def _fail(message: str) -> None:

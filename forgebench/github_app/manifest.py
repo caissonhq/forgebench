@@ -29,10 +29,14 @@ def export_github_app_manifest(
         "public": False,
         "default_permissions": {
             "checks": "write",
-            "pull_requests": "write",
+            "pull_requests": "read",
             "metadata": "read",
             "contents": "read",
         },
+        "permission_notes": (
+            "Minimum scope: read PR metadata, write Check Runs. "
+            "Org enforcement consumes verified Check Run conclusions or signed attestations — not PR write."
+        ),
         "default_events": [
             "pull_request",
             "pull_request_review",

@@ -46,7 +46,7 @@ if [ -z "${GH_TOKEN:-}" ] && [ -n "${GITHUB_TOKEN:-}" ]; then
   export GH_TOKEN="${GITHUB_TOKEN}"
 fi
 
-GUARDRAILS_PATH="${GUARDRAILS_PATH:-forgebench.yml}"
+GUARDRAILS_PATH="${GUARDRAILS_PATH:-.github/forgebench.yml}"
 OUT_DIR="${GITHUB_WORKSPACE:-$PWD}/forgebench-output"
 
 if [ -z "${PR_URL}" ] && [ -n "${GITHUB_EVENT_PATH:-}" ] && [ -f "${GITHUB_EVENT_PATH}" ]; then
@@ -78,8 +78,12 @@ else
 fi
 
 if is_true "${RUN_CHECKS}"; then
+  if [ ! -f "${GITHUB_WORKSPACE:-$PWD}/${GUARDRAILS_PATH}" ] && [ ! -f "${GUARDRAILS_PATH}" ]; then
+    echo "ForgeBench action error: run-checks requires a trusted guardrails file at ${GUARDRAILS_PATH}." >&2
+    exit 2
+  fi
   command+=(--run-checks --checkout-pr)
-  echo "ForgeBench action: run-checks enabled; using --checkout-pr so checks run against PR code."
+  echo "ForgeBench action: run-checks enabled; using trusted guardrails at ${GUARDRAILS_PATH} and --checkout-pr for PR code."
 fi
 
 if is_true "${POST_COMMENT}"; then

@@ -32,6 +32,7 @@ class GitHubActionTests(unittest.TestCase):
             self.assertIn(input_name, payload["inputs"])
         self.assertEqual(payload["inputs"]["post-comment"]["default"], "false")
         self.assertEqual(payload["inputs"]["run-checks"]["default"], "false")
+        self.assertEqual(payload["inputs"]["guardrails-path"]["default"], ".github/forgebench.yml")
         self.assertEqual(payload["inputs"]["llm-review"]["default"], "false")
         for output_name in ["posture", "report-path", "pr-comment-path", "sarif-path"]:
             self.assertIn(output_name, payload["outputs"])
@@ -73,7 +74,8 @@ class GitHubActionTests(unittest.TestCase):
             {
                 "INPUT_PR_URL": "https://github.com/owner/repo/pull/1",
                 "INPUT_RUN_CHECKS": "true",
-            }
+            },
+            workspace_files={".github/forgebench.yml": "project: Trusted CI Policy\n"},
         )
 
         self.assertEqual(result.returncode, 0, result.stderr)
@@ -122,11 +124,19 @@ class EntrypointResult:
         self.github_output = github_output
 
 
-def _run_entrypoint(extra_env: dict[str, str]) -> EntrypointResult:
+def _run_entrypoint(
+    extra_env: dict[str, str],
+    *,
+    workspace_files: dict[str, str] | None = None,
+) -> EntrypointResult:
     with TemporaryDirectory() as tmp:
         root = Path(tmp)
         workspace = root / "workspace"
         workspace.mkdir()
+        for relative, content in (workspace_files or {}).items():
+            target = workspace / relative
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_text(content, encoding="utf-8")
         bin_dir = root / "bin"
         bin_dir.mkdir()
         capture_file = root / "args.json"

@@ -17,6 +17,10 @@ class FPLParseError(ValueError):
     pass
 
 
+MAX_FPL_LINES = 10_000
+MAX_FPL_BYTES = 512 * 1024
+
+
 _DIRECTIVE_RE = re.compile(
     r"^(?P<cmd>version|name|category|suppress|ceiling|override|advisory_only)\b(?P<rest>.*)$",
     re.IGNORECASE,
@@ -24,6 +28,12 @@ _DIRECTIVE_RE = re.compile(
 
 
 def parse_fpl(text: str) -> FPLDocument:
+    encoded = text.encode("utf-8")
+    if len(encoded) > MAX_FPL_BYTES:
+        raise FPLParseError(f"FPL source exceeds {MAX_FPL_BYTES} bytes.")
+    lines = text.splitlines()
+    if len(lines) > MAX_FPL_LINES:
+        raise FPLParseError(f"FPL source exceeds {MAX_FPL_LINES} lines.")
     document = FPLDocument()
     categories: list[CategoryDecl] = []
     suppress_rules: list[SuppressDecl] = []
@@ -31,7 +41,7 @@ def parse_fpl(text: str) -> FPLDocument:
     override_rules: list[OverrideDecl] = []
     advisory_only_paths: list[str] = []
 
-    for line_number, raw_line in enumerate(text.splitlines(), start=1):
+    for line_number, raw_line in enumerate(lines, start=1):
         line = _strip_comment(raw_line).strip()
         if not line:
             continue

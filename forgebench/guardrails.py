@@ -384,4 +384,4 @@ def _parse_timeout(value: object) -> int:
         timeout = int(str(value))
     except (TypeError, ValueError):
         return 120
-    return max(1, timeout)
+    return min(max(1, timeout), 3600)

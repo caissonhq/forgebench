@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 from dataclasses import dataclass
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import Any
@@ -8,6 +9,15 @@ from urllib.parse import urlparse
 
 from forgebench.github_app.manifest import export_github_app_manifest
 from forgebench.github_app.webhook import handle_github_webhook, verify_github_signature
+from forgebench.observability.logging import log_event
+from forgebench.security.http_limits import (
+    HTTPBodyTooLargeError,
+    InsecureBindError,
+    enforce_loopback_or_explicit,
+    parse_content_length,
+    read_bounded_body,
+)
+from forgebench.security.secrets import SecretValidationError, require_webhook_secret
 
 
 @dataclass(frozen=True)
@@ -19,8 +29,19 @@ class GitHubAppServiceConfig:
 
 
 def serve_github_app(config: GitHubAppServiceConfig) -> None:
-    handler = _build_handler(config)
+    secret = config.webhook_secret.strip() or os.environ.get("FORGEBENCH_GITHUB_WEBHOOK_SECRET", "").strip()
+    if not secret:
+        try:
+            secret = require_webhook_secret()
+        except SecretValidationError as exc:
+            raise SecretValidationError(str(exc)) from exc
+    try:
+        enforce_loopback_or_explicit(config.host)
+    except InsecureBindError as exc:
+        raise SecretValidationError(str(exc)) from exc
+    handler = _build_handler(config, webhook_secret=secret)
     server = ThreadingHTTPServer((config.host, config.port), handler)
+    log_event("info", "github_app_service_started", host=config.host, port=config.port)
     try:
         server.serve_forever()
     except KeyboardInterrupt:
@@ -29,7 +50,7 @@ def serve_github_app(config: GitHubAppServiceConfig) -> None:
         server.server_close()
 
 
-def _build_handler(config: GitHubAppServiceConfig):
+def _build_handler(config: GitHubAppServiceConfig, *, webhook_secret: str):
     class Handler(BaseHTTPRequestHandler):
         def log_message(self, format: str, *args) -> None:
             del format, args
@@ -49,13 +70,16 @@ def _build_handler(config: GitHubAppServiceConfig):
             if parsed.path != "/github-app/webhook":
                 self._json(404, {"error": "not_found"})
                 return
-            length = int(self.headers.get("Content-Length") or 0)
-            raw = self.rfile.read(length) if length else b"{}"
-            if config.webhook_secret:
-                signature = self.headers.get("X-Hub-Signature-256", "")
-                if not verify_github_signature(raw, signature, config.webhook_secret):
-                    self._json(401, {"error": "invalid_signature"})
-                    return
+            try:
+                length = parse_content_length(self.headers.get("Content-Length"))
+                raw = read_bounded_body(self.rfile, length)
+            except HTTPBodyTooLargeError as exc:
+                self._json(413, {"error": str(exc)})
+                return
+            signature = self.headers.get("X-Hub-Signature-256", "")
+            if not verify_github_signature(raw, signature, webhook_secret):
+                self._json(401, {"error": "invalid_signature"})
+                return
             try:
                 payload = json.loads(raw.decode("utf-8"))
             except json.JSONDecodeError:
@@ -68,12 +92,17 @@ def _build_handler(config: GitHubAppServiceConfig):
             result = handle_github_webhook(
                 payload,
                 config_path=config.org_enforcement_config,
+                webhook_secret=webhook_secret,
+                attestation_signature=self.headers.get("X-ForgeBench-Attestation"),
             )
-            self._json(200, {
-                "handled": result.handled,
-                "message": result.message,
-                "check_output": result.check_output,
-            })
+            self._json(
+                200,
+                {
+                    "handled": result.handled,
+                    "message": result.message,
+                    "check_output": result.check_output,
+                },
+            )
 
         def _json(self, status: int, payload: dict[str, Any]) -> None:
             body = json.dumps(payload, indent=2).encode("utf-8")

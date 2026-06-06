@@ -25,6 +25,9 @@ DANGEROUS_IMPORT_PATTERNS: tuple[tuple[str, str, Severity], ...] = (
     ("pickle_loads", r"\bpickle\.loads\s*\(", Severity.HIGH),
     ("marshal_loads", r"\bmarshal\.loads\s*\(", Severity.MEDIUM),
     ("unsafe_yaml_load", r"\byaml\.load\s*\(", Severity.MEDIUM),
+    ("unsafe_yaml_unsafe", r"\byaml\.unsafe_load\s*\(", Severity.HIGH),
+    ("compile_call", r"\bcompile\s*\(", Severity.MEDIUM),
+    ("ctypes_usage", r"\bctypes\.(?:CDLL|windll|dllload)\s*\(", Severity.MEDIUM),
 )
 
 

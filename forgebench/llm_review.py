@@ -3,6 +3,8 @@ from __future__ import annotations
 import json
 import subprocess
 from dataclasses import dataclass
+
+from forgebench.security.command_exec import CommandParseError, run_shell_free_command
 from pathlib import Path
 from typing import Any
 
@@ -65,14 +67,17 @@ class CommandLLMProvider(LLMProvider):
             )
 
         try:
-            completed = subprocess.run(
+            completed = run_shell_free_command(
                 self.command,
-                shell=True,
-                input=bundle,
-                text=True,
-                capture_output=True,
-                timeout=self.timeout_seconds,
-                check=False,
+                input_text=bundle,
+                timeout_seconds=self.timeout_seconds,
+            )
+        except CommandParseError as exc:
+            return LLMReviewResult(
+                enabled=True,
+                provider="command",
+                status=LLMReviewStatus.FAILED,
+                error_message=str(exc),
             )
         except subprocess.TimeoutExpired:
             return LLMReviewResult(
@@ -192,14 +197,17 @@ def _run_command_json(command: str | None, timeout_seconds: int, bundle: str) ->
         )
 
     try:
-        completed = subprocess.run(
+        completed = run_shell_free_command(
             command_text,
-            shell=True,
-            input=bundle,
-            text=True,
-            capture_output=True,
-            timeout=timeout_seconds,
-            check=False,
+            input_text=bundle,
+            timeout_seconds=timeout_seconds,
+        )
+    except CommandParseError as exc:
+        return LLMJSONResult(
+            enabled=True,
+            provider="command",
+            status=LLMReviewStatus.FAILED,
+            error_message=str(exc),
         )
     except subprocess.TimeoutExpired:
         return LLMJSONResult(

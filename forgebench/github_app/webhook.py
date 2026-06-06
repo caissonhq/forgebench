@@ -6,8 +6,11 @@ import json
 from dataclasses import dataclass
 from typing import Any
 
+from forgebench.github_app.attestation import (
+    posture_from_check_run_payload,
+    verify_signed_attestation,
+)
 from forgebench.github_app.enforcement import (
-    OrgEnforcementConfig,
     OrgPolicyEnforcementResult,
     enforce_org_policy,
     enforcement_to_check_output,
@@ -38,6 +41,8 @@ def handle_github_webhook(
     payload: dict[str, Any],
     *,
     config_path: str | None = None,
+    webhook_secret: str = "",
+    attestation_signature: str | None = None,
     default_posture: str = "REVIEW",
     finding_count: int = 0,
     policy_fingerprint: str | None = None,
@@ -45,24 +50,32 @@ def handle_github_webhook(
     event_type = str(payload.get("_event_type") or "unknown")
     action = str(payload.get("action") or "") or None
 
-    if not _is_pull_request_payload(payload):
-        return WebhookHandleResult(
-            event_type=event_type or action or "unknown",
-            action=action,
-            handled=False,
-            message="Unsupported event",
-        )
-
     if config_path is None:
         return WebhookHandleResult(
-            event_type="pull_request",
+            event_type=event_type,
             action=action,
             handled=False,
             message="Org enforcement config not provided.",
         )
 
+    posture_result = _resolve_trusted_posture(
+        payload,
+        event_type=event_type,
+        webhook_secret=webhook_secret,
+        attestation_signature=attestation_signature,
+        policy_fingerprint=policy_fingerprint,
+        default_posture=default_posture,
+    )
+    if posture_result is None:
+        return WebhookHandleResult(
+            event_type=event_type,
+            action=action,
+            handled=False,
+            message="No trusted ForgeBench posture source in webhook payload.",
+        )
+
+    posture, source = posture_result
     config = load_org_enforcement_config(config_path)
-    posture = _extract_posture(payload, default_posture=default_posture)
     enforcement = enforce_org_policy(
         posture=posture,
         config=config,
@@ -78,38 +91,59 @@ def handle_github_webhook(
                 "org_id": config.org_id,
                 "posture": enforcement.posture,
                 "allowed": enforcement.allowed,
+                "posture_source": source,
             },
         )
     return WebhookHandleResult(
-        event_type="pull_request",
+        event_type=event_type,
         action=action,
         handled=True,
         enforcement=enforcement,
         check_output=check_output,
-        message="Org policy enforcement evaluated.",
+        message=f"Org policy enforcement evaluated from {source}.",
     )
 
 
-def _is_pull_request_payload(payload: dict[str, Any]) -> bool:
-    if str(payload.get("_event_type") or "") == "pull_request":
-        return True
-    if payload.get("pull_request") is not None:
-        return True
-    return isinstance(payload.get("forgebench"), dict)
-
-
-def _extract_posture(payload: dict[str, Any], *, default_posture: str) -> str:
-    forgebench = payload.get("forgebench")
-    if isinstance(forgebench, dict):
-        posture = str(forgebench.get("posture") or "").strip().upper()
+def _resolve_trusted_posture(
+    payload: dict[str, Any],
+    *,
+    event_type: str,
+    webhook_secret: str,
+    attestation_signature: str | None,
+    policy_fingerprint: str | None,
+    default_posture: str,
+) -> tuple[str, str] | None:
+    if event_type == "check_run":
+        posture = posture_from_check_run_payload(payload)
         if posture:
-            return posture
-    labels = payload.get("labels")
-    if isinstance(labels, list):
-        for label in labels:
-            if not isinstance(label, dict):
-                continue
-            name = str(label.get("name") or "").upper()
-            if name in {"BLOCK", "REVIEW", "LOW_CONCERN"}:
-                return name
-    return default_posture
+            return posture, "github_check_run"
+        return None
+
+    attestation = payload.get("forgebench_attestation")
+    if isinstance(attestation, dict) and webhook_secret and attestation_signature:
+        org_id = str(attestation.get("org_id") or "").strip()
+        pr_number = _optional_int(attestation.get("pr_number"))
+        head_sha = str(attestation.get("head_sha") or "").strip()
+        posture = str(attestation.get("posture") or "").strip().upper()
+        fingerprint = str(attestation.get("policy_fingerprint") or policy_fingerprint or "").strip() or None
+        if org_id and pr_number is not None and head_sha and posture:
+            if verify_signed_attestation(
+                secret=webhook_secret,
+                signature_header=attestation_signature,
+                org_id=org_id,
+                pr_number=pr_number,
+                head_sha=head_sha,
+                posture=posture,
+                policy_fingerprint=fingerprint,
+            ):
+                return posture, "signed_attestation"
+    return None
+
+
+def _optional_int(value: Any) -> int | None:
+    if value is None:
+        return None
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return None

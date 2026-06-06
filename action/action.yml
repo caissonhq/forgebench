@@ -10,9 +10,9 @@ inputs:
     required: false
     default: ""
   guardrails-path:
-    description: Path to forgebench.yml. Missing files fall back to generic review rules.
+    description: Trusted guardrails path (recommended .github/forgebench.yml on base branch). Required when run-checks is true.
     required: false
-    default: forgebench.yml
+    default: .github/forgebench.yml
   run-checks:
     description: Run configured deterministic checks against a temporary PR worktree (--checkout-pr is added automatically).
     required: false

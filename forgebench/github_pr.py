@@ -20,6 +20,7 @@ from forgebench.github_checks import (
 from forgebench.models import CheckStatus, Confidence, ForgeBenchReport, PRCheckoutInfo
 from forgebench.report_writer import write_reports
 from forgebench.review import ReviewInputError, ReviewResult, run_review
+from forgebench.security.path_confinement import PathConfinementError, assert_path_within_root
 
 
 GH_MISSING_MESSAGE = "GitHub PR intake requires GitHub CLI. Install gh and run gh auth login, then retry."
@@ -456,6 +457,7 @@ def run_github_pr_review(
     prove_it: bool = False,
     llm_ensemble_models: list[str] | None = None,
     llm_ensemble_strategy: str | None = None,
+    trust_pr_guardrails: bool = False,
     client: GitHubPRClient | None = None,
 ) -> GitHubPRReviewResult:
     repo = Path(repo_path)
@@ -508,7 +510,13 @@ def run_github_pr_review(
             run_checks_for_review = False
             input_notes = _input_notes_for_checkout(checkout_info, run_checks)
 
-    resolved_guardrails = _resolve_guardrails(review_repo, guardrails_path)
+    resolved_guardrails = _resolve_guardrails(
+        main_repo=repo,
+        review_repo=review_repo,
+        guardrails_path=guardrails_path,
+        run_checks=run_checks_for_review,
+        trust_pr_guardrails=trust_pr_guardrails,
+    )
 
     review_result = run_review(
         repo_path=review_repo,
@@ -606,11 +614,51 @@ def run_github_pr_review(
     )
 
 
-def _resolve_guardrails(repo: Path, guardrails_path: str | Path | None) -> Path | None:
-    if guardrails_path:
-        return Path(guardrails_path)
-    candidate = repo / "forgebench.yml"
+def _resolve_guardrails(
+    *,
+    main_repo: Path,
+    review_repo: Path,
+    guardrails_path: str | Path | None,
+    run_checks: bool,
+    trust_pr_guardrails: bool,
+) -> Path | None:
+    explicit = Path(guardrails_path) if guardrails_path else None
+    if run_checks and explicit is None:
+        raise GitHubPRError(
+            "run_checks requires --guardrails pointing to a trusted policy file on the base branch. "
+            "ForgeBench will not execute check commands from an untrusted PR-head forgebench.yml."
+        )
+    if explicit is not None:
+        resolved = explicit.resolve()
+        if run_checks and not trust_pr_guardrails:
+            _assert_trusted_guardrails_path(resolved, main_repo=main_repo, review_repo=review_repo)
+        return resolved
+    candidate = review_repo / "forgebench.yml"
     return candidate if candidate.exists() else None
+
+
+def _assert_trusted_guardrails_path(path: Path, *, main_repo: Path, review_repo: Path) -> None:
+    resolved = path.resolve()
+    main_root = main_repo.resolve()
+    review_root = review_repo.resolve()
+    try:
+        assert_path_within_root(resolved, main_root)
+        return
+    except PathConfinementError:
+        pass
+    if review_root != main_root:
+        try:
+            assert_path_within_root(resolved, review_root)
+        except PathConfinementError:
+            pass
+        else:
+            raise GitHubPRError(
+                "Guardrails path resolves inside the PR worktree. "
+                "Pass a trusted base-branch policy path or --trust-pr-guardrails to override."
+            )
+    raise GitHubPRError(
+        "Guardrails path must resolve inside the main repository checkout when run_checks is enabled."
+    )
 
 
 def _validate_git_repo_for_worktree(repo: Path) -> None:
