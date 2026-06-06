@@ -43,7 +43,7 @@ In repo **Settings → Notifications**, disable email for Dependabot if using au
 
 ## Known manual steps
 
-- **GitHub Pages**: Repo Settings → Pages → Source: GitHub Actions (or let `docs.yml` deploy job use `enablement: true`)
+- **GitHub Pages**: Settings → Pages → Source: GitHub Actions, then set repository variable `PAGES_DEPLOY=true` to enable deploy job
 - **PyPI / release secrets**: Configure for tagged releases
 - **HOMEBREW_TAP_TOKEN**, **VSCE_PAT**: Optional; workflows skip push/publish when unset
 
