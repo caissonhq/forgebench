@@ -199,6 +199,7 @@ def run_review(
         )
         written["prove_it_plan"] = prove_it_result.plan_path
         written["prove_it_checklist"] = prove_it_result.checklist_path
+    _record_review_telemetry(report, config_mode=config_mode)
     return ReviewResult(
         report=report,
         written_paths=written,
@@ -206,6 +207,24 @@ def run_review(
         guardrails=guardrails,
         output_dir=out_dir,
     )
+
+
+def _record_review_telemetry(report, *, config_mode: str) -> None:
+    try:
+        from forgebench.telemetry import record_telemetry_event
+
+        record_telemetry_event(
+            "review_completed",
+            {
+                "posture": report.posture.value,
+                "config_mode": config_mode,
+                "finding_count": len(report.findings),
+                "reviewers_enabled": report.specialized_reviewers.enabled,
+                "llm_review_enabled": report.llm_review.enabled,
+            },
+        )
+    except Exception:
+        return
 
 
 def _validate_inputs(repo_path: Path, diff_path: Path, task_path: Path, guardrails_path: Path | None) -> None:

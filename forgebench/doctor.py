@@ -55,6 +55,7 @@ def run_doctor(repo_path: str | Path | None = None) -> DoctorReport:
         _check_gh_auth(),
         _check_writable_output(repo),
         _check_repo_path(repo),
+        _check_telemetry_opt_in(),
     ]
     return DoctorReport(checks=checks)
 
@@ -229,6 +230,25 @@ def _check_writable_output(repo: Path) -> DoctorCheck:
         status=DoctorStatus.FAIL,
         message="; ".join(errors) or "no writable forgebench-output directory",
         fix_hint="Choose a repo path with write permission or run from a writable directory.",
+    )
+
+
+def _check_telemetry_opt_in() -> DoctorCheck:
+    try:
+        from forgebench.telemetry import is_telemetry_enabled
+
+        if is_telemetry_enabled():
+            return DoctorCheck(
+                name="telemetry",
+                status=DoctorStatus.OK,
+                message="opt-in telemetry enabled (local-only, anonymized)",
+            )
+    except Exception:
+        pass
+    return DoctorCheck(
+        name="telemetry",
+        status=DoctorStatus.OK,
+        message="disabled by default; enable with forgebench telemetry enable",
     )
 
 
