@@ -45,6 +45,11 @@ nav:
   - Enterprise:
       - Init wizard: enterprise/init.md
       - Team policy: enterprise/team-policy.md
+      - Pricing & licensing: enterprise/pricing.md
+  - Go-to-Market:
+      - Sales one-pager: ../docs/sales/one-pager.md
+      - Competitive matrix: ../docs/sales/competitive-matrix.md
+      - Customer onboarding: ../docs/customer-success/onboarding-playbook.md
   - API:
       - MCP server: api/mcp.md
       - Report schema: api/report-schema.md

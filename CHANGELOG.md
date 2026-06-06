@@ -10,6 +10,12 @@
 
 ## Unreleased
 
+- EO-013 (GTM): `forgebench license` commands — activate, check, status, report with HMAC keys and seat enforcement.
+- EO-013 (analytics): `forgebench analytics` product telemetry (opt-in, separate from review telemetry); self-hosted usage dashboard.
+- EO-013 (quotas): Tier-based daily limits for Grok verify, cloud export, policy serve (Enterprise).
+- EO-013 (release): Multi-platform release workflow, SBOM, attestations.json, Homebrew formula, release notes automation, VS Code Marketplace workflow.
+- EO-013 (sales): One-pager, deck outline, competitive matrix, case study template, launch announcement copy.
+- EO-013 (CS): Onboarding playbook, SLA template, support process, usage reporting guide, GitHub Discussions template.
 - EO-012 (UX): `forgebench demo`, `forgebench status`, rich CLI output, global `--explain` flag, doctor onboarding checklist.
 - EO-012 (enterprise): `forgebench init --enterprise` wizard — org policy, GitHub Actions workflow, trusted CI guardrails, team onboarding docs.
 - EO-012 (IDE): VS Code findings sidebar, onboarding wizard, repair prompt clipboard, status bar posture colors; JetBrains tool window, settings, onboarding/status/repair/init actions.

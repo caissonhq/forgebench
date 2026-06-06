@@ -4,7 +4,15 @@ ForgeBench reviews AI-generated diffs before they hit main.
 
 Status key: **Done** · **In progress** · **Planned** · **Exploring**
 
-Last updated: 2026-06-05 (EO-011)
+Last updated: 2026-06-05 (EO-013)
+
+## EO-013 — Go-to-Market, Observability & Scale (Done)
+
+- **Pricing & licensing**: Free / Team / Enterprise tiers; `forgebench license activate|check|status|report`; HMAC license keys with seat management
+- **Product analytics**: Opt-in adoption telemetry (`forgebench analytics`) distinct from review telemetry; self-hosted HTML dashboard
+- **Quotas**: Daily limits for Grok verify and cloud export by tier
+- **Release maturity**: Multi-platform wheel matrix, SBOM, `attestations.json`, Homebrew formula template, changelog→release notes, VS Code Marketplace workflow
+- **Sales & CS**: One-pager, deck outline, competitive matrix, case study template, launch announcement, onboarding playbook, SLA template, support process
 
 ## EO-011 — Enterprise Readiness & Compliance (Done)
 
@@ -69,12 +77,12 @@ Last updated: 2026-06-05 (EO-011)
 - **IDE scaffolds**: VS Code extension scaffold, JetBrains plugin scaffold
 - **Community**: contribution process, issue templates, this roadmap
 
-## Next — Team adoption (Planned)
+## Next — Growth (Planned)
 
 | Item | Notes |
 |------|-------|
-| Hosted policy dashboard v1 | Wire skeleton to org inventory + adoption status (opt-in telemetry TBD) |
-| VS Code marketplace publish | Package v1.0.0 extension; diff picker UX polish |
+| Hosted license server | Online activation + seat revocation API |
+| Cloud analytics ingest | Opt-in Team dashboard sync (product analytics only) |
 | JetBrains Marketplace publish | Package Kotlin plugin; sign and list |
 | GitHub App hosted option | Managed webhook receiver (self-hosted kit ships in EO-010) |
 | GitLab / CircleCI shared templates | Publish reusable template repos |

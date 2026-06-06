@@ -82,6 +82,17 @@ forgebench init --enterprise --yes
 
 Documentation site (MkDocs Material): `mkdocs serve` after `pip install mkdocs-material`. See [site-docs/](site-docs/).
 
+Team and Enterprise licensing:
+
+```bash
+forgebench license activate FB-TEAM-...
+forgebench license status
+forgebench analytics enable
+forgebench analytics dashboard
+```
+
+See [docs/pricing.md](docs/pricing.md) for Free / Team / Enterprise tiers.
+
 Review a GitHub PR and run configured checks against a temporary PR worktree:
 
 ```bash

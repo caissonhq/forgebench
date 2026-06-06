@@ -1,4 +1,4 @@
-# ForgeBench — Marketing Home (EO-010 Early Access)
+# ForgeBench — Marketing Home (EO-013 Go-to-Market)
 
 Technical positioning for forgebench.dev. **Merge-risk governance for AI-generated code** — local-first, evidence-backed, honest about limits.
 
@@ -8,7 +8,7 @@ Technical positioning for forgebench.dev. **Merge-risk governance for AI-generat
 
 ForgeBench answers that question before code reaches `main`. Not agent task completion. Not vibe scores. **Cited merge posture** with a repair loop your agents can act on.
 
-[Start free](#quickstart) · [Early Access](#early-access) · [Security pack](#security) · [Roadmap](../ROADMAP.md)
+[Start free](#quickstart) · [Pricing](#pricing) · [Early Access](#early-access) · [Security pack](#security) · [Roadmap](../ROADMAP.md)
 
 ## Why teams adopt ForgeBench
 
@@ -53,16 +53,34 @@ forgebench init --enterprise --yes
 forgebench policy test --tests examples/policy_tests
 ```
 
+## Pricing
+
+| Tier | Price | Highlights |
+|------|-------|------------|
+| **Free** | $0 | Full core review, IDE extensions, GitHub Action |
+| **Team** | $29/dev/mo (EA) | License keys, `init --enterprise`, analytics, usage reports |
+| **Enterprise** | Custom | Policy serve, GitHub App serve, Grok quotas, SOC2 pack |
+
+```bash
+forgebench license activate FB-TEAM-...
+forgebench license status
+forgebench analytics dashboard
+```
+
+Details: [pricing.md](pricing.md) · [sales/one-pager.md](sales/one-pager.md)
+
 ## Early Access
 
 Team and Enterprise packages add **adoption infrastructure**, not hosted code review:
 
+- **License seat management** (`forgebench license`)
+- **Product analytics dashboard** (opt-in, distinct from review telemetry)
 - Production **VS Code** and **JetBrains** extensions
 - **Self-hosted GitHub App** manifest + org policy enforcement
 - **SOC2-style** security documentation for procurement
-- Priority support for shared policy rollouts
+- Customer success kit: onboarding playbook, SLA template, support process
 
-Details: [early-access.md](early-access.md) · [pricing.md](pricing.md)
+Details: [early-access.md](early-access.md) · [customer-success/onboarding-playbook.md](customer-success/onboarding-playbook.md)
 
 ## Integrations
 
@@ -70,8 +88,9 @@ Details: [early-access.md](early-access.md) · [pricing.md](pricing.md)
 |---------|--------|
 | CLI + MCP + Cursor | GA (beta) |
 | GitHub Action | GA |
-| VS Code extension | EA v1.0 |
-| JetBrains plugin | EA v1.0 |
+| VS Code extension | EA v1.1 — Marketplace submission ready |
+| JetBrains plugin | EA v1.1 |
+| License + analytics | Team/Enterprise |
 | Self-hosted GitHub App | EA kit |
 | FPL + policy tests | GA |
 | GitLab / CircleCI / Jenkins | Recipes |

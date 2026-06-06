@@ -1,29 +1,84 @@
-# ForgeBench Pricing (Early Access)
+# ForgeBench Pricing & Packaging
 
-ForgeBench core review stays **local and free**. Early Access adds Team/Enterprise packaging for org policy, audit artifacts, and supported integrations.
+ForgeBench core review stays **local and free forever**. Team and Enterprise tiers add org policy governance, analytics, and supported self-hosted integrations.
 
-## Tiers
+## Tier comparison
 
-| Tier | Price | Best for | Includes |
-|------|-------|----------|----------|
-| **Open** | Free | Individuals, OSS | CLI, golden benchmark, Cursor/MCP, GitHub Action, VS Code + JetBrains plugins |
-| **Team** | $29 / developer / month (EA) | Multi-repo teams | Shared policy layers, policy dashboard export, policy tests in CI, priority issue routing |
-| **Enterprise** | Custom | Regulated / platform teams | Self-hosted GitHub App kit, SOC2 audit pack, Grok verification playbook, dedicated onboarding |
+| | **Free** | **Team** | **Enterprise** |
+|---|----------|----------|----------------|
+| **Price** | $0 | $29 / developer / month (EA) | Custom annual |
+| **Best for** | Individuals, OSS | Multi-repo engineering teams | Regulated / platform orgs |
+| **License key** | Not required | `FB-TEAM-...` | `FB-ENTERPRISE-...` |
+| **Seats** | Unlimited machines | Per-seat activation | Org-wide or unlimited |
+
+## Feature matrix
+
+| Capability | Free | Team | Enterprise |
+|------------|:----:|:----:|:----------:|
+| `forgebench review` / `review-pr` | ✓ | ✓ | ✓ |
+| Golden benchmark & calibration | ✓ | ✓ | ✓ |
+| Cursor rule + MCP server | ✓ | ✓ | ✓ |
+| GitHub Action (Docker) | ✓ | ✓ | ✓ |
+| VS Code + JetBrains extensions | ✓ | ✓ | ✓ |
+| `forgebench init` (basic guardrails) | ✓ | ✓ | ✓ |
+| Review telemetry (opt-in, local) | ✓ | ✓ | ✓ |
+| Self-hosted analytics dashboard | ✓ | ✓ | ✓ |
+| `forgebench init --enterprise` | | ✓ | ✓ |
+| Org policy layers + dashboard export | | ✓ | ✓ |
+| Policy tests in CI | | ✓ | ✓ |
+| Cloud analytics export quota | | ✓ | ✓ |
+| Usage reporting (`license report`) | | ✓ | ✓ |
+| `forgebench policy serve` | | | ✓ |
+| `forgebench github-app serve` | | | ✓ |
+| Grok policy verification quota | | 50/day | 1000/day |
+| SOC2 audit pack + dedicated onboarding | | | ✓ |
+
+## License management
+
+```bash
+# Activate a Team or Enterprise key on this machine
+forgebench license activate FB-TEAM-...
+
+# Check tier and feature access
+forgebench license status
+forgebench license check --feature policy_serve
+
+# Customer success usage report (Team+)
+forgebench license report --out forgebench-output/license-report.json
+```
+
+License files are stored at `~/.config/forgebench/license.json` (override with `FORGEBENCH_LICENSE_PATH`).
+
+Seat enforcement counts distinct machine activations per license ID. Enterprise tier supports unlimited seats when `unlimited_seats` is included in the key.
+
+## Product analytics (distinct from review telemetry)
+
+| Stream | Purpose | Default |
+|--------|---------|---------|
+| **Review telemetry** (`forgebench telemetry`) | Review posture distributions, benchmark runs | Off |
+| **Product analytics** (`forgebench analytics`) | CLI adoption, license events, onboarding | Off |
+
+```bash
+forgebench analytics enable
+forgebench analytics dashboard --out forgebench-output/analytics-dashboard
+```
+
+No automatic cloud upload. Teams may export bundles manually for customer success review.
 
 ## What stays free
 
-- `forgebench review`, `review-pr`, `calibrate`, `benchmark`
-- Local feedback and telemetry (opt-in)
+- All core merge-risk review workflows
+- Local feedback and repair prompts
 - Merge Risk Benchmark reproduction
-- Community roadmap + golden case contributions
+- Community roadmap and golden case contributions
 
-## Early Access notes
+## Early Access (2026 H1)
 
-- Team pricing is introductory during Beta → Early Access (2026 H1)
+- Team pricing is introductory during Beta → Early Access
 - No hosted review SaaS required for any tier
-- Enterprise GitHub App is **customer-hosted**; ForgeBench supplies manifest + enforcement tooling
-- Annual billing and volume discounts available on request: hello@forgebench.dev
+- Enterprise GitHub App is **customer-hosted**
+- Annual billing and volume discounts: hello@forgebench.dev
 
 ## Honest limits
 
-ForgeBench does not prove code is safe. Pricing covers **merge-risk workflow, policy governance, and integration support** — not certification of correctness.
+ForgeBench does not prove code is safe. Pricing covers **merge-risk workflow, policy governance, integration support, and operational readiness** — not certification of correctness.
