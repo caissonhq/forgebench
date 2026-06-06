@@ -44,6 +44,15 @@ Lenses that produced findings on at least one case include Test Skeptic, Scope A
 3. Calibration passes when posture, required findings, and artifact shape match the case contract.
 4. This is a **product-quality regression suite**, not a public leaderboard. It guards merge-judgment drift as reviewers evolve.
 
+## Real PR outcomes (EO-008)
+
+Anonymized dogfood PR labels live in `examples/benchmark_outcomes/eo002-pr-outcomes.json`. They complement golden-case calibration; they do not certify production safety.
+
+```bash
+forgebench benchmark --cases examples/golden_cases --outcomes examples/benchmark_outcomes/eo002-pr-outcomes.json
+forgebench benchmark-dashboard --out ./forgebench-output/benchmark-dashboard
+```
+
 ## Reproduce locally
 
 ```bash

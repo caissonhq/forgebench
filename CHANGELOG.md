@@ -10,6 +10,12 @@
 
 ## Unreleased
 
+- EO-008 (telemetry): Opt-in local-only anonymized telemetry via `forgebench telemetry` and `FORGEBENCH_TELEMETRY=1`.
+- EO-008 (benchmark): Merge Risk Benchmark expanded with anonymized real PR outcomes (`examples/benchmark_outcomes/`).
+- EO-008 (arena): Review Arena leaderboard from calibration + PR outcomes.
+- EO-008 (feedback): Structured feedback v3 (`severity`, `confidence`, `files`, `outcome_label`, `expected_posture`).
+- EO-008 (golden): `forgebench feedback --generate-golden-cases` drafts calibration cases from local feedback.
+- EO-008 (dashboard): `forgebench benchmark-dashboard` exports public static HTML + JSON manifest.
 - EO-007 (semantic): Tree-sitter/stdlib AST parsing for Python, TypeScript, and Rust with cross-file behavioral diff signals.
 - EO-007 (reviewer): Behavioral Skeptic lens for uncovered changed symbols.
 - EO-007 (mutation): `forgebench mutation plan` skeleton exporting mutation candidates from semantic diff.

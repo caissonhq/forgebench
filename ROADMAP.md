@@ -4,7 +4,16 @@ ForgeBench reviews AI-generated diffs before they hit main.
 
 Status key: **Done** · **In progress** · **Planned** · **Exploring**
 
-Last updated: 2026-06-05 (EO-007)
+Last updated: 2026-06-05 (EO-008)
+
+## EO-008 — Data Flywheel & Trust at Scale (Done)
+
+- **Opt-in telemetry**: `forgebench telemetry enable|disable|status|export` — local JSONL, anonymized, no auto-upload
+- **PR outcomes**: Anonymized dogfood outcomes wired into `forgebench benchmark --outcomes`
+- **Review Arena**: Leaderboard ranking calibration pass rate, lens activity, and human agreement
+- **Feedback v3**: Outcome labels, severity/confidence, files, expected posture, reviewer lens
+- **Golden case automation**: Draft candidates from dismissed/wrong feedback with human review gate
+- **Benchmark dashboard**: `forgebench benchmark-dashboard` static HTML + manifest for public sharing
 
 ## Now — CLI alpha (Done)
 
@@ -71,7 +80,7 @@ Last updated: 2026-06-05 (EO-007)
 - No auto-merge or auto-fix
 - No numeric safety score
 - No mandatory hosted SaaS or OAuth for core review
-- No remote telemetry without explicit opt-in design review
+- No remote telemetry upload without explicit user action (local opt-in export only)
 
 ## How to influence the roadmap
 
