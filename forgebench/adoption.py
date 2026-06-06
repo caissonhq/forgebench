@@ -95,6 +95,9 @@ def next_actions_after_review(*, posture: str, config_mode: str, finding_count: 
     else:
         actions.append("Nice first pass — try `forgebench review-pr PR_URL` on a real PR.")
     actions.append("Track progress: `forgebench doctor --checklist`")
+    actions.append(
+        f"Share your experience: `forgebench feedback --share --posture {posture} --finding-count {finding_count}`"
+    )
     return actions
 
 
@@ -211,10 +214,22 @@ def _doctor_core_ok(repo: Path) -> bool:
         return False
 
 
+FUNNEL_STAGE_BY_MILESTONE = {
+    "first_install": "install",
+    "quickstart_completed": "install",
+    "first_review": "first_review",
+    "first_team_init": "team_init",
+    "first_paid_feature": "license_activate",
+}
+
+
 def _emit_product_event(milestone: str) -> None:
     try:
         from forgebench.product_analytics import record_product_event
 
         record_product_event("milestone_reached", {"milestone": milestone})
+        stage = FUNNEL_STAGE_BY_MILESTONE.get(milestone)
+        if stage:
+            record_product_event("funnel_stage", {"stage": stage, "milestone": milestone})
     except Exception:
         pass

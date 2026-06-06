@@ -34,9 +34,9 @@ plugins:
 nav:
   - Home: index.md
   - Installation: installation.md
+  - Install methods: install-methods.md
   - Quickstart: quickstart.md
-  - Install methods: ../docs/install-methods.md
-  - Presets gallery: ../docs/presets-gallery.md
+  - Presets gallery: presets-gallery.md
   - CLI Reference: cli-reference.md
   - Troubleshooting: troubleshooting.md
   - Onboarding:
@@ -49,12 +49,15 @@ nav:
       - Init wizard: enterprise/init.md
       - Team policy: enterprise/team-policy.md
       - Pricing & licensing: enterprise/pricing.md
-      - GitHub App listing: ../docs/github-app-listing.md
-      - Design partners: ../docs/design-partner.md
-  - Go-to-Market:
-      - Sales one-pager: ../docs/sales/one-pager.md
-      - Competitive matrix: ../docs/sales/competitive-matrix.md
-      - Customer onboarding: ../docs/customer-success/onboarding-playbook.md
+      - GitHub App listing: github-app-listing.md
+      - Design partners: design-partner.md
+      - Early access: early-access.md
+  - Launch:
+      - v1.0 release notes: launch/RELEASE_v1.0.0.md
+      - Announcements: launch/announcements.md
+      - Launch checklist: launch/LAUNCH_EXECUTION_CHECKLIST.md
+      - Press one-pager: launch/press-one-pager.md
+      - Design partners: design-partner.md
   - API:
       - MCP server: api/mcp.md
       - Report schema: api/report-schema.md

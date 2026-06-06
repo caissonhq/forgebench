@@ -1,0 +1,34 @@
+title: Success story
+labels: ["show-and-tell", "discussion"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Share how ForgeBench helped before merge. Generate a draft: `forgebench feedback --share`
+  - type: textarea
+    id: experience
+    attributes:
+      label: What happened?
+      description: Posture, findings, agent workflow
+    validations:
+      required: true
+  - type: dropdown
+    id: recommend
+    attributes:
+      label: Would you recommend ForgeBench?
+      options:
+        - "Yes — already recommending"
+        - "Yes — for teams using coding agents"
+        - "Maybe — still evaluating"
+    validations:
+      required: true
+  - type: dropdown
+    id: stack
+    attributes:
+      label: Primary stack
+      options:
+        - Python
+        - TypeScript / Node
+        - Rust
+        - Polyglot / monorepo
+        - Other

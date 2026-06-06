@@ -16,6 +16,6 @@ python3 -m venv "${VENV}"
 "${VENV}/bin/forgebench" --version
 "${VENV}/bin/forgebench" --help
 "${VENV}/bin/forgebench" doctor
-"${VENV}/bin/python" -c "import forgebench; assert forgebench.__version__ == '0.9.0'"
+"${VENV}/bin/python" -c "import forgebench; assert forgebench.__version__ == '1.0.0'"
 
 echo "smoke_install: ok"

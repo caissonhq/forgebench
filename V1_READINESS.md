@@ -35,6 +35,7 @@ ForgeBench does not prove code is safe. It highlights merge risk before AI-gener
 - EO-013 (2026-06-05): Go-to-market — `forgebench license` (activate/check/status/report), product analytics (`forgebench analytics`), usage dashboard, quota hooks, release automation (multi-platform wheels, SBOM, attestations, Homebrew formula, VS Code Marketplace workflow), sales + customer success kits.
 - EO-014 (2026-06-06): Adoption velocity — `forgebench quickstart`, `forgebench team init`, presets gallery (`forgebench presets`), `forgebench share-report`, doctor adoption checklist, milestone analytics, GitHub App install auto-config, install-methods + design-partner docs, GitHub Discussions templates.
 - EO-015 (2026-06-06): Distribution excellence — `forgebench install`, binary releases + macOS pkg, Homebrew tap CI, shell completions, doctor install detection, VS Code/JetBrains/GitHub Marketplace listing kits, `site-docs/installation.md`, README install badges.
+- EO-016 (2026-06-06): **v1.0.0 public launch** — release pipeline, marketing site refresh, launch announcement kit, `feedback --share`, funnel analytics, adoption dashboard, Design Partner program v1, GitHub Pages docs deploy.
 - Self-hosted GitHub App kit for org-level policy enforcement (`forgebench github-app`).
 - SOC 2-style security documentation pack (`docs/security/`) with controls matrix and evidence mapping.
 - Enterprise security hardening (EO-011): path confinement, trusted guardrails for checks, webhook attestation, RBAC, tamper-evident audit chain, data retention.

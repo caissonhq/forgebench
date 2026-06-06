@@ -114,6 +114,6 @@ forgebench status
 ## Next steps
 
 - [Quickstart](quickstart.md)
-- [Presets gallery](../docs/presets-gallery.md)
+- [Presets gallery](presets-gallery.md)
 - [Team init](enterprise/init.md)
 - [Troubleshooting](troubleshooting.md)

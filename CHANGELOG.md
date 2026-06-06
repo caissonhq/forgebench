@@ -1,5 +1,27 @@
 # Changelog
 
+## 1.0.0 — 2026-06-06
+
+**Public launch.** ForgeBench v1.0 — production-ready local merge-risk review for AI-generated diffs.
+
+### Launch highlights
+
+- `forgebench quickstart`, `forgebench install`, `forgebench team init`, presets gallery, `forgebench share-report`
+- Distribution: pip/pipx/Homebrew, binary bundles, macOS `.pkg`, shell completions, VS Code 1.2
+- Adoption: doctor checklist, funnel analytics (`funnel_stage`), `forgebench analytics adoption-dashboard`
+- Traction: `forgebench feedback --share`, Design Partner program, GitHub Discussions templates
+- Enterprise: Team/Enterprise licensing, self-hosted GitHub App kit, SOC2-style security pack
+- Evidence hierarchy: deterministic checks → static signals → guardrails → lenses → optional LLM
+
+### Install
+
+```bash
+pipx install forgebench==1.0.0
+forgebench quickstart
+```
+
+See [docs/launch/RELEASE_v1.0.0.md](docs/launch/RELEASE_v1.0.0.md) for full release notes.
+
 ## 0.9.0 — 2026-06-05
 
 - Published to PyPI as `forgebench==0.9.0` with README-on-PyPI metadata and Apache-2.0 license.
@@ -9,6 +31,10 @@
 - CI: wheel install smoke test verifies `pip install` and `forgebench doctor`.
 
 ## Unreleased
+
+_No changes yet._
+
+## Development history (pre-1.0)
 
 - EO-015 (distribution): `forgebench install` guidance command (detect environment, methods table, shell completions, upgrade path).
 - EO-015 (releases): Official binary `.tar.gz` bundles, macOS `.pkg` installer, Homebrew tap automation workflow.

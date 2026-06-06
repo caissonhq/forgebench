@@ -18,6 +18,7 @@ from forgebench.feedback import (
     suggest_guardrails,
     summarize_feedback,
 )
+from forgebench.feedback_share import format_success_story_share
 from forgebench.adoption import format_feature_suggestion, format_next_actions, increment_review_count, next_actions_after_review
 from forgebench.presets import PresetError, export_preset_bundle, format_preset_list, install_preset, list_presets
 from forgebench.quickstart import run_quickstart
@@ -639,6 +640,23 @@ def _run_feedback(args: argparse.Namespace) -> int:
             print(text)
         return 0
 
+    if getattr(args, "share", False):
+        text = format_success_story_share(
+            posture=args.posture or "REVIEW",
+            finding_count=args.finding_count or 0,
+            note=args.note or "",
+            agent_tool=args.agent or "",
+            workflow=args.workflow or "",
+        )
+        if args.out:
+            output = Path(args.out)
+            output.parent.mkdir(parents=True, exist_ok=True)
+            output.write_text(text, encoding="utf-8")
+            print(f"Success story template written to {output}.")
+        else:
+            print(text)
+        return 0
+
     if args.summarize:
         summary = summarize_feedback([args.feedback_log])
         if summary.total == 0 and summary.malformed_count == 0:
@@ -885,6 +903,7 @@ def _build_parser() -> argparse.ArgumentParser:
     feedback.add_argument("--summarize", action="store_true", help="Summarize a local feedback JSONL log.")
     feedback.add_argument("--suggest-guardrails", action="store_true", help="Suggest forgebench.yml tuning from local feedback.")
     feedback.add_argument("--suggest", action="store_true", help="Print a feature-request template for GitHub Discussions.")
+    feedback.add_argument("--share", action="store_true", help="Print a success-story template for GitHub Discussions.")
     feedback.add_argument("--feature-description", required=False, help="Problem description for --suggest template.")
     feedback.add_argument("--export", action="store_true", help="Export structured beta feedback bundle as JSON.")
     feedback.add_argument("--posture", required=False, choices=["BLOCK", "REVIEW", "LOW_CONCERN"], help="Optional review posture for structured beta feedback.")

@@ -48,6 +48,12 @@ def _run_activate(args: argparse.Namespace) -> int:
         print(f"ForgeBench license error: {exc}", file=sys.stderr)
         return 2
     record_product_event("license_activated", {"tier": record.tier.name.lower(), "valid": record.valid})
+    try:
+        from forgebench.adoption import record_milestone
+
+        record_milestone("first_paid_feature")
+    except Exception:
+        pass
     print(format_license_status(record))
     print(f"License file: {license_path() if not args.path else args.path}")
     return 0 if record.valid else 2

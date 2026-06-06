@@ -32,6 +32,9 @@ def add_analytics_subparser(subparsers: argparse._SubParsersAction) -> None:
     dashboard.add_argument("--out", required=False, default="forgebench-output/analytics-dashboard", help="Output directory.")
     dashboard.add_argument("--no-review-telemetry", action="store_true", help="Omit review telemetry section.")
     dashboard.add_argument("--cloud-export", action="store_true", help="Consume cloud export quota (Team+).")
+    adoption = analytics_sub.add_parser("adoption-dashboard", help="Export public adoption funnel dashboard (static HTML).")
+    adoption.add_argument("--out", required=False, default="forgebench-output/adoption-dashboard", help="Output directory.")
+    adoption.add_argument("--public-stats", required=False, help="Path to public-stats.json manifest.")
 
 
 def run_analytics_command(args: argparse.Namespace) -> int:
@@ -77,7 +80,18 @@ def run_analytics_command(args: argparse.Namespace) -> int:
         print(f"- HTML: {result.index_path}")
         print(f"- Manifest: {result.manifest_path}")
         return 0
-    print("analytics requires enable, disable, status, export, or dashboard.", file=sys.stderr)
+    if action == "adoption-dashboard":
+        from forgebench.adoption_dashboard import export_adoption_dashboard
+
+        result = export_adoption_dashboard(
+            output_dir=args.out,
+            public_stats_path=getattr(args, "public_stats", None),
+        )
+        print("ForgeBench adoption dashboard exported.")
+        print(f"- HTML: {result.index_path}")
+        print(f"- Manifest: {result.manifest_path}")
+        return 0
+    print("analytics requires enable, disable, status, export, dashboard, or adoption-dashboard.", file=sys.stderr)
     return 2
 
 

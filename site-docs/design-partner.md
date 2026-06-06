@@ -39,4 +39,4 @@ Help shape ForgeBench while your team ships faster with AI-assisted development.
 - CI pass rate with `--run-checks`
 - Engineer NPS after first merge with ForgeBench
 
-See also [Early Access](early-access.md) and [Contribution Program](contribution-program.md).
+See also [Early Access](early-access.md) and [Contribution Program on GitHub](https://github.com/caissonhq/forgebench/blob/main/docs/contribution-program.md).

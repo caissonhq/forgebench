@@ -21,6 +21,7 @@ ALLOWED_PRODUCT_EVENTS = {
     "onboarding_completed",
     "extension_command",
     "milestone_reached",
+    "funnel_stage",
 }
 
 

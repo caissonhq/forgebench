@@ -1,10 +1,10 @@
-# Early Access Launch Announcement
+# ForgeBench v1.0.0 Launch Announcement
 
-**Subject:** ForgeBench Early Access — merge-risk review for AI-generated code
+**Subject:** ForgeBench v1.0 — merge-risk review for AI-generated code is live
 
 ---
 
-We're opening **ForgeBench Early Access** to engineering teams shipping AI-generated diffs.
+**ForgeBench v1.0.0** is now publicly available — local merge-risk review for teams shipping AI-generated diffs.
 
 ForgeBench answers one question before merge: *Would a serious engineer ship this patch?*
 
@@ -21,9 +21,8 @@ ForgeBench answers one question before merge: *Would a serious engineer ship thi
 **Try it:**
 
 ```bash
-pip install forgebench
-forgebench doctor
-forgebench demo
+pipx install forgebench
+forgebench quickstart
 ```
 
 Docs: https://forgebench.dev · Pricing: [docs/pricing.md](../pricing.md)

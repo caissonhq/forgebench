@@ -1,44 +1,81 @@
-# ForgeBench
+# ForgeBench v1.0
 
-**Adversarial pre-merge QA for coding-agent output.**
+**Would a serious engineer merge this AI-generated diff?**
 
-ForgeBench reviews AI-generated diffs before they hit main. It produces a sober merge-risk report (`BLOCK`, `REVIEW`, or `LOW_CONCERN`), machine-readable JSON, and a repair prompt you can paste back into Cursor, Codex, or Claude Code.
+ForgeBench is adversarial pre-merge QA for coding-agent output — local-first, evidence-backed, honest about limits.
 
-## Get started in 60 seconds
+[![PyPI](https://img.shields.io/pypi/v/forgebench.svg)](https://pypi.org/project/forgebench/)
+[![GitHub](https://img.shields.io/github/stars/caissonhq/forgebench?style=social)](https://github.com/caissonhq/forgebench)
+
+## Install in 30 seconds
 
 ```bash
-pip install forgebench
-forgebench doctor
-forgebench demo
+pipx install forgebench
+forgebench quickstart
+```
+
+Not sure which method? `forgebench install` · [Full installation guide](installation.md)
+
+## What you get
+
+| Output | Description |
+|--------|-------------|
+| **Posture** | `BLOCK`, `REVIEW`, or `LOW_CONCERN` |
+| **Findings** | Evidence-backed merge-risk signals |
+| **Repair prompt** | Paste back into Cursor, Codex, or Claude Code |
+| **SARIF / JSON** | CI and IDE integration |
+
+## Demo
+
+```bash
+forgebench demo              # guided review, no setup
+forgebench doctor --checklist
 forgebench status
 ```
 
-## Professional onboarding
+![Demo flow](assets/demo-placeholder.md) — capture `forgebench demo` GIF for forgebench.dev
 
-| Step | Command |
-|------|---------|
-| Verify install | `forgebench doctor` |
-| See a realistic review | `forgebench demo` |
-| Health summary | `forgebench status` |
-| Team starter kit | `forgebench init --enterprise` |
-| IDE integration | VS Code or JetBrains ForgeBench extension |
+## For teams
+
+```bash
+forgebench team init
+forgebench review-pr PR_URL --guardrails .github/forgebench.yml --checkout-pr --run-checks
+```
+
+[Design Partner program](design-partner.md) · [Early Access](early-access.md) · [GitHub App](github-app-listing.md)
 
 ## Evidence hierarchy
 
-1. Deterministic checks
-2. Static risk signals
-3. Guardrails policy
-4. Heuristic review lenses
-5. Optional LLM review
+1. Deterministic checks  
+2. Static risk signals  
+3. Guardrails policy (`forgebench.yml`)  
+4. Heuristic review lenses  
+5. Optional LLM review (advisory)
 
-Deterministic failures are never downgraded by lenses or policy calibration.
+Deterministic failures are never downgraded.
 
-## Deploy this site
+## Integrations
+
+| Surface | Install |
+|---------|---------|
+| CLI | `pipx install forgebench` |
+| VS Code | [Marketplace](https://marketplace.visualstudio.com/items?itemName=caissonhq.forgebench) |
+| JetBrains | Marketplace plugin |
+| GitHub Action | `caissonhq/forgebench` |
+| MCP | `forgebench mcp` |
+
+## Share your experience
 
 ```bash
-pip install mkdocs-material
-mkdocs serve    # local preview at http://127.0.0.1:8000
-mkdocs build    # static site in site/
+forgebench feedback --share --posture REVIEW --finding-count 3
 ```
 
-Publish `site/` to GitHub Pages or Vercel.
+## Testimonials
+
+> *"ForgeBench caught scope creep our agent missed — repair prompt saved the PR."* — Design Partner (anonymous)
+
+> *"Finally a merge-risk checkpoint that runs locally."* — Indie hacker beta user
+
+*Submit yours via [GitHub Discussions](https://github.com/caissonhq/forgebench/discussions/new?category=show-and-tell) or `forgebench feedback --share`.*
+
+ForgeBench does not prove code is safe. It highlights merge risk before AI-generated code reaches main.

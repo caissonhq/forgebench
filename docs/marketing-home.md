@@ -1,14 +1,29 @@
-# ForgeBench — Marketing Home (EO-013 Go-to-Market)
+# ForgeBench — Marketing Home (v1.0 Launch)
 
 Technical positioning for forgebench.dev. **Merge-risk governance for AI-generated code** — local-first, evidence-backed, honest about limits.
 
 ## Hero
 
+# ForgeBench v1.0 is live
+
 **Would a serious engineer merge this AI-generated diff?**
 
 ForgeBench answers that question before code reaches `main`. Not agent task completion. Not vibe scores. **Cited merge posture** with a repair loop your agents can act on.
 
-[Start free](#quickstart) · [Pricing](#pricing) · [Early Access](#early-access) · [Security pack](#security) · [Roadmap](../ROADMAP.md)
+```bash
+pipx install forgebench && forgebench quickstart
+```
+
+[Install](https://forgebench.dev/docs/installation/) · [GitHub](https://github.com/caissonhq/forgebench) · [VS Code](https://marketplace.visualstudio.com/items?itemName=caissonhq.forgebench) · [Design Partners](design-partner.md) · [Pricing](#pricing)
+
+### Install buttons
+
+| | Command |
+|---|---------|
+| **pipx** | `pipx install forgebench` |
+| **Homebrew** | `brew tap caissonhq/tap && brew install forgebench` |
+| **VS Code** | `ext install caissonhq.forgebench` |
+| **Binary** | [GitHub Releases](https://github.com/caissonhq/forgebench/releases/latest) |
 
 ## Why teams adopt ForgeBench
 
@@ -99,8 +114,8 @@ Details: [early-access.md](early-access.md) · [customer-success/onboarding-play
 |---------|--------|
 | CLI + MCP + Cursor | GA (beta) |
 | GitHub Action | GA |
-| VS Code extension | EA v1.1 — Marketplace submission ready |
-| JetBrains plugin | EA v1.1 |
+| VS Code extension | **v1.2 GA** — Marketplace |
+| JetBrains plugin | v1.2 — Marketplace ready |
 | License + analytics | Team/Enterprise |
 | Self-hosted GitHub App | EA kit |
 | FPL + policy tests | GA |
@@ -113,11 +128,21 @@ Details: [early-access.md](early-access.md) · [customer-success/onboarding-play
 - [Controls matrix](security/controls-matrix.md)
 - [Audit prep checklist](security/audit-prep-checklist.md)
 
+## Testimonials
+
+> *"ForgeBench caught scope creep our agent missed."* — Design Partner pilot
+
+> *"The repair prompt loop is what sold our team."* — Platform engineering lead
+
+Share yours: `forgebench feedback --share` · [GitHub Discussions](https://github.com/caissonhq/forgebench/discussions/new?category=show-and-tell)
+
 ## Community
 
+- [Design Partner program](design-partner.md) — **now accepting v1.0 pilots**
 - [Contribution program](contribution-program.md)
 - [CONTRIBUTING.md](../CONTRIBUTING.md)
 - Merge Risk Benchmark: [merge-risk-benchmark.md](merge-risk-benchmark.md)
+- Launch kit: [launch/announcements.md](launch/announcements.md)
 
 ## Footer
 

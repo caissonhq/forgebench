@@ -2,14 +2,25 @@ name: Docs
 
 on:
   push:
+    branches: [main]
     paths:
       - "site-docs/**"
+      - "docs/**"
       - "mkdocs.yml"
       - ".github/workflows/docs.yml"
   pull_request:
     paths:
       - "site-docs/**"
       - "mkdocs.yml"
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: docs-pages
+  cancel-in-progress: true
 
 jobs:
   build:
@@ -28,3 +39,21 @@ jobs:
         with:
           name: forgebench-docs-site
           path: site/
+  deploy:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: forgebench-docs-site
+          path: site
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+      - id: deployment
+        uses: actions/deploy-pages@v4

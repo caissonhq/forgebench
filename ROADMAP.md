@@ -4,7 +4,15 @@ ForgeBench reviews AI-generated diffs before they hit main.
 
 Status key: **Done** · **In progress** · **Planned** · **Exploring**
 
-Last updated: 2026-06-06 (EO-015)
+Last updated: 2026-06-06 (EO-016)
+
+## EO-016 — Public Launch & Initial Traction (Done)
+
+- **v1.0.0 release**: Production-stable classifier, release notes, tag + full pipeline (PyPI, binaries, SBOM, Homebrew)
+- **Marketing launch**: forgebench.dev positioning refresh, testimonials, install CTAs, MkDocs GitHub Pages deploy
+- **Announcements**: X/HN/Reddit/LinkedIn copies, press one-pager, launch execution checklist
+- **Traction**: `forgebench feedback --share`, post-review share prompts, funnel analytics, adoption dashboard
+- **Design Partners**: Enhanced benefits (custom presets, 50% Team discount, priority support)
 
 ## EO-015 — Marketplace & Distribution Excellence (Done)
 

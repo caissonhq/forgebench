@@ -5,9 +5,9 @@
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 [![VS Code](https://img.shields.io/badge/VS%20Code-Marketplace-007ACC?logo=visualstudiocode)](https://marketplace.visualstudio.com/items?itemName=caissonhq.forgebench)
 
-ForgeBench reviews AI-generated diffs before they hit main.
+**ForgeBench v1.0** — reviews AI-generated diffs before they hit main.
 
-Adversarial pre-merge QA for coding-agent output.
+Adversarial pre-merge QA for coding-agent output. [Launch notes](docs/launch/RELEASE_v1.0.0.md)
 
 SWE-Bench asks whether an agent solved a task. ForgeBench asks whether a serious engineer would merge the diff.
 
