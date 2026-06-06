@@ -12,6 +12,14 @@ authors = [{ name = "ForgeBench", email = "hello@forgebench.dev" }]
 dependencies = [
     "pyyaml>=6.0",
 ]
+
+[project.optional-dependencies]
+semantic = [
+    "tree-sitter>=0.22",
+    "tree-sitter-python>=0.23",
+    "tree-sitter-typescript>=0.23",
+    "tree-sitter-rust>=0.23",
+]
 license = "Apache-2.0"
 keywords = [
     "ai-code-review",
