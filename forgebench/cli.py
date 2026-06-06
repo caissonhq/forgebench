@@ -57,6 +57,12 @@ def main(argv: list[str] | None = None) -> int:
     if args.command == "telemetry":
         return _run_telemetry(args)
 
+    if args.command == "data":
+        return _run_data(args)
+
+    if args.command == "audit":
+        return _run_audit(args)
+
     if args.command == "policy":
         return run_policy_command(args)
 
@@ -287,6 +293,7 @@ def _run_review_pr(args: argparse.Namespace) -> int:
             prove_it=args.prove_it,
             llm_ensemble_models=_parse_ensemble_models(args.llm_ensemble),
             llm_ensemble_strategy=args.llm_ensemble_strategy,
+            trust_pr_guardrails=args.trust_pr_guardrails,
         )
     except (ReviewInputError, GitHubPRError) as exc:
         _fail(str(exc))
@@ -529,7 +536,12 @@ def _build_parser() -> argparse.ArgumentParser:
     review_pr.add_argument("pr_url", nargs="?", help="GitHub pull request URL.")
     review_pr.add_argument("--repo", required=False, default=".", help="Local repository path. Defaults to current directory.")
     review_pr.add_argument("--pr-url", dest="pr_url_option", required=False, help="GitHub pull request URL. Kept for compatibility; positional URL is preferred.")
-    review_pr.add_argument("--guardrails", required=False, help="Optional path to forgebench.yml.")
+    review_pr.add_argument("--guardrails", required=False, help="Optional path to forgebench.yml. Required with --run-checks (trusted base-branch policy).")
+    review_pr.add_argument(
+        "--trust-pr-guardrails",
+        action="store_true",
+        help="Allow --guardrails inside the PR worktree when --run-checks is passed. Not recommended for fork PRs.",
+    )
     review_pr.add_argument("--out", required=False, help="Output directory. Defaults to ./forgebench-output/pr-OWNER-REPO-NUMBER/.")
     review_pr.add_argument("--run-checks", action="store_true", help="Execute configured local deterministic checks from forgebench.yml.")
     review_pr.add_argument("--no-reviewers", action="store_true", help="Skip Phase 1 heuristic review lenses.")
@@ -665,10 +677,48 @@ def _build_parser() -> argparse.ArgumentParser:
         help="Output directory. Defaults to ./forgebench-output/policy-dashboard/.",
     )
 
+    data = subparsers.add_parser("data", help="Local data retention and privacy utilities.")
+    data_sub = data.add_subparsers(dest="data_action")
+    retention = data_sub.add_parser("retention", help="Purge telemetry and feedback older than max age.")
+    retention.add_argument("--max-age-days", type=int, default=90, help="Delete records older than this many days.")
+    retention.add_argument("--dry-run", action="store_true", help="Report what would be deleted without writing.")
+
+    audit = subparsers.add_parser("audit", help="Tamper-evident audit chain utilities.")
+    audit_sub = audit.add_subparsers(dest="audit_action")
+    verify = audit_sub.add_parser("verify", help="Verify audit-chain.jsonl integrity.")
+    verify.add_argument("--log-path", required=False, help="Audit chain JSONL path.")
+
     add_policy_subparser(subparsers)
     add_github_app_subparser(subparsers)
 
     return parser
+
+
+def _run_data(args: argparse.Namespace) -> int:
+    if args.data_action == "retention":
+        from forgebench.data_retention import apply_data_retention_policy
+
+        report = apply_data_retention_policy(max_age_days=args.max_age_days, dry_run=args.dry_run)
+        print(json.dumps(report, indent=2))
+        return 0
+    _fail("data requires retention.")
+    return 2
+
+
+def _run_audit(args: argparse.Namespace) -> int:
+    if args.audit_action == "verify":
+        from forgebench.audit_chain import verify_audit_chain
+
+        ok, errors = verify_audit_chain(log_path=args.log_path)
+        if ok:
+            print("Audit chain integrity: OK")
+            return 0
+        print("Audit chain integrity: FAILED")
+        for item in errors:
+            print(f"- {item}")
+        return 1
+    _fail("audit requires verify.")
+    return 2
 
 
 def _add_semantic_llm_flags(parser: argparse.ArgumentParser) -> None:
