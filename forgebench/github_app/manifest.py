@@ -26,7 +26,14 @@ def export_github_app_manifest(
         "hook_attributes": {"url": webhook_url, "active": True},
         "redirect_url": setup_url,
         "setup_url": setup_url,
-        "public": False,
+        "public": True,
+        "logo_url": f"{homepage_url}/assets/forgebench-logo.svg",
+        "listing": {
+            "tagline": "Merge-risk review for AI-generated PRs",
+            "categories": ["code-review", "security", "continuous-integration"],
+            "support_url": f"{homepage_url}/docs/troubleshooting",
+            "documentation_url": f"{homepage_url}/docs/quickstart",
+        },
         "default_permissions": {
             "checks": "write",
             "pull_requests": "read",

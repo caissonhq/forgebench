@@ -63,3 +63,4 @@ include = ["forgebench*"]
 
 [tool.setuptools.package-data]
 "forgebench.adversaries.prompts" = ["*.md"]
+"forgebench.bundled_presets" = ["**/*"]

@@ -10,7 +10,19 @@ from forgebench.calibration import format_calibration_result, run_calibration
 from forgebench.doctor import format_doctor_report, run_doctor
 from forgebench.benchmark import build_benchmark_snapshot, format_benchmark_markdown
 from forgebench.benchmark_dashboard import BenchmarkDashboardError, export_benchmark_dashboard
-from forgebench.feedback import FeedbackError, append_feedback, export_feedback_bundle, format_feedback_summary, suggest_guardrails, summarize_feedback
+from forgebench.feedback import (
+    FeedbackError,
+    append_feedback,
+    export_feedback_bundle,
+    format_feedback_summary,
+    suggest_guardrails,
+    summarize_feedback,
+)
+from forgebench.adoption import format_feature_suggestion, format_next_actions, increment_review_count, next_actions_after_review
+from forgebench.presets import PresetError, export_preset_bundle, format_preset_list, install_preset, list_presets
+from forgebench.quickstart import run_quickstart
+from forgebench.share_report import ShareReportError, export_shareable_report
+from forgebench.team_cli import add_team_subparser, run_team_command
 from forgebench.golden_case_generator import generate_golden_case_candidates
 from forgebench.telemetry import disable_telemetry, enable_telemetry, export_telemetry_bundle, telemetry_status
 from forgebench.mcp_server import run_mcp_server
@@ -61,6 +73,18 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.command == "doctor":
         return _run_doctor(args)
+
+    if args.command == "quickstart":
+        return _run_quickstart(args)
+
+    if args.command == "team":
+        return run_team_command(args)
+
+    if args.command == "presets":
+        return _run_presets(args)
+
+    if args.command == "share-report":
+        return _run_share_report(args)
 
     if args.command == "init":
         return _run_init(args)
@@ -119,19 +143,68 @@ def main(argv: list[str] | None = None) -> int:
 
 def _run_doctor(args: argparse.Namespace) -> int:
     report = run_doctor(repo_path=args.repo)
-    print(format_doctor_report(report))
+    print(
+        format_doctor_report(
+            report,
+            repo_path=args.repo,
+            include_checklist=getattr(args, "checklist", False),
+        )
+    )
     return report.exit_code
+
+
+def _run_quickstart(args: argparse.Namespace) -> int:
+    result = run_quickstart(
+        repo_path=args.repo,
+        skip_init=args.skip_init,
+        skip_demo=args.skip_demo,
+    )
+    return result.doctor_exit_code
+
+
+def _run_presets(args: argparse.Namespace) -> int:
+    if args.presets_action == "list":
+        print(format_preset_list(list_presets()))
+        return 0
+    if args.presets_action == "install":
+        try:
+            path = install_preset(args.name, repo_path=args.repo, force=args.force)
+        except PresetError as exc:
+            _fail(str(exc), explain=getattr(args, "explain", False))
+        success(f"Preset installed: {path}")
+        return 0
+    if args.presets_action == "export":
+        try:
+            manifest = export_preset_bundle(args.file, output_dir=args.out or "forgebench-output/preset-export")
+        except PresetError as exc:
+            _fail(str(exc), explain=getattr(args, "explain", False))
+        print(json.dumps(manifest, indent=2, sort_keys=True))
+        return 0
+    _fail("presets requires list, install, or export.")
+    return 2
+
+
+def _run_share_report(args: argparse.Namespace) -> int:
+    try:
+        result = export_shareable_report(output_dir=args.out, dest=args.dest)
+    except ShareReportError as exc:
+        _fail(str(exc), explain=getattr(args, "explain", False))
+    success(f"Shareable report: {result.html_path}")
+    info("Open in a browser or attach to Slack/email. No network upload performed.")
+    return 0
 
 
 def _run_init(args: argparse.Namespace) -> int:
     try:
-        if args.enterprise:
+        if args.enterprise or getattr(args, "team", False):
+            from forgebench.adoption import record_milestone
             from forgebench.licensing.quotas import LicenseRequired, require_feature
 
             try:
                 require_feature("init_enterprise")
             except LicenseRequired as exc:
                 _fail(str(exc), explain=getattr(args, "explain", False))
+            wizard_mode = "team" if getattr(args, "team", False) else "enterprise"
             options = EnterpriseInitOptions(
                 org_name=args.org_name,
                 team_slug=args.team_slug,
@@ -142,10 +215,13 @@ def _run_init(args: argparse.Namespace) -> int:
                 org_policy_dir=args.org_policy_dir,
                 force=args.force,
                 non_interactive=args.yes,
+                wizard_mode=wizard_mode,
             )
             result = run_enterprise_init(repo_path=args.repo, options=options)
             if args.manifest:
                 write_enterprise_manifest(result, Path(args.manifest))
+            if wizard_mode == "team":
+                record_milestone("first_team_init")
             print(format_enterprise_init_result(result))
             return 0
         result = write_starter_guardrails(repo_path=args.repo, output_path=args.out, force=args.force, preset=args.preset)
@@ -257,6 +333,14 @@ def _run_review(args: argparse.Namespace) -> int:
         print(f"- {result.written_paths['prove_it_checklist']}")
     print()
     print(f"Paste repair prompt: forgebench repair --out {result.output_dir}")
+    increment_review_count()
+    actions = next_actions_after_review(
+        posture=result.report.posture.value,
+        config_mode=result.report.config_mode,
+        finding_count=len(result.report.findings),
+    )
+    print()
+    print(format_next_actions(actions))
     return 0
 
 
@@ -531,6 +615,21 @@ def _run_feedback(args: argparse.Namespace) -> int:
             print(suggestions)
         return 0
 
+    if getattr(args, "suggest", False):
+        text = format_feature_suggestion(
+            title=args.note or "",
+            description=getattr(args, "feature_description", "") or "",
+            use_case=args.workflow or "",
+        )
+        if args.out:
+            output = Path(args.out)
+            output.parent.mkdir(parents=True, exist_ok=True)
+            output.write_text(text, encoding="utf-8")
+            print(f"Feature suggestion template written to {output}.")
+        else:
+            print(text)
+        return 0
+
     if args.summarize:
         summary = summarize_feedback([args.feedback_log])
         if summary.total == 0 and summary.malformed_count == 0:
@@ -606,9 +705,11 @@ def _build_parser() -> argparse.ArgumentParser:
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=(
             "Examples:\n"
-            "  forgebench doctor\n"
+            "  forgebench quickstart\n"
+            "  forgebench doctor --checklist\n"
             "  forgebench demo\n"
             "  forgebench status\n"
+            "  forgebench team init\n"
             "  forgebench init --enterprise\n"
             "  forgebench review --repo . --diff patch.diff --task task.md\n"
             "\n"
@@ -652,6 +753,15 @@ def _build_parser() -> argparse.ArgumentParser:
 
     doctor = subparsers.add_parser("doctor", help="Verify local install, tooling, and first-run readiness.")
     doctor.add_argument("--repo", required=False, default=".", help="Repository path to inspect. Defaults to current directory.")
+    doctor.add_argument("--checklist", action="store_true", help="Show adoption success checklist and milestone progress.")
+
+    quickstart = subparsers.add_parser(
+        "quickstart",
+        help="Solo developer onboarding — doctor, demo, status, and starter guardrails.",
+    )
+    quickstart.add_argument("--repo", required=False, default=".", help="Repository path.")
+    quickstart.add_argument("--skip-init", action="store_true", help="Skip forgebench.yml creation.")
+    quickstart.add_argument("--skip-demo", action="store_true", help="Skip guided demo review.")
 
     init = subparsers.add_parser(
         "init",
@@ -669,6 +779,7 @@ def _build_parser() -> argparse.ArgumentParser:
         help="Starter guardrails preset. Defaults to auto.",
     )
     init.add_argument("--enterprise", action="store_true", help="Generate org policy, CI workflow, and team onboarding kit.")
+    init.add_argument("--team", action="store_true", help="Alias for team init wizard (same as forgebench team init).")
     init.add_argument("--org-name", required=False, default="Acme Engineering", help="Organization name for enterprise init.")
     init.add_argument("--team-slug", required=False, default="platform", help="Team slug for enterprise policy paths.")
     init.add_argument("--org-policy-dir", required=False, default="org-policy", help="Directory for org-wide policy file.")
@@ -761,6 +872,8 @@ def _build_parser() -> argparse.ArgumentParser:
     feedback.add_argument("--feedback-log", required=False, default="forgebench-output/feedback.jsonl", help="Local JSONL feedback log path.")
     feedback.add_argument("--summarize", action="store_true", help="Summarize a local feedback JSONL log.")
     feedback.add_argument("--suggest-guardrails", action="store_true", help="Suggest forgebench.yml tuning from local feedback.")
+    feedback.add_argument("--suggest", action="store_true", help="Print a feature-request template for GitHub Discussions.")
+    feedback.add_argument("--feature-description", required=False, help="Problem description for --suggest template.")
     feedback.add_argument("--export", action="store_true", help="Export structured beta feedback bundle as JSON.")
     feedback.add_argument("--posture", required=False, choices=["BLOCK", "REVIEW", "LOW_CONCERN"], help="Optional review posture for structured beta feedback.")
     feedback.add_argument("--agent", required=False, choices=["cursor", "codex", "claude", "copilot", "other"], help="Optional coding agent label for structured beta feedback.")
@@ -858,6 +971,22 @@ def _build_parser() -> argparse.ArgumentParser:
     verify = audit_sub.add_parser("verify", help="Verify audit-chain.jsonl integrity.")
     verify.add_argument("--log-path", required=False, help="Audit chain JSONL path.")
 
+    presets = subparsers.add_parser("presets", help="Browse and install curated guardrail presets.")
+    presets_sub = presets.add_subparsers(dest="presets_action")
+    presets_list = presets_sub.add_parser("list", help="List bundled guardrail presets.")
+    presets_install = presets_sub.add_parser("install", help="Install a preset into the current repo.")
+    presets_install.add_argument("name", help="Preset name (e.g. python, node, nextjs).")
+    presets_install.add_argument("--repo", required=False, default=".", help="Repository path.")
+    presets_install.add_argument("--force", action="store_true", help="Overwrite existing files.")
+    presets_export = presets_sub.add_parser("export", help="Export local forgebench.yml as a shareable preset bundle.")
+    presets_export.add_argument("--file", required=False, default="forgebench.yml", help="Guardrails file to export.")
+    presets_export.add_argument("--out", required=False, help="Output directory.")
+
+    share_report = subparsers.add_parser("share-report", help="Generate a clean shareable HTML report from review output.")
+    share_report.add_argument("--out", required=False, default="forgebench-output", help="Review output directory.")
+    share_report.add_argument("--dest", required=False, help="Optional HTML output path.")
+
+    add_team_subparser(subparsers)
     add_policy_subparser(subparsers)
     add_github_app_subparser(subparsers)
     add_license_subparser(subparsers)

@@ -20,6 +20,8 @@ class EnterpriseInitOptions:
     org_policy_dir: str = "org-policy"
     force: bool = False
     non_interactive: bool = False
+    wizard_mode: str = "enterprise"
+    agent_pr_mode: bool = True
 
 
 @dataclass(frozen=True)
@@ -44,7 +46,10 @@ def run_enterprise_init(
         raise InitError(f"repo path does not exist or is not a directory: {repo}")
 
     opts = options or _prompt_options(repo)
-    heading("ForgeBench Enterprise Init")
+    title = "ForgeBench Team Init" if opts.wizard_mode == "team" else "ForgeBench Enterprise Init"
+    heading(title)
+    if opts.wizard_mode == "team":
+        info("Magic team onboarding — org policy, CI, guardrails, and docs in one flow.")
     info(f"Repository: {repo}")
     write_kv("Organization", opts.org_name)
     write_kv("Team", opts.team_slug)
@@ -54,6 +59,8 @@ def run_enterprise_init(
     org_dir = repo / opts.org_policy_dir
     org_policy_path = org_dir / "forgebench-org.yml"
     _write_org_policy(org_policy_path, opts, force=opts.force)
+    if opts.enable_github_app:
+        _write_github_app_install_guide(repo / "docs" / "forgebench-github-app.md", opts, force=opts.force)
 
     progress("Writing repository guardrails")
     guardrails_path = repo / "forgebench.yml"
@@ -99,10 +106,11 @@ def _prompt_options(repo: Path) -> EnterpriseInitOptions:
     if not interactive:
         return EnterpriseInitOptions(non_interactive=True)
 
-    org_name = _prompt("Organization name", "Acme Engineering")
+    org_name = _prompt("Organization or team name", "Acme Engineering")
     team_slug = _prompt("Team slug (for policy paths)", "platform")
-    preset = _prompt("Guardrails preset (auto|python|node|nextjs|swift|rust)", "auto")
-    enable_github_app = _prompt_yes_no("Include GitHub App setup notes?", default=True)
+    preset = _prompt("Primary stack preset (auto|python|node|nextjs|swift|rust)", "auto")
+    agent_pr_mode = _prompt_yes_no("Optimize guardrails for AI agent PRs?", default=True)
+    enable_github_app = _prompt_yes_no("Include GitHub App install + auto-config notes?", default=True)
     enable_ci = _prompt_yes_no("Generate GitHub Actions CI workflow?", default=True)
     return EnterpriseInitOptions(
         org_name=org_name,
@@ -111,6 +119,8 @@ def _prompt_options(repo: Path) -> EnterpriseInitOptions:
         enable_github_app=enable_github_app,
         enable_ci=enable_ci,
         non_interactive=False,
+        wizard_mode="enterprise",
+        agent_pr_mode=agent_pr_mode,
     )
 
 
@@ -135,6 +145,12 @@ def _write_text(path: Path, content: str, *, force: bool) -> None:
 
 
 def _write_org_policy(path: Path, opts: EnterpriseInitOptions, *, force: bool) -> None:
+    agent_behavior = ""
+    if opts.agent_pr_mode:
+        agent_behavior = (
+            "  - Agent patches must stay within stated task scope\n"
+            "  - Behavior changes require tests or explicit rationale in the PR\n"
+        )
     content = f"""# Org-wide ForgeBench policy for {opts.org_name}
 # Merge into repos via extends or FORGEBENCH_ORG_POLICY.
 # Schema: https://forgebench.dev/docs/forgebench-yml-schema/
@@ -147,6 +163,7 @@ protected_behavior:
   - No direct production database writes from agent-generated patches
   - No secrets, API keys, or credentials committed in diffs
   - Auth and payment flows require human review before merge
+{agent_behavior}
 
 forbidden_patterns:
   - eval(
@@ -172,6 +189,43 @@ policy:
         - "docs/**"
         - "**/*.md"
       default_severity: advisory
+"""
+    _write_text(path, content, force=force)
+
+
+def _write_github_app_install_guide(path: Path, opts: EnterpriseInitOptions, *, force: bool) -> None:
+    content = f"""# ForgeBench GitHub App — install & auto-configuration
+
+## 1. Export manifest
+
+```bash
+forgebench github-app manifest --out forgebench-output/github-app-manifest.json
+```
+
+## 2. Create the GitHub App
+
+Use the manifest with GitHub's manifest flow or register manually with permissions from the JSON file.
+
+## 3. Install on your organization
+
+After install, ForgeBench auto-configuration creates:
+
+- `.github/forgebench.yml` (trusted CI guardrails) — already present if you ran team init
+- `.github/workflows/forgebench.yml` — PR review workflow
+- Webhook target: your self-hosted `forgebench github-app serve` endpoint
+
+## 4. Post-install verification
+
+```bash
+forgebench github-app enforce --config org-policy/github-app-enforcement.json --posture REVIEW
+forgebench doctor --repo .
+```
+
+## 5. Secrets
+
+Set `FORGEBENCH_GITHUB_WEBHOOK_SECRET` (16+ characters) on the webhook receiver host.
+
+Team: {opts.org_name} · Docs: https://forgebench.dev/docs/github-app-listing.md
 """
     _write_text(path, content, force=force)
 

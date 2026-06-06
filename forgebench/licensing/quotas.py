@@ -61,7 +61,18 @@ def require_feature(feature: str, *, record: LicenseRecord | None = None) -> Lic
             f"Feature '{feature}' requires {required.name.lower() if required else 'team'} tier or higher. "
             "See docs/pricing.md"
         )
+    _record_paid_feature_milestone(current)
     return current
+
+
+def _record_paid_feature_milestone(record: LicenseRecord) -> None:
+    try:
+        from forgebench.adoption import record_milestone
+
+        if record.valid and tier_at_least(effective_tier(record), LicenseTier.TEAM):
+            record_milestone("first_paid_feature")
+    except Exception:
+        pass
 
 
 def check_quota(quota_name: str, *, amount: int = 1, record: LicenseRecord | None = None) -> QuotaStatus:

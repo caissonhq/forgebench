@@ -64,7 +64,8 @@ def run_doctor(repo_path: str | Path | None = None) -> DoctorReport:
     return DoctorReport(checks=checks)
 
 
-def format_doctor_report(report: DoctorReport) -> str:
+def format_doctor_report(report: DoctorReport, *, repo_path: str | Path | None = None, include_checklist: bool = False) -> str:
+    repo = Path(repo_path or ".").resolve()
     lines = [
         "ForgeBench doctor",
         f"Version: {__version__}",
@@ -76,23 +77,15 @@ def format_doctor_report(report: DoctorReport) -> str:
         if check.fix_hint and check.status != DoctorStatus.OK:
             lines.append(f"       fix: {check.fix_hint}")
     lines.append("")
-    if not report.ready:
-        lines.append("Fix failed checks before relying on ForgeBench in CI or PR review.")
-    elif report.has_warnings:
-        lines.append("Core install looks usable. Address warnings before GitHub PR review.")
-        lines.append("Next: forgebench demo")
-        lines.append("      forgebench review --repo . --diff ./patch.diff --task ./task.md")
-        lines.append("      forgebench review-pr PR_URL   # requires gh auth")
-    else:
-        lines.append("Ready for a first local review.")
-        lines.append("Onboarding checklist:")
-        lines.append("  [ ] forgebench demo")
-        lines.append("  [ ] forgebench init --enterprise   # team starter kit")
-        lines.append("  [ ] forgebench status")
-        lines.append("  [ ] Install VS Code or JetBrains ForgeBench extension")
-        lines.append("Next: forgebench review-pr PR_URL")
-        lines.append("      forgebench init --repo . --out forgebench.yml")
-        lines.append("      forgebench repair --out forgebench-output   # paste prompt into Cursor/Codex")
+    if include_checklist:
+        from forgebench.adoption import build_success_checklist, format_success_checklist
+
+        lines.append(format_success_checklist(build_success_checklist(repo_path=repo)))
+        lines.append("")
+    from forgebench.adoption import doctor_next_steps
+
+    for step in doctor_next_steps(repo_path=repo, doctor_ready=report.ready, has_warnings=report.has_warnings):
+        lines.append(step)
     return "\n".join(lines)
 
 

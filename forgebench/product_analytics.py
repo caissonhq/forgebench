@@ -20,6 +20,7 @@ ALLOWED_PRODUCT_EVENTS = {
     "analytics_cloud_export",
     "onboarding_completed",
     "extension_command",
+    "milestone_reached",
 }
 
 

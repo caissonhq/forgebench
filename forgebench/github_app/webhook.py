@@ -46,9 +46,31 @@ def handle_github_webhook(
     default_posture: str = "REVIEW",
     finding_count: int = 0,
     policy_fingerprint: str | None = None,
+    install_output_dir: str | None = None,
 ) -> WebhookHandleResult:
     event_type = str(payload.get("_event_type") or "unknown")
     action = str(payload.get("action") or "") or None
+
+    if event_type == "installation":
+        from forgebench.github_app.install_config import handle_installation_event
+
+        result = handle_installation_event(payload, output_dir=install_output_dir or "forgebench-output/github-app-installs")
+        if result is None:
+            return WebhookHandleResult(
+                event_type=event_type,
+                action=action,
+                handled=False,
+                message="Installation event ignored (unsupported action or missing installation id).",
+            )
+        return WebhookHandleResult(
+            event_type=event_type,
+            action=action,
+            handled=True,
+            message=(
+                f"Auto-configured installation {result.installation_id} for {result.account_login}. "
+                f"Enforcement config: {result.enforcement_path}"
+            ),
+        )
 
     if config_path is None:
         return WebhookHandleResult(
