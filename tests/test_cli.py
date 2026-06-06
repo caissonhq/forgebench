@@ -254,6 +254,37 @@ class CliTests(unittest.TestCase):
             self.assertTrue((out_dir / "index.html").exists())
             self.assertTrue((out_dir / "policy-manifest.json").exists())
 
+    def test_telemetry_status_command(self) -> None:
+        stdout = StringIO()
+        with redirect_stdout(stdout):
+            result = main(["telemetry", "status"])
+        self.assertEqual(result, 0)
+        self.assertIn("telemetry status", stdout.getvalue().lower())
+
+    def test_benchmark_dashboard_exports_static_preview(self) -> None:
+        root = Path(__file__).resolve().parents[1]
+        with TemporaryDirectory() as tmp:
+            out_dir = Path(tmp) / "benchmark-dashboard"
+            stdout = StringIO()
+            with redirect_stdout(stdout):
+                result = main(
+                    [
+                        "benchmark-dashboard",
+                        "--cases",
+                        str(root / "examples" / "golden_cases"),
+                        "--repo",
+                        str(root),
+                        "--outcomes",
+                        str(root / "examples" / "benchmark_outcomes" / "eo002-pr-outcomes.json"),
+                        "--out",
+                        str(out_dir),
+                    ]
+                )
+            self.assertEqual(result, 0)
+            self.assertIn("benchmark dashboard exported", stdout.getvalue().lower())
+            self.assertTrue((out_dir / "index.html").exists())
+            self.assertTrue((out_dir / "benchmark-manifest.json").exists())
+
     def test_review_pr_run_checks_requires_checkout_pr(self) -> None:
         stderr = StringIO()
 

@@ -9,7 +9,10 @@ from forgebench import __version__
 from forgebench.calibration import format_calibration_result, run_calibration
 from forgebench.doctor import format_doctor_report, run_doctor
 from forgebench.benchmark import build_benchmark_snapshot, format_benchmark_markdown
+from forgebench.benchmark_dashboard import BenchmarkDashboardError, export_benchmark_dashboard
 from forgebench.feedback import FeedbackError, append_feedback, export_feedback_bundle, format_feedback_summary, suggest_guardrails, summarize_feedback
+from forgebench.golden_case_generator import generate_golden_case_candidates
+from forgebench.telemetry import disable_telemetry, enable_telemetry, export_telemetry_bundle, telemetry_status
 from forgebench.mcp_server import run_mcp_server
 from forgebench.github_pr import GitHubPRError, GitHubPRReviewResult, run_github_pr_review
 from forgebench.init import InitError, write_starter_guardrails
@@ -45,6 +48,12 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.command == "benchmark":
         return _run_benchmark(args)
+
+    if args.command == "benchmark-dashboard":
+        return _run_benchmark_dashboard(args)
+
+    if args.command == "telemetry":
+        return _run_telemetry(args)
 
     if args.command == "repair":
         return _run_repair(args)
@@ -128,10 +137,29 @@ def _run_review(args: argparse.Namespace) -> int:
 
 
 def _run_benchmark(args: argparse.Namespace) -> int:
+    outcomes_path = args.outcomes or None
     try:
-        snapshot = build_benchmark_snapshot(args.cases, repo_path=args.repo, output_dir=args.out)
+        snapshot = build_benchmark_snapshot(
+            args.cases,
+            repo_path=args.repo,
+            output_dir=args.out,
+            outcomes_path=outcomes_path,
+        )
     except (FileNotFoundError, ValueError, OSError) as exc:
         _fail(str(exc))
+    try:
+        from forgebench.telemetry import record_telemetry_event
+
+        record_telemetry_event(
+            "benchmark_run",
+            {
+                "case_count": snapshot.case_count,
+                "failed_count": snapshot.failed_count,
+                "has_pr_outcomes": snapshot.pr_outcomes is not None,
+            },
+        )
+    except Exception:
+        pass
     markdown = format_benchmark_markdown(snapshot, cases_dir=args.cases)
     if args.out_markdown:
         output = Path(args.out_markdown)
@@ -141,6 +169,58 @@ def _run_benchmark(args: argparse.Namespace) -> int:
     else:
         print(markdown)
     return 1 if snapshot.failed_count else 0
+
+
+def _run_benchmark_dashboard(args: argparse.Namespace) -> int:
+    outcomes_path = args.outcomes or None
+    try:
+        result = export_benchmark_dashboard(
+            cases_dir=args.cases,
+            repo_path=args.repo,
+            calibration_output_dir=args.calibration_out,
+            outcomes_path=outcomes_path,
+            output_dir=args.out,
+            include_telemetry=not args.no_telemetry,
+        )
+    except (BenchmarkDashboardError, FileNotFoundError, ValueError, OSError) as exc:
+        _fail(str(exc))
+    print("ForgeBench benchmark dashboard exported.")
+    print(f"- HTML: {result.index_path}")
+    print(f"- Manifest: {result.manifest_path}")
+    return 0
+
+
+def _run_telemetry(args: argparse.Namespace) -> int:
+    action = args.telemetry_action
+    if action == "enable":
+        path = enable_telemetry(flag_path=args.flag_path)
+        print("ForgeBench telemetry enabled (opt-in, local-only, anonymized).")
+        print(f"Flag: {path}")
+        print("Set FORGEBENCH_TELEMETRY=1 in CI to enable without writing a flag file.")
+        return 0
+    if action == "disable":
+        disable_telemetry(flag_path=args.flag_path)
+        print("ForgeBench telemetry disabled.")
+        return 0
+    if action == "status":
+        status = telemetry_status(log_path=args.log_path)
+        print("ForgeBench telemetry status")
+        print(f"- enabled: {status.enabled}")
+        print(f"- log: {status.log_path}")
+        print(f"- events: {status.event_count}")
+        return 0
+    if action == "export":
+        bundle = export_telemetry_bundle(log_path=args.log_path)
+        if args.out:
+            output = Path(args.out)
+            output.parent.mkdir(parents=True, exist_ok=True)
+            output.write_text(json.dumps(bundle, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+            print(f"ForgeBench telemetry export written to {output}.")
+        else:
+            print(json.dumps(bundle, indent=2, sort_keys=True))
+        return 0
+    _fail("telemetry requires enable, disable, status, or export.")
+    return 2
 
 
 def _run_repair(args: argparse.Namespace) -> int:
@@ -287,6 +367,19 @@ def _run_calibrate(args: argparse.Namespace) -> int:
 
 
 def _run_feedback(args: argparse.Namespace) -> int:
+    if args.generate_golden_cases:
+        result = generate_golden_case_candidates(
+            [args.feedback_log],
+            output_dir=args.out or "forgebench-output/golden-case-candidates",
+        )
+        print("ForgeBench golden case candidates generated.")
+        print(f"- Output: {result.output_dir}")
+        print(f"- Candidates: {len(result.candidates)}")
+        print(f"- Skipped: {result.skipped_count}")
+        print(f"- Manifest: {result.manifest_path}")
+        print("Human review required before promoting cases to examples/golden_cases/.")
+        return 0
+
     if args.export:
         bundle = export_feedback_bundle(
             [args.feedback_log],
@@ -339,9 +432,43 @@ def _run_feedback(args: argparse.Namespace) -> int:
             workflow=args.workflow,
             finding_count=args.finding_count,
             review_command=args.review_command,
+            severity=args.severity,
+            confidence=args.confidence,
+            files=args.files,
+            expected_posture=args.expected_posture,
+            outcome_label=args.outcome_label,
+            reviewer_lens=args.reviewer_lens,
+            case_slug=args.case_slug,
         )
     except FeedbackError as exc:
         _fail(str(exc))
+    try:
+        from forgebench.telemetry import record_telemetry_event
+
+        record_telemetry_event(
+            "feedback_recorded",
+            {
+                "status": args.status,
+                "kind": args.kind,
+                "fb_version": 3 if any(
+                    value is not None
+                    for value in (
+                        args.severity,
+                        args.confidence,
+                        args.files,
+                        args.expected_posture,
+                        args.outcome_label,
+                        args.reviewer_lens,
+                        args.case_slug,
+                    )
+                ) else (2 if any(
+                    value is not None
+                    for value in (args.posture, args.agent, args.workflow, args.finding_count, args.review_command)
+                ) else 1),
+            },
+        )
+    except Exception:
+        pass
     print("ForgeBench feedback recorded.")
     print(f"Log: {path}")
     return 0
@@ -450,6 +577,19 @@ def _build_parser() -> argparse.ArgumentParser:
     feedback.add_argument("--workflow", required=False, help="Optional workflow label, such as review_then_repair.")
     feedback.add_argument("--finding-count", type=int, required=False, help="Optional finding count from the reviewed report.")
     feedback.add_argument("--review-command", required=False, help="Optional command used to produce the reviewed report.")
+    feedback.add_argument("--severity", required=False, choices=["low", "medium", "high", "critical"], help="Structured feedback v3 severity.")
+    feedback.add_argument("--confidence", required=False, choices=["low", "medium", "high"], help="Structured feedback v3 confidence.")
+    feedback.add_argument("--files", nargs="*", required=False, help="Structured feedback v3 affected file paths.")
+    feedback.add_argument("--expected-posture", required=False, choices=["BLOCK", "REVIEW", "LOW_CONCERN"], help="Expected merge posture for calibration.")
+    feedback.add_argument(
+        "--outcome-label",
+        required=False,
+        choices=["false_positive", "true_positive", "missed_concern", "noise", "calibration_gap", "other"],
+        help="Structured feedback v3 outcome label.",
+    )
+    feedback.add_argument("--reviewer-lens", required=False, help="Reviewer lens that produced the finding.")
+    feedback.add_argument("--case-slug", required=False, help="Optional golden case slug for linking feedback to calibration.")
+    feedback.add_argument("--generate-golden-cases", action="store_true", help="Generate draft golden cases from dismissed/wrong feedback.")
     feedback.add_argument("--out", required=False, help="Optional output path for export, suggestions, or other write modes.")
 
     benchmark = subparsers.add_parser("benchmark", help="Run the Merge Risk Benchmark and print publishable summary Markdown.")
@@ -457,6 +597,38 @@ def _build_parser() -> argparse.ArgumentParser:
     benchmark.add_argument("--repo", required=False, default=".", help="Repo root for configured checks.")
     benchmark.add_argument("--out", required=False, default="forgebench-benchmark-output", help="Calibration output directory.")
     benchmark.add_argument("--out-markdown", required=False, help="Optional path to write benchmark Markdown.")
+    benchmark.add_argument(
+        "--outcomes",
+        required=False,
+        default="examples/benchmark_outcomes/eo002-pr-outcomes.json",
+        help="Anonymized real PR outcomes JSON. Pass empty string to skip.",
+    )
+
+    benchmark_dashboard = subparsers.add_parser(
+        "benchmark-dashboard",
+        help="Export public Merge Risk Benchmark dashboard (static HTML + JSON manifest).",
+    )
+    benchmark_dashboard.add_argument("--cases", required=False, default="examples/golden_cases", help="Golden cases directory.")
+    benchmark_dashboard.add_argument("--repo", required=False, default=".", help="Repo root for configured checks.")
+    benchmark_dashboard.add_argument("--calibration-out", required=False, default="forgebench-benchmark-output", help="Calibration output directory.")
+    benchmark_dashboard.add_argument(
+        "--outcomes",
+        required=False,
+        default="examples/benchmark_outcomes/eo002-pr-outcomes.json",
+        help="Anonymized real PR outcomes JSON. Pass empty string to skip.",
+    )
+    benchmark_dashboard.add_argument(
+        "--out",
+        required=False,
+        help="Output directory. Defaults to ./forgebench-output/benchmark-dashboard/.",
+    )
+    benchmark_dashboard.add_argument("--no-telemetry", action="store_true", help="Omit telemetry summary section from manifest.")
+
+    telemetry = subparsers.add_parser("telemetry", help="Manage opt-in local anonymized telemetry.")
+    telemetry.add_argument("telemetry_action", choices=["enable", "disable", "status", "export"], help="Telemetry action.")
+    telemetry.add_argument("--flag-path", required=False, help="Optional path for .telemetry-enabled flag file.")
+    telemetry.add_argument("--log-path", required=False, help="Optional telemetry JSONL log path.")
+    telemetry.add_argument("--out", required=False, help="Output path for telemetry export JSON.")
 
     repair = subparsers.add_parser("repair", help="Print repair-prompt.md for pasting into a coding agent.")
     repair.add_argument("--out", required=False, default="forgebench-output", help="ForgeBench output directory.")
