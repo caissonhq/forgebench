@@ -13,6 +13,19 @@ class Forgebench < Formula
 
   def install
     virtualenv_install_with_resources
+    (bin/"forgebench").write_env_script libexec/"bin/forgebench", FORGEBENCH_INSTALL: "homebrew"
+  end
+
+  def caveats
+    <<~EOS
+      Run `forgebench quickstart` for a guided first review.
+      Shell completions: eval "$(forgebench install completions --shell bash)"
+    EOS
+  end
+
+  def post_install
+    ohai "ForgeBench #{version} installed!"
+    ohai "Next: forgebench quickstart"
   end
 
   test do

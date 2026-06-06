@@ -58,6 +58,7 @@ def run_quickstart(
         if (repo / "forgebench.yml").exists():
             guardrails_path = repo / "forgebench.yml"
 
+    record_milestone("first_install")
     record_milestone("quickstart_completed")
     actions = next_actions_after_review(
         posture=demo_posture if demo_posture != "skipped" else "REVIEW",

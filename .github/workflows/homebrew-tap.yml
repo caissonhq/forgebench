@@ -1,0 +1,59 @@
+name: Homebrew Tap
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: ForgeBench version (e.g. 0.9.0)
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  update-formula:
+    name: Generate and publish Homebrew formula
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Resolve version
+        id: ver
+        run: |
+          if [ -n "${{ github.event.release.tag_name }}" ]; then
+            echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+          else
+            echo "version=${{ inputs.version }}" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Download PyPI sdist
+        run: |
+          VERSION="${{ steps.ver.outputs.version }}"
+          curl -fsSL -o "forgebench-${VERSION}.tar.gz" \
+            "https://files.pythonhosted.org/packages/source/f/forgebench/forgebench-${VERSION}.tar.gz"
+          SHA=$(sha256sum "forgebench-${VERSION}.tar.gz" | awk '{print $1}')
+          echo "SHA256=${SHA}" >> "$GITHUB_ENV"
+      - name: Render formula
+        run: |
+          VERSION="${{ steps.ver.outputs.version }}"
+          sed -e "s/VERSION_PLACEHOLDER/${VERSION}/g" -e "s/SHA256_PLACEHOLDER/${SHA256}/g" \
+            packaging/homebrew/forgebench.rb > forgebench.rb
+          cat forgebench.rb
+      - uses: actions/upload-artifact@v4
+        with:
+          name: homebrew-formula
+          path: forgebench.rb
+      - name: Push to homebrew-tap
+        if: secrets.HOMEBREW_TAP_TOKEN != ''
+        env:
+          TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+        run: |
+          VERSION="${{ steps.ver.outputs.version }}"
+          git clone "https://x-access-token:${TAP_TOKEN}@github.com/caissonhq/homebrew-tap.git" tap
+          cp forgebench.rb tap/Formula/forgebench.rb
+          cd tap
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add Formula/forgebench.rb
+          git commit -m "forgebench ${VERSION}"
+          git push origin main

@@ -23,6 +23,7 @@ from forgebench.presets import PresetError, export_preset_bundle, format_preset_
 from forgebench.quickstart import run_quickstart
 from forgebench.share_report import ShareReportError, export_shareable_report
 from forgebench.team_cli import add_team_subparser, run_team_command
+from forgebench.install_cli import add_install_subparser, maybe_show_first_run_welcome, run_install_command
 from forgebench.golden_case_generator import generate_golden_case_candidates
 from forgebench.telemetry import disable_telemetry, enable_telemetry, export_telemetry_bundle, telemetry_status
 from forgebench.mcp_server import run_mcp_server
@@ -54,6 +55,7 @@ from forgebench.analytics_cli import add_analytics_subparser, maybe_record_cli_c
 def main(argv: list[str] | None = None) -> int:
     parser = _build_parser()
     args = parser.parse_args(argv)
+    maybe_show_first_run_welcome(argv)
     maybe_record_cli_command(getattr(args, "command", None))
 
     if args.command == "license":
@@ -76,6 +78,9 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.command == "quickstart":
         return _run_quickstart(args)
+
+    if args.command == "install":
+        return run_install_command(args)
 
     if args.command == "team":
         return run_team_command(args)
@@ -142,6 +147,8 @@ def main(argv: list[str] | None = None) -> int:
 
 
 def _run_doctor(args: argparse.Namespace) -> int:
+    from forgebench.adoption import record_milestone
+
     report = run_doctor(repo_path=args.repo)
     print(
         format_doctor_report(
@@ -150,6 +157,8 @@ def _run_doctor(args: argparse.Namespace) -> int:
             include_checklist=getattr(args, "checklist", False),
         )
     )
+    if report.ready:
+        record_milestone("first_install")
     return report.exit_code
 
 
@@ -705,6 +714,7 @@ def _build_parser() -> argparse.ArgumentParser:
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=(
             "Examples:\n"
+            "  forgebench install\n"
             "  forgebench quickstart\n"
             "  forgebench doctor --checklist\n"
             "  forgebench demo\n"
@@ -754,6 +764,8 @@ def _build_parser() -> argparse.ArgumentParser:
     doctor = subparsers.add_parser("doctor", help="Verify local install, tooling, and first-run readiness.")
     doctor.add_argument("--repo", required=False, default=".", help="Repository path to inspect. Defaults to current directory.")
     doctor.add_argument("--checklist", action="store_true", help="Show adoption success checklist and milestone progress.")
+
+    add_install_subparser(subparsers)
 
     quickstart = subparsers.add_parser(
         "quickstart",

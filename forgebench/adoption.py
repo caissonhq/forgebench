@@ -9,6 +9,7 @@ from typing import Any
 ADOPTION_STATE_PATH = Path("forgebench-output") / "adoption-state.json"
 
 MILESTONES = (
+    "first_install",
     "quickstart_completed",
     "first_review",
     "first_demo",

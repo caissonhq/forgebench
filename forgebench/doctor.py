@@ -50,6 +50,9 @@ def run_doctor(repo_path: str | Path | None = None) -> DoctorReport:
         _check_python_version(),
         _check_forgebench_import(),
         _check_pyyaml(),
+        _check_install_method(),
+        _check_upgrade_path(),
+        _check_pipx_recommendation(),
         _check_git(),
         _check_gh(),
         _check_gh_auth(),
@@ -119,6 +122,63 @@ def _check_forgebench_import() -> DoctorCheck:
         name="forgebench",
         status=DoctorStatus.OK,
         message=f"import ok ({__version__})",
+    )
+
+
+def _check_install_method() -> DoctorCheck:
+    from forgebench.distribution import detect_environment
+
+    env = detect_environment()
+    if not env.forgebench_path:
+        return DoctorCheck(
+            name="install_method",
+            status=DoctorStatus.FAIL,
+            message="forgebench executable not found on PATH",
+            fix_hint="Run: forgebench install  (or pipx install forgebench)",
+        )
+    return DoctorCheck(
+        name="install_method",
+        status=DoctorStatus.OK,
+        message=f"{env.detected_method.value} at {env.forgebench_path}",
+    )
+
+
+def _check_upgrade_path() -> DoctorCheck:
+    from forgebench.distribution import check_version_status, detect_environment, upgrade_instructions
+
+    status = check_version_status()
+    env = detect_environment()
+    upgrade = upgrade_instructions(env.detected_method)
+    hint = upgrade[0] if upgrade else "forgebench install upgrade"
+    return DoctorCheck(
+        name="upgrade_path",
+        status=DoctorStatus.OK,
+        message=f"version {status.current} ({env.detected_method.value})",
+        fix_hint=hint,
+    )
+
+
+def _check_pipx_recommendation() -> DoctorCheck:
+    from forgebench.distribution import InstallMethod, detect_environment
+
+    env = detect_environment()
+    if env.detected_method == InstallMethod.PIP and not env.in_venv and env.has_pipx:
+        return DoctorCheck(
+            name="pipx_available",
+            status=DoctorStatus.WARN,
+            message="global pip install detected while pipx is available",
+            fix_hint="Consider: pipx install forgebench  (isolated CLI, fewer dependency conflicts)",
+        )
+    if env.detected_method == InstallMethod.UNKNOWN and env.has_pipx:
+        return DoctorCheck(
+            name="pipx_available",
+            status=DoctorStatus.OK,
+            message="pipx available — recommended for CLI install",
+        )
+    return DoctorCheck(
+        name="pipx_available",
+        status=DoctorStatus.OK,
+        message="pipx not required for current install method",
     )
 
 
