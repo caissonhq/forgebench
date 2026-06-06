@@ -1,25 +1,48 @@
-# VS Code ForgeBench Extension (Scaffold)
+# ForgeBench VS Code Extension
 
-Local development scaffold for running ForgeBench from VS Code.
-
-## Commands
-
-- **ForgeBench: Review Diff** — runs `forgebench review` with repo-relative diff and task paths
-- **ForgeBench: Open Report** — opens `forgebench-output/forgebench-report.md`
-- **ForgeBench: Export Policy Dashboard** — runs `forgebench dashboard` and opens the HTML preview
+Production-grade local integration for the ForgeBench CLI.
 
 ## Requirements
 
+- VS Code 1.85+
 - `forgebench` on `PATH` (`pip install forgebench`)
-- Workspace with optional `forgebench.yml`
+- Optional: `forgebench doctor` to verify install
 
-## Develop
+## Commands
+
+| Command | Description |
+|---------|-------------|
+| ForgeBench: Review Diff + Task | Pick diff and task files, run review, open report |
+| ForgeBench: Review Active File as Diff | Review the active editor file as the diff |
+| ForgeBench: Open Markdown Report | Open `forgebench-report.md` |
+| ForgeBench: Open SARIF Report | Open SARIF output |
+| ForgeBench: Validate Guardrails | Run `forgebench validate --strict` |
+| ForgeBench: Run Policy Tests | Run `forgebench policy test` |
+| ForgeBench: Export Policy Dashboard | Export local policy dashboard HTML |
+| ForgeBench: Export Benchmark Dashboard | Export benchmark dashboard HTML |
+
+## Settings
+
+- `forgebench.guardrailsFile` — default `forgebench.yml`
+- `forgebench.outputDir` — default `forgebench-output`
+- `forgebench.policyTestsDir` — default `examples/policy_tests`
+- `forgebench.runChecks` — pass `--run-checks`
+- `forgebench.skipReviewers` — pass `--no-reviewers`
+
+## Development
 
 ```bash
+cd integrations/vscode-forgebench
 npm install
 npm run compile
 ```
 
-Load the extension folder in VS Code's Extension Development Host.
+Press F5 in VS Code to launch the Extension Development Host.
 
-This is a scaffold. Marketplace publishing is tracked on the public [ROADMAP.md](../../ROADMAP.md).
+## Marketplace publish (Early Access)
+
+1. `npm run compile`
+2. `npx @vscode/vsce package`
+3. Publish to Open VSX / Visual Studio Marketplace under the `caissonhq` publisher.
+
+ForgeBench does not prove code is safe. The extension runs the local CLI only; no hosted review service is required.

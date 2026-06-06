@@ -1,40 +1,106 @@
 {
-  "name": "vscode-forgebench",
+  "name": "forgebench",
   "displayName": "ForgeBench",
-  "description": "Run ForgeBench merge-risk review from VS Code (scaffold).",
-  "version": "0.1.0",
+  "description": "Merge-risk review for AI-generated diffs — local ForgeBench CLI integration.",
+  "version": "1.0.0",
   "publisher": "caissonhq",
+  "license": "Apache-2.0",
   "engines": {
     "vscode": "^1.85.0"
   },
   "categories": [
+    "Linters",
     "Other"
   ],
+  "keywords": [
+    "code review",
+    "ai",
+    "merge risk",
+    "forgebench"
+  ],
   "activationEvents": [
-    "onCommand:forgebench.reviewDiff",
-    "onCommand:forgebench.openReport",
-    "onCommand:forgebench.exportDashboard"
+    "onStartupFinished"
   ],
   "main": "./out/extension.js",
   "contributes": {
     "commands": [
       {
         "command": "forgebench.reviewDiff",
-        "title": "ForgeBench: Review Diff"
+        "title": "ForgeBench: Review Diff + Task",
+        "category": "ForgeBench"
+      },
+      {
+        "command": "forgebench.reviewActiveFileAsDiff",
+        "title": "ForgeBench: Review Active File as Diff",
+        "category": "ForgeBench"
       },
       {
         "command": "forgebench.openReport",
-        "title": "ForgeBench: Open Report"
+        "title": "ForgeBench: Open Markdown Report",
+        "category": "ForgeBench"
+      },
+      {
+        "command": "forgebench.openSarif",
+        "title": "ForgeBench: Open SARIF Report",
+        "category": "ForgeBench"
+      },
+      {
+        "command": "forgebench.validateGuardrails",
+        "title": "ForgeBench: Validate Guardrails",
+        "category": "ForgeBench"
+      },
+      {
+        "command": "forgebench.policyTest",
+        "title": "ForgeBench: Run Policy Tests",
+        "category": "ForgeBench"
       },
       {
         "command": "forgebench.exportDashboard",
-        "title": "ForgeBench: Export Policy Dashboard"
+        "title": "ForgeBench: Export Policy Dashboard",
+        "category": "ForgeBench"
+      },
+      {
+        "command": "forgebench.exportBenchmarkDashboard",
+        "title": "ForgeBench: Export Benchmark Dashboard",
+        "category": "ForgeBench"
       }
-    ]
+    ],
+    "configuration": {
+      "title": "ForgeBench",
+      "properties": {
+        "forgebench.guardrailsFile": {
+          "type": "string",
+          "default": "forgebench.yml",
+          "description": "Path to forgebench.yml relative to workspace root."
+        },
+        "forgebench.outputDir": {
+          "type": "string",
+          "default": "forgebench-output",
+          "description": "ForgeBench output directory relative to workspace root."
+        },
+        "forgebench.policyTestsDir": {
+          "type": "string",
+          "default": "examples/policy_tests",
+          "description": "Directory containing policy_test.json cases."
+        },
+        "forgebench.runChecks": {
+          "type": "boolean",
+          "default": false,
+          "description": "Pass --run-checks to forgebench review."
+        },
+        "forgebench.skipReviewers": {
+          "type": "boolean",
+          "default": false,
+          "description": "Pass --no-reviewers to forgebench review."
+        }
+      }
+    }
   },
   "scripts": {
     "compile": "tsc -p .",
-    "watch": "tsc -watch -p ."
+    "watch": "tsc -watch -p .",
+    "package": "npm run compile",
+    "vscode:prepublish": "npm run compile"
   },
   "devDependencies": {
     "@types/node": "^20.11.0",

@@ -1,34 +1,30 @@
-# JetBrains ForgeBench Plugin (Scaffold)
+# ForgeBench JetBrains Plugin
 
-Planned IntelliJ Platform plugin for ForgeBench merge-risk review.
+Production-grade IntelliJ Platform plugin for local ForgeBench CLI workflows.
 
-## Intended actions
+## Requirements
 
-| Action | CLI equivalent |
-|--------|----------------|
-| Review Diff | `forgebench review --repo . --diff patch.diff --task task.md` |
-| Open Report | Open `forgebench-output/forgebench-report.md` |
-| Export Policy Dashboard | `forgebench dashboard --repo .` |
+- IntelliJ IDEA 2023.3+ (IC/Ultimate compatible scaffold)
+- `forgebench` on `PATH`
 
-## Scaffold status
+## Actions (Tools → ForgeBench)
 
-This directory documents the plugin contract and target Gradle layout. Full Kotlin sources and marketplace publish are deferred to the public roadmap.
+- **Review Diff + Task** — file pickers + `forgebench review`
+- **Open Markdown Report** — `forgebench-output/forgebench-report.md`
+- **Run Policy Tests** — `forgebench policy test`
+- **Export Policy Dashboard** — `forgebench dashboard`
 
-## Local workflow today
-
-Use the terminal tool window:
+## Build
 
 ```bash
-forgebench review --repo . --diff patch.diff --task task.md --guardrails forgebench.yml
-forgebench repair --out forgebench-output
+cd integrations/jetbrains-forgebench
+./gradlew buildPlugin
 ```
 
-Configure MCP in compatible JetBrains AI clients via `forgebench mcp` — see [docs/mcp-server.md](../../docs/mcp-server.md).
+## Publish (Early Access)
 
-## Org policy
+1. `./gradlew buildPlugin`
+2. Upload `build/distributions/*.zip` to JetBrains Marketplace
+3. Document org policy + GitHub App self-hosting in listing notes
 
-```bash
-export FORGEBENCH_ORG_POLICY=/path/to/forgebench-org.yml
-```
-
-See [docs/team-enterprise.md](../../docs/team-enterprise.md).
+ForgeBench does not prove code is safe. The plugin shells out to the local CLI only.

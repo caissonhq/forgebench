@@ -1,0 +1,32 @@
+<idea-plugin>
+  <id>dev.forgebench.jetbrains</id>
+  <name>ForgeBench</name>
+  <vendor email="hello@forgebench.dev" url="https://forgebench.dev">ForgeBench</vendor>
+  <description><![CDATA[
+    Local merge-risk review for AI-generated diffs via the ForgeBench CLI.
+    Runs forgebench review, opens Markdown reports, and exports policy dashboards.
+  ]]></description>
+  <depends>com.intellij.modules.platform</depends>
+  <extensions defaultExtensionNs="com.intellij"/>
+  <actions>
+    <group id="ForgeBench.Group" text="ForgeBench" popup="true">
+      <add-to-group group-id="ToolsMenu" anchor="last"/>
+      <action id="ForgeBench.ReviewDiff"
+              class="dev.forgebench.jetbrains.ForgeBenchReviewAction"
+              text="Review Diff + Task"
+              description="Run forgebench review on selected diff and task files"/>
+      <action id="ForgeBench.OpenReport"
+              class="dev.forgebench.jetbrains.ForgeBenchOpenReportAction"
+              text="Open Markdown Report"
+              description="Open forgebench-report.md"/>
+      <action id="ForgeBench.PolicyTest"
+              class="dev.forgebench.jetbrains.ForgeBenchPolicyTestAction"
+              text="Run Policy Tests"
+              description="Run forgebench policy test"/>
+      <action id="ForgeBench.ExportDashboard"
+              class="dev.forgebench.jetbrains.ForgeBenchExportDashboardAction"
+              text="Export Policy Dashboard"
+              description="Run forgebench dashboard"/>
+    </group>
+  </actions>
+</idea-plugin>
