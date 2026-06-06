@@ -10,6 +10,10 @@
 
 ## Unreleased
 
+- EO-010 (IDE): Production-grade VS Code extension v1.0.0 (`forgebenchRunner`, policy test, SARIF) and JetBrains Kotlin plugin with Gradle build.
+- EO-010 (GitHub App): Self-hosted org policy enforcement kit — `forgebench github-app manifest|enforce|serve`, webhook handler, check-run output.
+- EO-010 (security): SOC 2-style readiness pack — controls matrix, audit prep checklist, SOC 2 overview in `docs/security/`.
+- EO-010 (launch): Early Access positioning, pricing tiers, and contribution program docs.
 - EO-009 (FPL): ForgeBench Policy Language v1 — line-oriented DSL compiling into guardrails policy.
 - EO-009 (testing): `forgebench policy test` simulation framework with `examples/policy_tests/`.
 - EO-009 (verification): Formal-ish verification hooks and optional Grok API policy verification.
