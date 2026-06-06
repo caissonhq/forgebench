@@ -109,7 +109,7 @@ class InitTests(unittest.TestCase):
         output = repo / "custom-forgebench.yml"
         self.assertEqual(result, 0)
         self.assertTrue(output.exists())
-        self.assertIn("ForgeBench guardrails file created.", stdout.getvalue())
+        self.assertIn("Guardrails file created.", stdout.getvalue())
         parse_guardrails(output.read_text(encoding="utf-8"))
 
     def test_cli_init_missing_repo_exits_cleanly(self) -> None:

@@ -56,6 +56,10 @@ def run_doctor(repo_path: str | Path | None = None) -> DoctorReport:
         _check_writable_output(repo),
         _check_repo_path(repo),
         _check_telemetry_opt_in(),
+        _check_guardrails(repo),
+        _check_ci_workflow(repo),
+        _check_demo_available(),
+        _check_onboarding_docs(repo),
     ]
     return DoctorReport(checks=checks)
 
@@ -76,14 +80,19 @@ def format_doctor_report(report: DoctorReport) -> str:
         lines.append("Fix failed checks before relying on ForgeBench in CI or PR review.")
     elif report.has_warnings:
         lines.append("Core install looks usable. Address warnings before GitHub PR review.")
-        lines.append("Next: forgebench review --repo . --diff ./patch.diff --task ./task.md")
+        lines.append("Next: forgebench demo")
+        lines.append("      forgebench review --repo . --diff ./patch.diff --task ./task.md")
         lines.append("      forgebench review-pr PR_URL   # requires gh auth")
     else:
         lines.append("Ready for a first local review.")
+        lines.append("Onboarding checklist:")
+        lines.append("  [ ] forgebench demo")
+        lines.append("  [ ] forgebench init --enterprise   # team starter kit")
+        lines.append("  [ ] forgebench status")
+        lines.append("  [ ] Install VS Code or JetBrains ForgeBench extension")
         lines.append("Next: forgebench review-pr PR_URL")
         lines.append("      forgebench init --repo . --out forgebench.yml")
-        lines.append("Beta: forgebench repair --out forgebench-output   # paste prompt into Cursor/Codex")
-        lines.append("      docs/beta-launch.md")
+        lines.append("      forgebench repair --out forgebench-output   # paste prompt into Cursor/Codex")
     return "\n".join(lines)
 
 
@@ -249,6 +258,72 @@ def _check_telemetry_opt_in() -> DoctorCheck:
         name="telemetry",
         status=DoctorStatus.OK,
         message="disabled by default; enable with forgebench telemetry enable",
+    )
+
+
+def _check_guardrails(repo: Path) -> DoctorCheck:
+    root_guardrails = repo / "forgebench.yml"
+    ci_guardrails = repo / ".github" / "forgebench.yml"
+    if root_guardrails.exists() or ci_guardrails.exists():
+        found = root_guardrails if root_guardrails.exists() else ci_guardrails
+        return DoctorCheck(
+            name="guardrails",
+            status=DoctorStatus.OK,
+            message=f"found at {found}",
+        )
+    return DoctorCheck(
+        name="guardrails",
+        status=DoctorStatus.WARN,
+        message="no forgebench.yml found",
+        fix_hint="Run: forgebench init --repo . --out forgebench.yml (or forgebench init --enterprise)",
+    )
+
+
+def _check_ci_workflow(repo: Path) -> DoctorCheck:
+    workflow = repo / ".github" / "workflows" / "forgebench.yml"
+    if workflow.exists():
+        return DoctorCheck(
+            name="ci_workflow",
+            status=DoctorStatus.OK,
+            message=f"ForgeBench workflow at {workflow}",
+        )
+    return DoctorCheck(
+        name="ci_workflow",
+        status=DoctorStatus.WARN,
+        message="no .github/workflows/forgebench.yml",
+        fix_hint="Run: forgebench init --enterprise to generate CI workflow and trusted guardrails",
+    )
+
+
+def _check_demo_available() -> DoctorCheck:
+    demo_case = Path(__file__).resolve().parents[1] / "examples" / "golden_cases" / "generic_dependency_without_tests_review"
+    if demo_case.is_dir() and (demo_case / "patch.diff").exists():
+        return DoctorCheck(
+            name="demo",
+            status=DoctorStatus.OK,
+            message="demo case bundled; run forgebench demo",
+        )
+    return DoctorCheck(
+        name="demo",
+        status=DoctorStatus.WARN,
+        message="demo case not found in package",
+        fix_hint="Reinstall forgebench or run from the source repository",
+    )
+
+
+def _check_onboarding_docs(repo: Path) -> DoctorCheck:
+    onboarding = repo / "docs" / "forgebench-onboarding.md"
+    if onboarding.exists():
+        return DoctorCheck(
+            name="onboarding",
+            status=DoctorStatus.OK,
+            message=f"team guide at {onboarding}",
+        )
+    return DoctorCheck(
+        name="onboarding",
+        status=DoctorStatus.WARN,
+        message="no docs/forgebench-onboarding.md",
+        fix_hint="Run: forgebench init --enterprise for team onboarding docs",
     )
 
 

@@ -15,7 +15,18 @@ from forgebench.golden_case_generator import generate_golden_case_candidates
 from forgebench.telemetry import disable_telemetry, enable_telemetry, export_telemetry_bundle, telemetry_status
 from forgebench.mcp_server import run_mcp_server
 from forgebench.github_pr import GitHubPRError, GitHubPRReviewResult, run_github_pr_review
+from forgebench.demo import format_demo_result, run_demo
 from forgebench.init import InitError, write_starter_guardrails
+from forgebench.init_enterprise import (
+    EnterpriseInitOptions,
+    format_enterprise_init_result,
+    run_enterprise_init,
+    write_enterprise_manifest,
+)
+from forgebench.status import build_status_report, format_status_report, print_status_report
+from forgebench.ux.explain import explain_error
+from forgebench.ux.output import error as ux_error
+from forgebench.ux.output import heading, info, success
 from forgebench.models import ForgeBenchReport
 from forgebench.review import ReviewInputError, run_review
 from forgebench.dashboard import DashboardExportError, export_policy_dashboard
@@ -29,6 +40,12 @@ from forgebench.validate import format_validation_report, validate_guardrails_fi
 def main(argv: list[str] | None = None) -> int:
     parser = _build_parser()
     args = parser.parse_args(argv)
+
+    if args.command == "status":
+        return _run_status(args)
+
+    if args.command == "demo":
+        return _run_demo(args)
 
     if args.command == "calibrate":
         return _run_calibrate(args)
@@ -99,20 +116,98 @@ def _run_doctor(args: argparse.Namespace) -> int:
 
 def _run_init(args: argparse.Namespace) -> int:
     try:
+        if args.enterprise:
+            options = EnterpriseInitOptions(
+                org_name=args.org_name,
+                team_slug=args.team_slug,
+                preset=args.preset,
+                enable_github_app=not args.no_github_app,
+                enable_ci=not args.no_ci,
+                ci_provider=args.ci_provider,
+                org_policy_dir=args.org_policy_dir,
+                force=args.force,
+                non_interactive=args.yes,
+            )
+            result = run_enterprise_init(repo_path=args.repo, options=options)
+            if args.manifest:
+                write_enterprise_manifest(result, Path(args.manifest))
+            print(format_enterprise_init_result(result))
+            return 0
         result = write_starter_guardrails(repo_path=args.repo, output_path=args.out, force=args.force, preset=args.preset)
     except InitError as exc:
-        _fail(str(exc))
+        _fail(str(exc), explain=getattr(args, "explain", False))
 
-    print("ForgeBench guardrails file created.")
-    print()
-    print(f"Repo: {result.repo_path}")
-    print(f"Output: {result.path}")
+    heading("ForgeBench init")
+    success("Guardrails file created.")
+    info(f"Repo: {result.repo_path}")
+    info(f"Output: {result.path}")
     if result.detected:
-        print(f"Detected: {', '.join(result.detected)}")
+        info(f"Detected: {', '.join(result.detected)}")
     else:
-        print("Detected: no supported project manifest; checks defaulted to null")
-    print()
-    print("Edit protected_behavior and forbidden_patterns before relying on project-specific guardrails.")
+        info("Detected: no supported project manifest; checks defaulted to null")
+    info("Edit protected_behavior and forbidden_patterns before relying on project-specific guardrails.")
+    return 0
+
+
+def _run_status(args: argparse.Namespace) -> int:
+    report = build_status_report(repo_path=args.repo)
+    if args.json:
+        payload = {
+            "version": report.version,
+            "ready": report.doctor.ready,
+            "guardrails_path": str(report.guardrails_path) if report.guardrails_path else None,
+            "ci_guardrails_path": str(report.ci_guardrails_path) if report.ci_guardrails_path else None,
+            "policy_tests_present": report.policy_tests_present,
+            "telemetry_enabled": report.telemetry_enabled,
+            "recommendations": report.recommendations,
+            "checks": [
+                {"name": c.name, "status": c.status.value, "message": c.message}
+                for c in report.doctor.checks
+            ],
+        }
+        print(json.dumps(payload, indent=2, sort_keys=True))
+        return 0 if report.doctor.ready else 2
+    if args.plain:
+        print(format_status_report(report))
+    else:
+        print_status_report(report)
+    if getattr(args, "explain", False):
+        info("")
+        info("Status explains repository readiness. Run forgebench doctor for fix hints per check.")
+    return 0 if report.doctor.ready else 2
+
+
+def _run_demo(args: argparse.Namespace) -> int:
+    import os
+
+    plain_env = os.environ.get("FORGEBENCH_PLAIN_OUTPUT", "")
+    if args.json:
+        os.environ["FORGEBENCH_PLAIN_OUTPUT"] = "1"
+    try:
+        result = run_demo(repo_path=args.repo, output_dir=args.out, case_name=args.case)
+    except ReviewInputError as exc:
+        _fail(str(exc), explain=getattr(args, "explain", False))
+    finally:
+        if args.json:
+            if plain_env:
+                os.environ["FORGEBENCH_PLAIN_OUTPUT"] = plain_env
+            else:
+                os.environ.pop("FORGEBENCH_PLAIN_OUTPUT", None)
+    if args.json:
+        print(
+            json.dumps(
+                {
+                    "case": result.case_name,
+                    "posture": result.posture,
+                    "finding_count": result.finding_count,
+                    "report_markdown": str(result.report_markdown),
+                    "report_json": str(result.report_json),
+                },
+                indent=2,
+            )
+        )
+        return 0
+    print(format_demo_result(result))
     return 0
 
 
@@ -137,7 +232,7 @@ def _run_review(args: argparse.Namespace) -> int:
             llm_ensemble_strategy=args.llm_ensemble_strategy,
         )
     except ReviewInputError as exc:
-        _fail(str(exc))
+        _fail(str(exc), explain=getattr(args, "explain", False))
 
     _print_summary(result.report, result.written_paths, guardrails_explicit=bool(args.guardrails))
     if "prove_it_plan" in result.written_paths:
@@ -490,14 +585,65 @@ def _run_feedback(args: argparse.Namespace) -> int:
 
 
 def _build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(prog="forgebench", description="Adversarial pre-merge QA for coding-agent output.")
+    parser = argparse.ArgumentParser(
+        prog="forgebench",
+        description="Adversarial pre-merge QA for coding-agent output.",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog=(
+            "Examples:\n"
+            "  forgebench doctor\n"
+            "  forgebench demo\n"
+            "  forgebench status\n"
+            "  forgebench init --enterprise\n"
+            "  forgebench review --repo . --diff patch.diff --task task.md\n"
+            "\n"
+            "Use --explain on any command for actionable error suggestions."
+        ),
+    )
     parser.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
-    subparsers = parser.add_subparsers(dest="command")
+    parser.add_argument(
+        "--explain",
+        action="store_true",
+        help="When an error occurs, print an actionable explanation and remediation hint.",
+    )
+    subparsers = parser.add_subparsers(dest="command", metavar="COMMAND")
+
+    status = subparsers.add_parser(
+        "status",
+        help="Show repository health summary and recommended next steps.",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        description="Summarize ForgeBench readiness for the current repository.",
+    )
+    status.add_argument("--repo", required=False, default=".", help="Repository path. Defaults to current directory.")
+    status.add_argument("--json", action="store_true", help="Emit machine-readable JSON.")
+    status.add_argument("--plain", action="store_true", help="Plain text output without ANSI colors.")
+    status.add_argument("--explain", action="store_true", help="Include extended guidance in output.")
+
+    demo = subparsers.add_parser(
+        "demo",
+        help="Run a guided realistic review using a bundled golden case.",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        description="One-command demo for new users. No guardrails or network required.",
+    )
+    demo.add_argument("--repo", required=False, default=".", help="Repository path. Defaults to current directory.")
+    demo.add_argument("--out", required=False, help="Output directory. Defaults to forgebench-output/demo.")
+    demo.add_argument(
+        "--case",
+        required=False,
+        default="generic_dependency_without_tests_review",
+        help="Golden case slug under examples/golden_cases/.",
+    )
+    demo.add_argument("--json", action="store_true", help="Emit machine-readable JSON summary.")
 
     doctor = subparsers.add_parser("doctor", help="Verify local install, tooling, and first-run readiness.")
     doctor.add_argument("--repo", required=False, default=".", help="Repository path to inspect. Defaults to current directory.")
 
-    init = subparsers.add_parser("init", help="Write a starter forgebench.yml for a local repo.")
+    init = subparsers.add_parser(
+        "init",
+        help="Write starter guardrails or an enterprise team kit.",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        description="Create forgebench.yml for a repo, or --enterprise for org policy, CI, and onboarding docs.",
+    )
     init.add_argument("--repo", required=False, default=".", help="Repository to inspect. Defaults to current directory.")
     init.add_argument("--out", required=False, default="forgebench.yml", help="Output guardrails path. Defaults to forgebench.yml in the repo.")
     init.add_argument("--force", action="store_true", help="Overwrite the output file if it already exists.")
@@ -507,6 +653,15 @@ def _build_parser() -> argparse.ArgumentParser:
         default="auto",
         help="Starter guardrails preset. Defaults to auto.",
     )
+    init.add_argument("--enterprise", action="store_true", help="Generate org policy, CI workflow, and team onboarding kit.")
+    init.add_argument("--org-name", required=False, default="Acme Engineering", help="Organization name for enterprise init.")
+    init.add_argument("--team-slug", required=False, default="platform", help="Team slug for enterprise policy paths.")
+    init.add_argument("--org-policy-dir", required=False, default="org-policy", help="Directory for org-wide policy file.")
+    init.add_argument("--ci-provider", choices=["github-actions"], default="github-actions", help="CI provider for enterprise init.")
+    init.add_argument("--no-github-app", action="store_true", help="Omit GitHub App notes from onboarding docs.")
+    init.add_argument("--no-ci", action="store_true", help="Skip CI workflow and .github/forgebench.yml generation.")
+    init.add_argument("--yes", action="store_true", help="Non-interactive enterprise init (use flag defaults).")
+    init.add_argument("--manifest", required=False, help="Write enterprise-init-manifest.json to this path.")
 
     review = subparsers.add_parser("review", help="Review an AI-generated diff before merge.")
     review.add_argument("--repo", required=True, help="Path to the repository being reviewed.")
@@ -752,8 +907,13 @@ def _parse_ensemble_models(raw: str | None) -> list[str] | None:
     return models or None
 
 
-def _fail(message: str) -> None:
-    print(f"ForgeBench error: {message}", file=sys.stderr)
+def _fail(message: str, *, explain: bool = False) -> None:
+    ux_error(message)
+    hint = explain_error(message)
+    if explain and hint:
+        info(f"Suggestion: {hint}")
+    elif hint and sys.stderr.isatty():
+        print(f"Hint: {hint}", file=sys.stderr)
     raise SystemExit(2)
 
 

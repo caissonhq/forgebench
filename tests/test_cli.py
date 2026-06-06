@@ -293,6 +293,45 @@ class CliTests(unittest.TestCase):
             self.assertTrue((out_dir / "index.html").exists())
             self.assertTrue((out_dir / "benchmark-manifest.json").exists())
 
+    def test_cli_explain_flag_prints_suggestion(self) -> None:
+        stderr = StringIO()
+        stdout = StringIO()
+
+        with self.assertRaises(SystemExit) as raised:
+            with redirect_stderr(stderr), redirect_stdout(stdout):
+                main(
+                    [
+                        "--explain",
+                        "review",
+                        "--repo",
+                        str(Path.cwd()),
+                        "--diff",
+                        str(FIXTURES / "missing.patch"),
+                        "--task",
+                        str(FIXTURES / "task.md"),
+                    ]
+                )
+
+        self.assertEqual(raised.exception.code, 2)
+        combined = stderr.getvalue() + stdout.getvalue()
+        self.assertIn("diff file does not exist", combined.lower())
+        self.assertIn("git diff", combined.lower())
+
+    def test_cli_status_command(self) -> None:
+        stdout = StringIO()
+        with redirect_stdout(stdout):
+            result = main(["status", "--plain", "--repo", str(Path.cwd())])
+        self.assertIn(result, {0, 2})
+        self.assertIn("ForgeBench status", stdout.getvalue())
+
+    def test_cli_demo_command(self) -> None:
+        with TemporaryDirectory() as tmp:
+            stdout = StringIO()
+            with redirect_stdout(stdout):
+                result = main(["demo", "--repo", tmp])
+            self.assertEqual(result, 0)
+            self.assertIn("demo complete", stdout.getvalue().lower())
+
     def test_review_pr_run_checks_requires_checkout_pr(self) -> None:
         stderr = StringIO()
 

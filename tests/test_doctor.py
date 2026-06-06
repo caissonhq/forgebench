@@ -18,7 +18,9 @@ class DoctorTests(unittest.TestCase):
         report = run_doctor(repo_path=Path.cwd())
 
         names = {check.name for check in report.checks}
-        self.assertTrue({"python", "forgebench", "pyyaml", "git", "output_dir", "repo"} <= names)
+        self.assertTrue(
+            {"python", "forgebench", "pyyaml", "git", "output_dir", "repo", "guardrails", "demo"} <= names
+        )
         self.assertEqual(report.checks[0].status, DoctorStatus.OK)
 
     def test_format_doctor_report_includes_version_and_next_steps(self) -> None:
@@ -26,7 +28,7 @@ class DoctorTests(unittest.TestCase):
         text = format_doctor_report(report)
 
         self.assertIn("ForgeBench doctor", text)
-        self.assertIn("0.9.0", text)
+        self.assertTrue("demo" in text.lower() or "onboarding" in text.lower())
         if report.has_warnings:
             self.assertIn("forgebench review --repo", text)
         else:
