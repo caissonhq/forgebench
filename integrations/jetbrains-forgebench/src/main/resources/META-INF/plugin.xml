@@ -3,14 +3,23 @@
   <name>ForgeBench</name>
   <vendor email="hello@forgebench.dev" url="https://forgebench.dev">ForgeBench</vendor>
   <description><![CDATA[
-    Local merge-risk review for AI-generated diffs via the ForgeBench CLI.
-    Runs forgebench review, opens Markdown reports, and exports policy dashboards.
+    Professional merge-risk review for AI-generated diffs via the ForgeBench CLI.
+    Tool window panel, onboarding wizard, repair prompts, status, and enterprise init.
   ]]></description>
   <depends>com.intellij.modules.platform</depends>
-  <extensions defaultExtensionNs="com.intellij"/>
+  <extensions defaultExtensionNs="com.intellij">
+    <toolWindow id="ForgeBench"
+                anchor="right"
+                factoryClass="dev.forgebench.jetbrains.ForgeBenchToolWindowFactory"/>
+    <projectService serviceImplementation="dev.forgebench.jetbrains.ForgeBenchSettings"/>
+  </extensions>
   <actions>
     <group id="ForgeBench.Group" text="ForgeBench" popup="true">
       <add-to-group group-id="ToolsMenu" anchor="last"/>
+      <action id="ForgeBench.Onboarding"
+              class="dev.forgebench.jetbrains.ForgeBenchOnboardingAction"
+              text="Onboarding Wizard"
+              description="Run doctor, demo, and status checklist"/>
       <action id="ForgeBench.ReviewDiff"
               class="dev.forgebench.jetbrains.ForgeBenchReviewAction"
               text="Review Diff + Task"
@@ -19,6 +28,22 @@
               class="dev.forgebench.jetbrains.ForgeBenchOpenReportAction"
               text="Open Markdown Report"
               description="Open forgebench-report.md"/>
+      <action id="ForgeBench.Repair"
+              class="dev.forgebench.jetbrains.ForgeBenchRepairAction"
+              text="Open Repair Prompt"
+              description="Open repair-prompt.md for your coding agent"/>
+      <action id="ForgeBench.Status"
+              class="dev.forgebench.jetbrains.ForgeBenchStatusAction"
+              text="Show Status"
+              description="Run forgebench status"/>
+      <action id="ForgeBench.Init"
+              class="dev.forgebench.jetbrains.ForgeBenchInitAction"
+              text="Init / Enterprise Kit"
+              description="Run forgebench init or init --enterprise"/>
+      <action id="ForgeBench.Validate"
+              class="dev.forgebench.jetbrains.ForgeBenchValidateAction"
+              text="Validate Guardrails"
+              description="Run forgebench validate --strict"/>
       <action id="ForgeBench.PolicyTest"
               class="dev.forgebench.jetbrains.ForgeBenchPolicyTestAction"
               text="Run Policy Tests"

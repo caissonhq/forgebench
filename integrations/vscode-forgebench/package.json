@@ -1,10 +1,11 @@
 {
   "name": "forgebench",
   "displayName": "ForgeBench",
-  "description": "Merge-risk review for AI-generated diffs — local ForgeBench CLI integration.",
-  "version": "1.0.0",
+  "description": "Professional merge-risk review for AI-generated diffs — sidebar, onboarding, and repair prompts.",
+  "version": "1.1.0",
   "publisher": "caissonhq",
   "license": "Apache-2.0",
+
   "engines": {
     "vscode": "^1.85.0"
   },
@@ -16,18 +17,43 @@
     "code review",
     "ai",
     "merge risk",
-    "forgebench"
+    "forgebench",
+    "onboarding"
   ],
   "activationEvents": [
     "onStartupFinished"
   ],
   "main": "./out/extension.js",
   "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "forgebench",
+          "title": "ForgeBench",
+          "icon": "$(shield)"
+        }
+      ]
+    },
+    "views": {
+      "forgebench": [
+        {
+          "id": "forgebench.findings",
+          "name": "Findings"
+        }
+      ]
+    },
     "commands": [
+      {
+        "command": "forgebench.onboarding",
+        "title": "ForgeBench: Onboarding Wizard",
+        "category": "ForgeBench",
+        "icon": "$(rocket)"
+      },
       {
         "command": "forgebench.reviewDiff",
         "title": "ForgeBench: Review Diff + Task",
-        "category": "ForgeBench"
+        "category": "ForgeBench",
+        "icon": "$(search)"
       },
       {
         "command": "forgebench.reviewActiveFileAsDiff",
@@ -35,9 +61,31 @@
         "category": "ForgeBench"
       },
       {
+        "command": "forgebench.runDemo",
+        "title": "ForgeBench: Run Demo Review",
+        "category": "ForgeBench",
+        "icon": "$(play)"
+      },
+      {
+        "command": "forgebench.runStatus",
+        "title": "ForgeBench: Show Status",
+        "category": "ForgeBench"
+      },
+      {
+        "command": "forgebench.runDoctor",
+        "title": "ForgeBench: Run Doctor",
+        "category": "ForgeBench"
+      },
+      {
         "command": "forgebench.openReport",
         "title": "ForgeBench: Open Markdown Report",
         "category": "ForgeBench"
+      },
+      {
+        "command": "forgebench.openRepairPrompt",
+        "title": "ForgeBench: Open Repair Prompt",
+        "category": "ForgeBench",
+        "icon": "$(sparkle)"
       },
       {
         "command": "forgebench.openSarif",
@@ -55,6 +103,11 @@
         "category": "ForgeBench"
       },
       {
+        "command": "forgebench.initEnterprise",
+        "title": "ForgeBench: Enterprise Init",
+        "category": "ForgeBench"
+      },
+      {
         "command": "forgebench.exportDashboard",
         "title": "ForgeBench: Export Policy Dashboard",
         "category": "ForgeBench"
@@ -65,6 +118,37 @@
         "category": "ForgeBench"
       }
     ],
+    "menus": {
+      "view/title": [
+        {
+          "command": "forgebench.onboarding",
+          "when": "view == forgebench.findings",
+          "group": "navigation@1"
+        },
+        {
+          "command": "forgebench.reviewDiff",
+          "when": "view == forgebench.findings",
+          "group": "navigation@2"
+        },
+        {
+          "command": "forgebench.runDemo",
+          "when": "view == forgebench.findings",
+          "group": "navigation@3"
+        }
+      ],
+      "editor/context": [
+        {
+          "command": "forgebench.reviewActiveFileAsDiff",
+          "when": "resourceExtname =~ /\\.(diff|patch)$/ ",
+          "group": "forgebench@1"
+        },
+        {
+          "command": "forgebench.openRepairPrompt",
+          "when": "resourceFilename == repair-prompt.md",
+          "group": "forgebench@2"
+        }
+      ]
+    },
     "configuration": {
       "title": "ForgeBench",
       "properties": {
@@ -92,6 +176,11 @@
           "type": "boolean",
           "default": false,
           "description": "Pass --no-reviewers to forgebench review."
+        },
+        "forgebench.showOnboardingOnFirstRun": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show welcome onboarding prompt on first activation."
         }
       }
     }
