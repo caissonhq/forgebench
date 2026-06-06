@@ -45,10 +45,13 @@ jobs:
           path: forgebench.rb
           retention-days: 30
       - name: Push to homebrew-tap
-        if: ${{ secrets.HOMEBREW_TAP_TOKEN != '' }}
         env:
           TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
         run: |
+          if [ -z "${TAP_TOKEN}" ]; then
+            echo "HOMEBREW_TAP_TOKEN not set — skipping tap push."
+            exit 0
+          fi
           VERSION="${{ steps.ver.outputs.version }}"
           git clone "https://x-access-token:${TAP_TOKEN}@github.com/caissonhq/homebrew-tap.git" tap
           cp forgebench.rb tap/Formula/forgebench.rb
