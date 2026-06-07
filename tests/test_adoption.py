@@ -6,13 +6,16 @@ from tempfile import TemporaryDirectory
 import unittest
 
 from forgebench.adoption import (
+    AdoptionState,
+    build_conversion_funnel,
     build_success_checklist,
+    format_conversion_funnel,
     format_success_checklist,
     increment_review_count,
+    is_first_review_pending,
     load_adoption_state,
     record_milestone,
     save_adoption_state,
-    AdoptionState,
 )
 
 
@@ -41,6 +44,21 @@ class AdoptionTests(unittest.TestCase):
             text = format_success_checklist(items)
             self.assertIn("Adoption success checklist", text)
             self.assertIn("[x] First demo completed", text)
+
+    def test_conversion_funnel_format(self) -> None:
+        with TemporaryDirectory() as tmp:
+            path = Path(tmp) / "adoption-state.json"
+            record_milestone("first_review", path=path)
+            text = format_conversion_funnel(path=path)
+            self.assertIn("first_review", text)
+            funnel = build_conversion_funnel(path=path)
+            self.assertTrue(funnel["first_review"])
+
+    def test_is_first_review_pending_false_after_review(self) -> None:
+        with TemporaryDirectory() as tmp:
+            path = Path(tmp) / "adoption-state.json"
+            increment_review_count(path=path)
+            self.assertFalse(is_first_review_pending(path=path))
 
     def test_adoption_state_round_trip(self) -> None:
         with TemporaryDirectory() as tmp:

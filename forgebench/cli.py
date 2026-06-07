@@ -19,7 +19,26 @@ from forgebench.feedback import (
     summarize_feedback,
 )
 from forgebench.feedback_share import format_success_story_share
-from forgebench.adoption import format_feature_suggestion, format_next_actions, increment_review_count, next_actions_after_review
+from forgebench.adoption import (
+    format_feature_suggestion,
+    format_first_review_success_banner,
+    format_next_actions,
+    increment_review_count,
+    is_first_review_pending,
+    next_actions_after_review,
+)
+from forgebench.feedback import format_paid_feedback_prompt
+from forgebench.feedback_cli import (
+    add_feedback_subparsers,
+    build_feedback_action_parser,
+    is_feedback_subcommand,
+    parse_period_arg,
+    run_feedback_subcommand,
+)
+from forgebench.feedback_digest import build_feedback_digest, format_feedback_digest
+from forgebench.roadmap_cli import add_roadmap_subparser, run_roadmap_command
+from forgebench.weekly_review_cli import add_weekly_review_subparser, run_weekly_review_command
+from forgebench.launch_cli import add_launch_subparser, run_launch_command
 from forgebench.presets import PresetError, export_preset_bundle, format_preset_list, install_preset, list_presets
 from forgebench.quickstart import run_quickstart
 from forgebench.share_report import ShareReportError, export_shareable_report
@@ -63,11 +82,18 @@ from forgebench.revenue_cli import (
     run_subscribe_command,
     run_upgrade_command,
 )
+from forgebench.partner_cli import add_partner_subparser, run_partner_command
 
 
 def main(argv: list[str] | None = None) -> int:
+    cli_argv = list(argv) if argv is not None else None
+    if is_feedback_subcommand(list(cli_argv or sys.argv[1:])):
+        action_args = build_feedback_action_parser().parse_args((cli_argv or sys.argv[1:])[1:])
+        result = run_feedback_subcommand(action_args)
+        return result if result is not None else 0
+
     parser = _build_parser()
-    args = parser.parse_args(argv)
+    args = parser.parse_args(cli_argv)
     maybe_show_first_run_welcome(argv)
     maybe_record_cli_command(getattr(args, "command", None))
 
@@ -88,6 +114,9 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.command == "crm":
         return run_crm_command(args)
+
+    if args.command == "partner":
+        return run_partner_command(args)
 
     if args.command == "billing-serve":
         return run_billing_serve_command(args)
@@ -124,6 +153,15 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.command == "feedback":
         return _run_feedback(args)
+
+    if args.command == "roadmap":
+        return run_roadmap_command(args)
+
+    if args.command == "weekly-review":
+        return run_weekly_review_command(args)
+
+    if args.command == "launch":
+        return run_launch_command(args)
 
     if args.command == "validate":
         return _run_validate(args)
@@ -370,13 +408,21 @@ def _run_review(args: argparse.Namespace) -> int:
         print(f"- {result.written_paths['prove_it_checklist']}")
     print()
     print(f"Paste repair prompt: forgebench repair --out {result.output_dir}")
+    first_review = is_first_review_pending()
     increment_review_count()
     actions = next_actions_after_review(
         posture=result.report.posture.value,
         config_mode=result.report.config_mode,
         finding_count=len(result.report.findings),
+        is_first_review=first_review,
     )
     print()
+    if first_review:
+        print(format_first_review_success_banner(
+            posture=result.report.posture.value,
+            finding_count=len(result.report.findings),
+        ))
+        print()
     print(format_next_actions(actions))
     return 0
 
@@ -667,6 +713,41 @@ def _run_feedback(args: argparse.Namespace) -> int:
             print(text)
         return 0
 
+    if getattr(args, "digest", False):
+        period = getattr(args, "period", None)
+        if period:
+            digest = build_feedback_digest([args.feedback_log], period=period)
+        else:
+            digest = build_feedback_digest([args.feedback_log], days=parse_period_arg(args))
+        text = format_feedback_digest(digest)
+        if args.out:
+            output = Path(args.out)
+            output.parent.mkdir(parents=True, exist_ok=True)
+            output.write_text(text, encoding="utf-8")
+            print(f"Feedback digest written to {output}.")
+        else:
+            print(text)
+        return 0
+
+    if getattr(args, "paid", False):
+        from forgebench.licensing.store import load_license
+
+        record = load_license()
+        text = format_paid_feedback_prompt(
+            organization=record.organization if record.valid else "",
+            tier=record.tier.name.lower() if record.valid else "free",
+            posture=args.posture,
+            agent_tool=args.agent,
+        )
+        if args.out:
+            output = Path(args.out)
+            output.parent.mkdir(parents=True, exist_ok=True)
+            output.write_text(text, encoding="utf-8")
+            print(f"Paid feedback prompt written to {output}.")
+        else:
+            print(text)
+        return 0
+
     if getattr(args, "share", False):
         text = format_success_story_share(
             posture=args.posture or "REVIEW",
@@ -717,6 +798,12 @@ def _run_feedback(args: argparse.Namespace) -> int:
             outcome_label=args.outcome_label,
             reviewer_lens=args.reviewer_lens,
             case_slug=args.case_slug,
+            category=getattr(args, "category", None),
+            triage=getattr(args, "triage", None),
+            context=getattr(args, "context", None),
+            nps=getattr(args, "nps", None),
+            resolved=getattr(args, "resolved", None),
+            external_id=getattr(args, "external_id", None),
         )
     except FeedbackError as exc:
         _fail(str(exc))
@@ -931,6 +1018,21 @@ def _build_parser() -> argparse.ArgumentParser:
     feedback.add_argument("--suggest-guardrails", action="store_true", help="Suggest forgebench.yml tuning from local feedback.")
     feedback.add_argument("--suggest", action="store_true", help="Print a feature-request template for GitHub Discussions.")
     feedback.add_argument("--share", action="store_true", help="Print a success-story template for GitHub Discussions.")
+    feedback.add_argument("--digest", action="store_true", help="Weekly feedback digest (alias: feedback digest --period 7d).")
+    feedback.add_argument("--period", default=None, help="Digest period: 7d, 14d, 2w, 30d.")
+    feedback.add_argument("--digest-days", type=int, default=7, help="Days to include in --digest (default: 7).")
+    feedback.add_argument(
+        "--category",
+        choices=["bug", "false_positive", "feature_request", "calibration", "ux", "missed_concern", "other"],
+        help="Feedback category (v4).",
+    )
+    feedback.add_argument("--triage", choices=["critical", "high", "medium", "low"], help="Triage priority (v4).")
+    feedback.add_argument("--context", help="Additional context for triage (v4).")
+    feedback.add_argument("--nps", type=float, help="Optional NPS-style score 0-10 (v4).")
+    feedback.add_argument("--resolved", action="store_true", help="Mark feedback as resolved (v4).")
+    feedback.add_argument("--external-id", help="External reference ID from import (v4).")
+    add_feedback_subparsers(feedback)
+    feedback.add_argument("--paid", action="store_true", help="Structured feedback prompts for paid / design partner users.")
     feedback.add_argument("--feature-description", required=False, help="Problem description for --suggest template.")
     feedback.add_argument("--export", action="store_true", help="Export structured beta feedback bundle as JSON.")
     feedback.add_argument("--posture", required=False, choices=["BLOCK", "REVIEW", "LOW_CONCERN"], help="Optional review posture for structured beta feedback.")
@@ -1053,6 +1155,10 @@ def _build_parser() -> argparse.ArgumentParser:
     add_upgrade_subparser(subparsers)
     add_portal_subparser(subparsers)
     add_crm_subparser(subparsers)
+    add_partner_subparser(subparsers)
+    add_roadmap_subparser(subparsers)
+    add_weekly_review_subparser(subparsers)
+    add_launch_subparser(subparsers)
     add_billing_serve_subparser(subparsers)
 
     return parser

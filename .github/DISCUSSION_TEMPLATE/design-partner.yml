@@ -1,0 +1,55 @@
+title: Design Partner intake
+labels: ["design-partner", "discussion"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Apply for the ForgeBench Design Partner program (4–6 week pilot, 50% Team discount, priority support).
+        See [docs/design-partner.md](https://github.com/caissonhq/forgebench/blob/main/docs/design-partner.md).
+  - type: input
+    id: organization
+    attributes:
+      label: Organization / team name
+    validations:
+      required: true
+  - type: input
+    id: contact
+    attributes:
+      label: Primary contact email
+    validations:
+      required: true
+  - type: dropdown
+    id: team_size
+    attributes:
+      label: Engineering team size
+      options:
+        - 1–5
+        - 6–15
+        - 16–50
+        - 50+
+    validations:
+      required: true
+  - type: checkboxes
+    id: agents
+    attributes:
+      label: Coding agents in use
+      options:
+        - label: Cursor
+        - label: Codex / OpenAI
+        - label: Claude Code
+        - label: GitHub Copilot
+        - label: Other
+  - type: textarea
+    id: stack
+    attributes:
+      label: Primary stack and repo context
+      description: e.g. Python monorepo, Next.js app, Rust CLI — no proprietary code required
+    validations:
+      required: true
+  - type: textarea
+    id: goals
+    attributes:
+      label: What do you want from the pilot?
+      description: e.g. reduce false positives, CI gates, org policy for agent PRs
+    validations:
+      required: true

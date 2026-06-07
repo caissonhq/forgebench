@@ -1,0 +1,48 @@
+# Design Partner preset: agent-pr-strict
+# Tuned for AI-assisted PR workflows — stricter scope and test skepticism.
+# Install: forgebench partner presets install agent-pr-strict
+
+project: agent-pr-strict
+protected_behavior:
+  - "Auth and session flows must not regress without tests"
+  - "Public API surfaces require contract review"
+forbidden_patterns:
+  - pattern: "eval\\("
+    reason: "Dynamic eval in agent-generated code"
+  - pattern: "TODO\\(agent\\)"
+    reason: "Agent left unresolved TODO markers"
+risk_files:
+  high:
+    - "**/auth/**"
+    - "**/security/**"
+    - "**/migrations/**"
+  medium:
+    - "**/*.py"
+    - "**/*.ts"
+    - "**/*.tsx"
+    - src/**
+checks:
+  build: null
+  test: null
+  lint: null
+  typecheck: null
+check_timeout_seconds: 180
+policy:
+  path_categories:
+    docs:
+      patterns:
+        - "docs/**"
+        - "**/*.md"
+      default_severity: advisory
+    generated:
+      patterns:
+        - "**/dist/**"
+        - "**/node_modules/**"
+      default_severity: advisory
+  posture_overrides:
+    agent_pr_broad_surface:
+      posture_ceiling: REVIEW
+      reason: "Agent PRs with broad file surface need human review"
+  suppress_findings: []
+review_scope:
+  max_files_without_escalation: 25

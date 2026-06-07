@@ -73,16 +73,53 @@ def record_milestone(name: str, *, path: str | Path | None = None) -> bool:
     return True
 
 
+def is_first_review_pending(*, path: str | Path | None = None) -> bool:
+    state = load_adoption_state(path)
+    return state.review_count == 0 and "first_review" not in state.milestones
+
+
 def increment_review_count(*, path: str | Path | None = None) -> AdoptionState:
     state = load_adoption_state(path)
     updated = AdoptionState(milestones=dict(state.milestones), review_count=state.review_count + 1)
     save_adoption_state(updated, path=path)
     if updated.review_count == 1:
         record_milestone("first_review", path=path)
+        _emit_conversion_event("first_review")
     return updated
 
 
-def next_actions_after_review(*, posture: str, config_mode: str, finding_count: int) -> list[str]:
+def build_conversion_funnel(*, path: str | Path | None = None) -> dict[str, bool]:
+    state = load_adoption_state(path)
+    install_markers = ("first_install", "quickstart_completed")
+    return {
+        "install": any(marker in state.milestones for marker in install_markers),
+        "first_review": "first_review" in state.milestones,
+        "team_init": "first_team_init" in state.milestones,
+        "license_activate": "first_paid_feature" in state.milestones,
+    }
+
+
+def format_conversion_funnel(*, path: str | Path | None = None) -> str:
+    funnel = build_conversion_funnel(path=path)
+    stages = ("install", "first_review", "team_init", "license_activate")
+    lines = ["Adoption conversion funnel:"]
+    for stage in stages:
+        mark = "✓" if funnel.get(stage) else "·"
+        lines.append(f"  {mark} {stage}")
+    completed = sum(1 for stage in stages if funnel.get(stage))
+    lines.append(f"Progress: {completed}/{len(stages)} stages")
+    return "\n".join(lines)
+
+
+def next_actions_after_review(
+    *,
+    posture: str,
+    config_mode: str,
+    finding_count: int,
+    is_first_review: bool = False,
+) -> list[str]:
+    if is_first_review:
+        return _first_review_success_actions(posture=posture, config_mode=config_mode, finding_count=finding_count)
     actions: list[str] = []
     if config_mode == "generic":
         actions.append("Run `forgebench init` to add repo-specific guardrails.")
@@ -99,6 +136,40 @@ def next_actions_after_review(*, posture: str, config_mode: str, finding_count: 
         f"Share your experience: `forgebench feedback --share --posture {posture} --finding-count {finding_count}`"
     )
     return actions
+
+
+def _first_review_success_actions(*, posture: str, config_mode: str, finding_count: int) -> list[str]:
+    actions = [
+        "🎉 First review complete — you're ahead of most teams shipping agent PRs.",
+        f"Posture: {posture} · Findings: {finding_count}",
+    ]
+    if finding_count:
+        actions.append("Paste repairs: `forgebench repair --out forgebench-output`")
+    actions.extend(
+        [
+            "Share your win: `forgebench feedback --share --posture "
+            + posture
+            + f" --finding-count {finding_count}`",
+            "Export a clean report: `forgebench share-report --out forgebench-output`",
+            "Upgrade for team CI + org policy: `forgebench upgrade --tier team`",
+            "Join Design Partners (50% off, white-glove onboarding): `forgebench partner onboard`",
+            "Track your funnel: `forgebench doctor --checklist`",
+        ]
+    )
+    if config_mode == "generic":
+        actions.insert(2, "Add guardrails: `forgebench init` or `forgebench presets install python`")
+    return actions
+
+
+def format_first_review_success_banner(*, posture: str, finding_count: int) -> str:
+    return "\n".join(
+        [
+            "━" * 52,
+            "  First review complete — welcome to ForgeBench",
+            f"  Posture {posture} · {finding_count} finding(s)",
+            "━" * 52,
+        ]
+    )
 
 
 def format_next_actions(actions: list[str]) -> str:
@@ -231,5 +302,18 @@ def _emit_product_event(milestone: str) -> None:
         stage = FUNNEL_STAGE_BY_MILESTONE.get(milestone)
         if stage:
             record_product_event("funnel_stage", {"stage": stage, "milestone": milestone})
+            _emit_conversion_event(stage, milestone=milestone)
+    except Exception:
+        pass
+
+
+def _emit_conversion_event(stage: str, *, milestone: str = "") -> None:
+    try:
+        from forgebench.product_analytics import record_product_event
+
+        record_product_event(
+            "conversion_event",
+            {"stage": stage, "milestone": milestone or stage},
+        )
     except Exception:
         pass

@@ -1,0 +1,7 @@
+{
+  "title": "Agent PR — strict merge gates",
+  "description": "Design Partner preset: stricter scope + test checks for Cursor/Codex/Claude PRs.",
+  "stack": "multi",
+  "visibility": "design-partner",
+  "install": "forgebench partner presets install agent-pr-strict"
+}

@@ -29,8 +29,19 @@ Help shape ForgeBench while your team ships faster with AI-assisted development.
 ## Apply
 
 1. Run `forgebench quickstart` locally
-2. Open a GitHub Discussion: [Design Partner intake](https://github.com/caissonhq/forgebench/discussions/new?category=general)
-3. Or email **hello@forgebench.dev** with team size, stack, and agent tooling
+2. Guided onboarding: `forgebench partner onboard`
+3. Open a GitHub Discussion: [Design Partner intake](https://github.com/caissonhq/forgebench/discussions/new?category=general) (use the **Design Partner** template)
+4. Or email **hello@forgebench.dev** with team size, stack, and agent tooling
+
+## Onboarding kit (EO-018)
+
+```bash
+forgebench partner onboard --organization "Your Team" --email "you@company.com" --out forgebench-output/partner-kit
+forgebench partner presets install agent-pr-strict
+forgebench partner support
+```
+
+See [design-partner/ONBOARDING_KIT.md](design-partner/ONBOARDING_KIT.md) · [WHY_JOIN_ONE_PAGER.md](design-partner/WHY_JOIN_ONE_PAGER.md) · [FIRST_30_DAYS_TRACTION_PLAN.md](design-partner/FIRST_30_DAYS_TRACTION_PLAN.md)
 
 ## What we measure together
 

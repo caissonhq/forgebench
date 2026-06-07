@@ -22,6 +22,8 @@ ALLOWED_PRODUCT_EVENTS = {
     "extension_command",
     "milestone_reached",
     "funnel_stage",
+    "conversion_event",
+    "design_partner_onboarded",
 }
 
 

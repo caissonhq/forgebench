@@ -1,0 +1,71 @@
+{
+  "delivery_note": "Assign organization when delivering; mark assigned=true in CRM.",
+  "description": "Design Partner pilot license keys for manual delivery. Store securely.",
+  "keys": [
+    {
+      "assigned": false,
+      "key": "FB-TEAM-eyJleHBpcmVzX2F0IjogIjIwMjctMDYtMDYiLCAiZmVhdHVyZXMiOiBbXSwgImxpY2Vuc2VfaWQiOiAiZGRjZjYwYmUxM2M0IiwgIm9yZ2FuaXphdGlvbiI6ICJQaWxvdCBBbHBoYSIsICJzZWF0cyI6IDEwLCAidGllciI6ICJ0ZWFtIn0.53531ac45c35aa12ae70cd835fff1c38",
+      "organization": "unassigned",
+      "pilot_slot": "Pilot Alpha",
+      "seats": 10,
+      "tier": "team"
+    },
+    {
+      "assigned": false,
+      "key": "FB-TEAM-eyJleHBpcmVzX2F0IjogIjIwMjctMDYtMDYiLCAiZmVhdHVyZXMiOiBbXSwgImxpY2Vuc2VfaWQiOiAiM2YxYzFjNzFlYzNlIiwgIm9yZ2FuaXphdGlvbiI6ICJQaWxvdCBCZXRhIiwgInNlYXRzIjogMTUsICJ0aWVyIjogInRlYW0ifQ.8dd7ea36f32b919308472f6828f2d02a",
+      "organization": "unassigned",
+      "pilot_slot": "Pilot Beta",
+      "seats": 15,
+      "tier": "team"
+    },
+    {
+      "assigned": false,
+      "key": "FB-TEAM-eyJleHBpcmVzX2F0IjogIjIwMjctMDYtMDYiLCAiZmVhdHVyZXMiOiBbXSwgImxpY2Vuc2VfaWQiOiAiNzBkNjg0YTBiY2MzIiwgIm9yZ2FuaXphdGlvbiI6ICJQaWxvdCBHYW1tYSIsICJzZWF0cyI6IDgsICJ0aWVyIjogInRlYW0ifQ.5db6cf7fc3f650db0adccf602a1a53fe",
+      "organization": "unassigned",
+      "pilot_slot": "Pilot Gamma",
+      "seats": 8,
+      "tier": "team"
+    },
+    {
+      "assigned": false,
+      "key": "FB-TEAM-eyJleHBpcmVzX2F0IjogIjIwMjctMDYtMDYiLCAiZmVhdHVyZXMiOiBbXSwgImxpY2Vuc2VfaWQiOiAiMTQ3MmEyYzZjN2NhIiwgIm9yZ2FuaXphdGlvbiI6ICJQaWxvdCBEZWx0YSIsICJzZWF0cyI6IDEyLCAidGllciI6ICJ0ZWFtIn0.d62cd2bb6a49ac0df6663be38d5599f6",
+      "organization": "unassigned",
+      "pilot_slot": "Pilot Delta",
+      "seats": 12,
+      "tier": "team"
+    },
+    {
+      "assigned": false,
+      "key": "FB-ENTERPRISE-eyJleHBpcmVzX2F0IjogIjIwMjctMDYtMDYiLCAiZmVhdHVyZXMiOiBbXSwgImxpY2Vuc2VfaWQiOiAiNzcxMjkyZmMxNzU5IiwgIm9yZ2FuaXphdGlvbiI6ICJQaWxvdCBFcHNpbG9uIiwgInNlYXRzIjogMjUsICJ0aWVyIjogImVudGVycHJpc2UifQ.4c88fe47701c1d6c0602fd8608044325",
+      "organization": "unassigned",
+      "pilot_slot": "Pilot Epsilon",
+      "seats": 25,
+      "tier": "enterprise"
+    },
+    {
+      "assigned": false,
+      "key": "FB-TEAM-eyJleHBpcmVzX2F0IjogIjIwMjctMDYtMDYiLCAiZmVhdHVyZXMiOiBbXSwgImxpY2Vuc2VfaWQiOiAiNmViY2U1MGNmZWRkIiwgIm9yZ2FuaXphdGlvbiI6ICJQaWxvdCBaZXRhIiwgInNlYXRzIjogMTAsICJ0aWVyIjogInRlYW0ifQ.702f44d56ba8b57b894f572d2d4bbb45",
+      "organization": "unassigned",
+      "pilot_slot": "Pilot Zeta",
+      "seats": 10,
+      "tier": "team"
+    },
+    {
+      "assigned": false,
+      "key": "FB-TEAM-eyJleHBpcmVzX2F0IjogIjIwMjctMDYtMDYiLCAiZmVhdHVyZXMiOiBbXSwgImxpY2Vuc2VfaWQiOiAiNjAxODhmOTQ2ZDIwIiwgIm9yZ2FuaXphdGlvbiI6ICJQaWxvdCBFdGEiLCAic2VhdHMiOiAxMCwgInRpZXIiOiAidGVhbSJ9.3afb22128b236686e82eb0379ea73c5d",
+      "organization": "unassigned",
+      "pilot_slot": "Pilot Eta",
+      "seats": 10,
+      "tier": "team"
+    },
+    {
+      "assigned": false,
+      "key": "FB-TEAM-eyJleHBpcmVzX2F0IjogIjIwMjctMDYtMDYiLCAiZmVhdHVyZXMiOiBbXSwgImxpY2Vuc2VfaWQiOiAiYTNmMjg1ZjUxOWVlIiwgIm9yZ2FuaXphdGlvbiI6ICJQaWxvdCBUaGV0YSIsICJzZWF0cyI6IDEwLCAidGllciI6ICJ0ZWFtIn0.73666641cf615cf2464a54f634aff0ff",
+      "organization": "unassigned",
+      "pilot_slot": "Pilot Theta",
+      "seats": 10,
+      "tier": "team"
+    }
+  ],
+  "schema_version": "1.0.0"
+}

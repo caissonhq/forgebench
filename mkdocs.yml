@@ -55,9 +55,14 @@ nav:
       - GitHub App listing: github-app-listing.md
       - Design partners: design-partner.md
       - Early access: early-access.md
+  - How we iterate: how-we-iterate.md
   - Launch:
       - v1.0 release notes: launch/RELEASE_v1.0.0.md
-      - Announcements: launch/announcements.md
+      - Launch day checklist: launch/LAUNCH_DAY_CHECKLIST.md
+      - Final announcements: launch/announcements-final.md
+      - Blog announcement: launch/BLOG_ANNOUNCEMENT.md
+      - Marketplace status: launch/MARKETPLACE_STATUS.md
+      - Announcements (drafts): launch/announcements.md
       - Launch checklist: launch/LAUNCH_EXECUTION_CHECKLIST.md
       - Press one-pager: launch/press-one-pager.md
       - Design partners: design-partner.md

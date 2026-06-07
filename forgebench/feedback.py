@@ -9,7 +9,17 @@ from typing import Any
 
 
 DEFAULT_FEEDBACK_LOG = Path("forgebench-output") / "feedback.jsonl"
-FEEDBACK_SCHEMA_VERSION = "3.0.0"
+FEEDBACK_SCHEMA_VERSION = "4.0.0"
+VALID_FEEDBACK_CATEGORIES = {
+    "bug",
+    "false_positive",
+    "feature_request",
+    "calibration",
+    "ux",
+    "missed_concern",
+    "other",
+}
+VALID_TRIAGE_PRIORITIES = {"critical", "high", "medium", "low"}
 VALID_FEEDBACK_STATUSES = {"accepted", "dismissed", "wrong"}
 VALID_FEEDBACK_POSTURES = {"BLOCK", "REVIEW", "LOW_CONCERN"}
 VALID_AGENT_TOOLS = {"cursor", "codex", "claude", "copilot", "other"}
@@ -59,6 +69,12 @@ def append_feedback(
     outcome_label: str | None = None,
     reviewer_lens: str | None = None,
     case_slug: str | None = None,
+    category: str | None = None,
+    triage: str | None = None,
+    context: str | None = None,
+    nps: int | float | None = None,
+    resolved: bool | None = None,
+    external_id: str | None = None,
 ) -> Path:
     normalized_uid = uid.strip()
     if not normalized_uid:
@@ -81,6 +97,14 @@ def append_feedback(
         raise FeedbackError(
             "outcome_label must be one of: false_positive, true_positive, missed_concern, noise, calibration_gap, other."
         )
+    if category is not None and category not in VALID_FEEDBACK_CATEGORIES:
+        raise FeedbackError(
+            "category must be one of: bug, false_positive, feature_request, calibration, ux, missed_concern, other."
+        )
+    if triage is not None and triage not in VALID_TRIAGE_PRIORITIES:
+        raise FeedbackError("triage must be one of: critical, high, medium, low.")
+    if nps is not None and not (0 <= float(nps) <= 10):
+        raise FeedbackError("nps must be between 0 and 10.")
 
     path = Path(feedback_log) if feedback_log else DEFAULT_FEEDBACK_LOG
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -100,7 +124,13 @@ def append_feedback(
             case_slug,
         )
     )
-    if v3_fields:
+    v4_fields = any(
+        value is not None
+        for value in (category, triage, context, nps, resolved, external_id)
+    )
+    if v4_fields:
+        fb_version = 4
+    elif v3_fields:
         fb_version = 3
     elif v2_fields:
         fb_version = 2
@@ -143,6 +173,26 @@ def append_feedback(
         payload["reviewer_lens"] = reviewer_lens
     if case_slug:
         payload["case_slug"] = case_slug
+    if category:
+        payload["category"] = category
+    if triage:
+        payload["triage"] = triage
+    if context:
+        payload["context"] = context
+    if nps is not None:
+        payload["nps"] = float(nps)
+    if resolved is not None:
+        payload["resolved"] = bool(resolved)
+    if external_id:
+        payload["external_id"] = external_id
+
+    if fb_version >= 4 and not triage:
+        from forgebench.feedback_triage import infer_priority
+
+        triage_result = infer_priority(payload)
+        payload["category"] = payload.get("category") or triage_result.category
+        payload["triage"] = triage_result.priority
+        payload["triage_rationale"] = triage_result.rationale
 
     with path.open("a", encoding="utf-8") as handle:
         handle.write(json.dumps(payload, sort_keys=True) + "\n")
@@ -201,10 +251,11 @@ def export_feedback_bundle(
 ) -> dict[str, Any]:
     entries, malformed_count, missing_logs = _load_feedback_entries(feedback_logs)
     summary = summarize_feedback(feedback_logs)
+    has_v4 = any(int(entry.get("fb_version") or 1) >= 4 for entry in entries)
     has_v3 = any(int(entry.get("fb_version") or 1) >= 3 for entry in entries)
     return {
-        "export_version": 2 if has_v3 else 1,
-        "schema_version": FEEDBACK_SCHEMA_VERSION if has_v3 else "2.0.0",
+        "export_version": 3 if has_v4 else (2 if has_v3 else 1),
+        "schema_version": FEEDBACK_SCHEMA_VERSION if has_v4 else ("3.0.0" if has_v3 else "2.0.0"),
         "source": source,
         "repo": repo_name,
         "generated_at": datetime.now(timezone.utc).isoformat(),
@@ -424,6 +475,52 @@ def _feedback_files_for_kind(kind: str, entries: list[dict[str, Any]]) -> list[s
 def _looks_like_asset_path(path: str) -> bool:
     lower = path.replace("\\", "/").lower()
     return lower.endswith((".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg", ".ico", ".icns")) or "assets.xcassets/" in lower
+
+
+PAID_FEEDBACK_DISCUSSION_HINT = "github.com/caissonhq/forgebench/discussions/new?category=general"
+
+
+def format_paid_feedback_prompt(
+    *,
+    organization: str = "",
+    tier: str = "team",
+    posture: str | None = None,
+    agent_tool: str | None = None,
+) -> str:
+    org = organization.strip() or "your team"
+    agent = agent_tool or "cursor / codex / claude"
+    posture_line = posture or "BLOCK / REVIEW / LOW_CONCERN"
+    return "\n".join(
+        [
+            "ForgeBench paid pilot — structured feedback",
+            "",
+            f"Organization: {org} · Tier: {tier}",
+            "",
+            "Answer these prompts when recording feedback (local JSONL only):",
+            "",
+            "1. Merge decision",
+            "   Did ForgeBench posture match what you would have merged? (yes / no / unsure)",
+            f"   Command: forgebench feedback FINDING_UID --status dismissed|accepted|wrong --posture {posture_line}",
+            "",
+            "2. False positive context",
+            "   --kind <finding_kind> --outcome-label false_positive --note \"why it was noise\"",
+            "",
+            "3. Agent workflow",
+            f"   --agent {agent.split('/')[0].strip()} --workflow review_then_repair",
+            "",
+            "4. Severity calibration",
+            "   --severity low|medium|high --confidence low|medium|high --expected-posture REVIEW",
+            "",
+            "5. Weekly digest for your CSM",
+            "   forgebench feedback digest --period 7d --out forgebench-output/weekly-digest.txt",
+            "",
+            "Share with ForgeBench (optional):",
+            f"  GitHub Discussions · label `design-partner` · {PAID_FEEDBACK_DISCUSSION_HINT}",
+            "  forgebench feedback export --out forgebench-output/pilot-feedback.json",
+            "",
+            "No automatic upload — you control what leaves your machine.",
+        ]
+    ) + "\n"
 
 
 

@@ -4,7 +4,47 @@ ForgeBench reviews AI-generated diffs before they hit main.
 
 Status key: **Done** · **In progress** · **Planned** · **Exploring**
 
-Last updated: 2026-06-06 (EO-016)
+Last updated: 2026-06-06 (EO-020)
+
+## EO-020 — Launch Execution & First Traction (Done)
+
+- **Release verification**: `forgebench launch verify` — version, pipeline, docs, marketplace kits, mkdocs build
+- **Launch day kit**: `LAUNCH_DAY_CHECKLIST.md`, `announcements-final.md`, `BLOG_ANNOUNCEMENT.md`, `MARKETPLACE_STATUS.md`
+- **Announcements**: Final X thread + Show HN via `forgebench launch announce`
+- **Traction**: `launch stats`, `seed-discussions`, `day1-review`, monitoring playbook activation
+- **Design Partners**: `OUTREACH_DAY1.md`, pilot keys, onboarding commands
+- **Retrospective**: `launch-retrospective.md` template
+
+## EO-019 — Post-Launch Iteration & Feedback Loop (Done)
+
+- **Feedback v4**: category, triage (Critical/High/Medium/Low), context, NPS, resolution tracking
+- **Import**: `forgebench feedback import` from JSON, JSONL, email, GitHub Discussions
+- **Digest**: `forgebench feedback digest --period 7d` with prioritized insights + health metrics
+- **Roadmap sync**: `forgebench roadmap update [--apply]` → ROADMAP.md user-requested table
+- **Rapid iteration**: `forgebench feedback promote`, golden-case checklist, `forgebench weekly-review`
+- **Transparency**: What's New drafts, thank-you templates, [how-we-iterate.md](docs/iteration/how-we-iterate.md)
+- **Metrics**: Adoption dashboard feedback health (volume, FP rate, resolution, top issues)
+
+## EO-018 — First Users & Design Partners (Done)
+
+- **Design Partner activation**: `forgebench partner onboard`, onboarding kit export, pilot license keys, private presets (`agent-pr-strict`), priority support process
+- **Feedback channel**: GitHub Discussions Design Partner template + `design-partner` label
+- **First-user UX**: Post-first-review success banner, upgrade + Design Partner CTAs, conversion funnel analytics (`conversion_event`)
+- **Feedback loop**: `forgebench feedback --paid`, `forgebench feedback digest`, roadmap candidates from weekly digest
+- **Outreach kit**: Target partners list, email/X templates, Why Join one-pager, 30-day traction plan, status tracker
+- **Revenue activation**: 8 pilot license keys, E2E paid-flow tests, enhanced upgrade prompts
+- **Launch follow-up**: Social monitoring playbook, adoption dashboard metrics, first anonymized success story
+
+### User-requested improvements (tracked from early feedback)
+
+| Priority | Request | Status | Notes |
+|----------|---------|--------|-------|
+| P1 | Reduce `ui_copy_changed` false positives on docs-only agent PRs | In progress | EO-002 fixes; partner `agent-pr-strict` preset |
+| P1 | GitLab / CircleCI shared template repos | Planned | EO-016 Next — Growth |
+| P2 | JetBrains Marketplace publish | Planned | Plugin ships; listing pending |
+| P2 | Hosted license server GA | Planned | Self-hosted kit ships EO-017 |
+| P2 | `feedback digest` → Linear sync for CS | Exploring | Local digest + weekly-review EO-019 |
+| P3 | Slack webhook for weekly digest | Exploring | Community request |
 
 ## EO-016 — Public Launch & Initial Traction (Done)
 

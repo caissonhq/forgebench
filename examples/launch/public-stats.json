@@ -1,8 +1,16 @@
 {
+  "design_partners_active": 0,
+  "design_partners_target_30d": 8,
+  "first_reviews_reported": 0,
   "github_stars": 0,
   "github_url": "https://github.com/caissonhq/forgebench",
-  "pypi_downloads_monthly": "launch",
-  "vscode_installs": "launch",
+  "hn_points": 0,
+  "launch_date": "2026-06-06",
+  "launch_day_installs": 0,
+  "launch_status": "go-live-ready",
+  "pypi_downloads_monthly": "pending-tag",
+  "success_stories_published": 1,
+  "tagline": "ForgeBench v1.0.0 public launch — update after tag push and day-1 metrics",
   "updated_at": "2026-06-06",
-  "tagline": "ForgeBench v1.0.0 public launch — update weekly from GitHub/PyPI/VS Code metrics"
+  "vscode_installs": "pending-publish"
 }

@@ -4,6 +4,11 @@
 
 ForgeBench is adversarial pre-merge QA for coding-agent output — local-first, evidence-backed, honest about limits.
 
+!!! success "Launch day — try ForgeBench now"
+    **Solo:** `pipx install forgebench && forgebench quickstart`  
+    **Team:** [`forgebench team init`](enterprise/init.md)  
+    **Design Partner:** [Apply for 50% Team pilot](design-partner.md) · `forgebench partner onboard`
+
 [![PyPI](https://img.shields.io/pypi/v/forgebench.svg)](https://pypi.org/project/forgebench/)
 [![GitHub](https://img.shields.io/github/stars/caissonhq/forgebench?style=social)](https://github.com/caissonhq/forgebench)
 
@@ -44,6 +49,10 @@ forgebench review-pr PR_URL --guardrails .github/forgebench.yml --checkout-pr --
 
 [Design Partner program](design-partner.md) · [Early Access](early-access.md) · [GitHub App](github-app-listing.md)
 
+!!! tip "Design Partners"
+    White-glove onboarding, private presets, 50% Team discount.  
+    `forgebench partner onboard` · [Why join](https://github.com/caissonhq/forgebench/blob/main/docs/design-partner/WHY_JOIN_ONE_PAGER.md)
+
 ## Evidence hierarchy
 
 1. Deterministic checks  
@@ -77,5 +86,9 @@ forgebench feedback --share --posture REVIEW --finding-count 3
 > *"Finally a merge-risk checkpoint that runs locally."* — Indie hacker beta user
 
 *Submit yours via [GitHub Discussions](https://github.com/caissonhq/forgebench/discussions/new?category=show-and-tell) or `forgebench feedback --share`.*
+
+## How we iterate
+
+Your feedback shapes the roadmap. [How We Iterate](how-we-iterate.md) · [v1.0 release notes](launch/RELEASE_v1.0.0.md)
 
 ForgeBench does not prove code is safe. It highlights merge risk before AI-generated code reaches main.

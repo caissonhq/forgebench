@@ -1,5 +1,50 @@
 # Changelog
 
+## 1.0.3 — 2026-06-06
+
+**EO-020: Launch Execution & First Traction** — v1.0.0 go-live orchestration.
+
+### Highlights
+
+- `forgebench launch verify` — release, docs, marketplace, and mkdocs readiness checks
+- `forgebench launch announce` — final X thread + Show HN copy
+- `forgebench launch stats` — update `public-stats.json` launch metrics
+- `forgebench launch seed-discussions` — GitHub Discussions seed pack (FAQ, success story, Design Partner)
+- `forgebench launch day1-review` — post-launch digest + roadmap suggestions
+- Launch Day Checklist, blog announcement, marketplace status, outreach log, retrospective template
+- Site docs: prominent quickstart / team init / Design Partner CTAs
+
+## 1.0.2 — 2026-06-06
+
+**EO-019: Post-Launch Iteration & Feedback Loop** — systematic feedback → roadmap → ship pipeline.
+
+### Highlights
+
+- Feedback v4: `--category`, `--triage`, `--context`, `--nps`, `--resolved`, `--external-id`
+- `forgebench feedback import` — JSON, JSONL, email, Discussion exports
+- `forgebench feedback digest --period 7d` — prioritized insights, health metrics, roadmap candidates
+- `forgebench feedback promote` — feedback → golden case candidates
+- `forgebench roadmap update [--apply]` — sync high-priority themes to ROADMAP.md
+- `forgebench weekly-review` — digest + roadmap + What's New draft in one command
+- `forgebench feedback thank` — thank-you response templates
+- Adoption dashboard: feedback volume, false positive rate, resolution rate, top issues
+- Docs: [how-we-iterate.md](docs/iteration/how-we-iterate.md), Weekly Iteration Playbook, Feedback Health Scorecard
+
+## 1.0.1 — 2026-06-06
+
+**EO-018: First Users & Design Partners** — activation kit for early adopters and paying pilots.
+
+### Highlights
+
+- `forgebench partner onboard` — guided Design Partner flow + welcome email / kit export
+- `forgebench partner presets install agent-pr-strict` — private partner guardrails
+- `forgebench partner keys` — pilot license key inventory (8 keys for manual delivery)
+- `forgebench feedback --paid` and `forgebench feedback digest` — structured paid feedback + weekly digest
+- Post-first-review success banner with upgrade + Design Partner CTAs
+- Conversion funnel analytics (`conversion_event`): install → first review → team init → license activate
+- Outreach kit: target partners, email/X templates, one-pager, 30-day traction plan, status tracker
+- Launch follow-up playbook, first anonymized success story, adoption dashboard metrics refresh
+
 ## 1.0.0 — 2026-06-06
 
 **Public launch.** ForgeBench v1.0 — production-ready local merge-risk review for AI-generated diffs.
