@@ -17,7 +17,7 @@ jobs:
     name: Generate and publish Homebrew formula
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - name: Resolve version
         id: ver
         run: |
