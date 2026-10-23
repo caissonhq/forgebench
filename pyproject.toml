@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "forgebench"
 version = "1.0.0"
-description = "Adversarial pre-merge QA for coding-agent output — merge-risk review for AI-generated diffs."
+description = "Local LLM reliability test bench and evidence-backed code review."
 readme = "README.md"
 requires-python = ">=3.10"
 authors = [{ name = "ForgeBench", email = "hello@forgebench.dev" }]
@@ -68,5 +68,6 @@ license-files = ["LICENSE"]
 include = ["forgebench*"]
 
 [tool.setuptools.package-data]
+"forgebench.lab" = ["static/*", "static/icons/*"]
 "forgebench.adversaries.prompts" = ["*.md"]
 "forgebench.bundled_presets" = ["**/*"]

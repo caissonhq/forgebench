@@ -14,6 +14,7 @@ site/
 *.egg-info/
 
 forgebench-output/
+.forgebench-lab/
 forgebench-calibration-output/
 forgebench-benchmark-output/
 dogfood_runs/*

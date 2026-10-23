@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="description"
+      content="ForgeBench: a local test bench for language models under pressure."
+    />
+    <title>ForgeBench / LLM test bench</title>
+    <link rel="icon" href="/brand-mark.svg" type="image/svg+xml" />
+    <link
+      rel="preload"
+      href="/inter-variable.woff2"
+      as="font"
+      type="font/woff2"
+      crossorigin
+    />
+    <link rel="stylesheet" href="/style.css" />
+    <script src="/app.js" defer></script>
+  </head>
+  <body>
+    <aside class="sidebar">
+      <a href="#bench" class="brand" aria-label="ForgeBench home">
+        <img class="brand-mark" src="/brand-mark.svg" alt="" />
+        <span>ForgeBench<span class="brand-sub">MODEL EVALUATION</span></span>
+      </a>
+      <div class="workspace-switch">
+        <span class="workspace-avatar">P</span>
+        <div>Personal workspace<small>Local environment</small></div>
+        <span class="workspace-code">01</span>
+      </div>
+      <div class="workspace-label">WORKSPACE</div>
+      <nav aria-label="Main navigation">
+        <a href="#bench" data-view="bench" title="Test bench"
+          ><img src="/icons/sliders-horizontal.svg" alt="" /><span
+            class="nav-label"
+            >Test bench</span
+          ><span class="nav-dot"></span
+        ></a>
+        <a href="#library" data-view="library" title="Trial library"
+          ><img src="/icons/library.svg" alt="" /><span class="nav-label"
+            >Trial library</span
+          ><span id="nav-count" class="nav-count">12</span></a
+        >
+        <a href="#history" data-view="history" title="Run history"
+          ><img src="/icons/history.svg" alt="" /><span class="nav-label"
+            >Run history</span
+          ></a
+        >
+        <a href="#compare" data-view="compare" title="Compare runs"
+          ><img src="/icons/git-compare-arrows.svg" alt="" /><span
+            class="nav-label"
+            >Compare runs</span
+          ></a
+        >
+      </nav>
+      <div class="sidebar-bottom">
+        <a
+          href="#settings"
+          class="settings-link"
+          data-view="settings"
+          title="Model connection"
+          ><img src="/icons/settings-2.svg" alt="" /><span class="nav-label"
+            >Model connection</span
+          ></a
+        >
+        <div class="local-status">
+          <span class="status-dot"></span>Local session<span class="mono"
+            >PRIVATE</span
+          >
+        </div>
+      </div>
+    </aside>
+    <div class="shell">
+      <header class="topbar">
+        <div class="breadcrumb">
+          <img src="/icons/layers.svg" alt="" />Workspace<span>/</span
+          ><strong id="crumb">Test bench</strong>
+        </div>
+        <div class="top-right">
+          <span class="local-pill"
+            ><span class="status-dot"></span>Local-first</span
+          ><span class="version-label">ALPHA</span>
+        </div>
+      </header>
+      <main id="main" tabindex="-1">
+        <div class="loading">Opening the bench...</div>
+      </main>
+      <footer>
+        <span>Evidence over confidence.</span
+        ><span>No safety guarantees. No automatic approvals.</span>
+      </footer>
+    </div>
+    <dialog id="trial-dialog" aria-labelledby="dialog-title"></dialog>
+    <div id="toast" role="status" aria-live="polite"></div>
+  </body>
+</html>

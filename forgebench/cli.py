@@ -94,6 +94,14 @@ def main(argv: list[str] | None = None) -> int:
 
     parser = _build_parser()
     args = parser.parse_args(cli_argv)
+    if args.command == "serve":
+        from forgebench.lab.server import serve
+
+        try:
+            return serve(port=args.port, data_dir=args.data_dir)
+        except (OSError, ValueError) as exc:
+            print(f"Could not start the local test bench: {exc}", file=sys.stderr)
+            return 1
     maybe_show_first_run_welcome(argv)
     maybe_record_cli_command(getattr(args, "command", None))
 
@@ -842,10 +850,11 @@ def _run_feedback(args: argparse.Namespace) -> int:
 def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="forgebench",
-        description="Adversarial pre-merge QA for coding-agent output.",
+        description="Local LLM test bench and evidence-backed code review.",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=(
             "Examples:\n"
+            "  forgebench serve\n"
             "  forgebench install\n"
             "  forgebench quickstart\n"
             "  forgebench doctor --checklist\n"
@@ -865,6 +874,10 @@ def _build_parser() -> argparse.ArgumentParser:
         help="When an error occurs, print an actionable explanation and remediation hint.",
     )
     subparsers = parser.add_subparsers(dest="command", metavar="COMMAND")
+
+    lab = subparsers.add_parser("serve", help="Open the local LLM test bench and visual trial runner.")
+    lab.add_argument("--port", type=int, default=8765, help="Loopback port (default: 8765).")
+    lab.add_argument("--data-dir", default=".forgebench-lab", help="Local run storage directory.")
 
     status = subparsers.add_parser(
         "status",

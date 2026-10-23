@@ -1,5 +1,11 @@
 # ForgeBench V1 Readiness
 
+## Product Direction: LLM Test Bench (Unreleased)
+
+The new front door is `forgebench serve`: a local web app for testing model responses against explicit assertions. It includes 12 synthetic trials, labeled demo fixtures, an opt-in model endpoint, editable trials, run history, evidence, and comparison. It does not establish broad model reliability or replace human evaluation. Real-provider model-quality dogfood remains outstanding.
+
+The remainder of this document describes the existing code-review CLI, which is retained for compatibility. See [the local LLM bench guide](docs/llm-test-bench.md) for the new app's trust boundary and limitations.
+
 ForgeBench reviews AI-generated diffs before they hit main.
 
 ForgeBench does not prove code is safe. It highlights merge risk before AI-generated code reaches main.

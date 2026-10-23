@@ -5,11 +5,46 @@
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 [![VS Code](https://img.shields.io/badge/VS%20Code-Marketplace-007ACC?logo=visualstudiocode)](https://marketplace.visualstudio.com/items?itemName=caissonhq.forgebench)
 
-**ForgeBench v1.0** — reviews AI-generated diffs before they hit main.
+**ForgeBench: put language models under pressure.**
 
-Adversarial pre-merge QA for coding-agent output. [Launch notes](docs/launch/RELEASE_v1.0.0.md)
+A local web test bench for LLM reliability. The model works through a gauntlet of conflicting instructions, misleading context, missing evidence, strict output contracts, and reasoning traps. The bench records what held up and what failed.
 
-SWE-Bench asks whether an agent solved a task. ForgeBench asks whether a serious engineer would merge the diff.
+## Start the Local Test Bench
+
+From this checkout (the new web bench is not claimed to be published):
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+python3 -m pip install -e .
+forgebench serve
+```
+
+Open **http://127.0.0.1:8765**. Use `--port 8781` if that port is occupied.
+
+- **Test bench:** select trials, run them, inspect prompts, responses, and assertion evidence.
+- **Trial library:** edit the 12 synthetic starter trials or create your own.
+- **Run history:** local, persistent results with JSON export.
+- **Compare runs:** per-trial improvements and regressions for identical test definitions.
+- **Model connection:** configure a local or explicitly permitted remote OpenAI-compatible endpoint.
+
+Start with **Demo fixtures**. The Baseline and Candidate profiles return labeled synthetic responses. They do not call a model, fabricate model latency, or represent benchmark results. Custom and edited trials require a real model endpoint.
+
+To test a real model, set its exact identifier and base URL in **Model connection**, choose **Model endpoint**, and start a run. Local servers such as Ollama can expose a compatible `/v1/chat/completions` interface; see [Ollama's compatibility reference](https://docs.ollama.com/api/openai-compatibility). Install and start your model server separately.
+
+For an authenticated endpoint, provide `FORGEBENCH_LAB_API_KEY` in the server environment before starting ForgeBench. Keys are not stored in the browser or database. Remote endpoints require HTTPS and explicit consent; prompts leave the machine only when you start an endpoint run. Provider fees may apply.
+
+### What a Result Means
+
+Assertions are deterministic: exact text, contains, does-not-contain, or JSON equality. Every result exposes its criterion. These checks are deliberately narrow; a pass does not establish general model quality, semantic correctness, or safety. No model judges another model here.
+
+Runs and trial edits are stored in `.forgebench-lab/bench.sqlite3` (git-ignored). Use `--data-dir PATH` for another workspace. Prompts and responses are sensitive local data, not encrypted records. There is no telemetry, cloud account, shell execution, or automatic approval in the new bench. Stop prevents new requests; an in-flight model request can finish within its 45-second timeout.
+
+See [the LLM bench guide](docs/llm-test-bench.md) for limitations, privacy, and development checks.
+
+## Existing Code-Review CLI
+
+The earlier AI-generated diff reviewer remains available for compatibility. The documentation below applies to those existing commands, not to the new model-testing workflow. [Previous launch notes](docs/launch/RELEASE_v1.0.0.md).
 
 ForgeBench turns an AI-generated diff, the original task prompt, optional repo guardrails, optional local check results, and optional advisory LLM review into a sober merge-risk report, machine-readable JSON, and a repair prompt that can be pasted back into Codex, Claude Code, or Cursor.
 
@@ -17,7 +52,7 @@ Website: https://forgebench.dev
 
 ForgeBench does not prove code is safe. It highlights merge risk before AI-generated code reaches main.
 
-## What ForgeBench Is
+## What the Code-Review CLI Does
 
 - A local CLI for reviewing AI-generated patches before merge.
 - A deterministic static-signal pass over unified git diffs.
@@ -28,11 +63,11 @@ ForgeBench does not prove code is safe. It highlights merge risk before AI-gener
 - A sober report that classifies the patch as `BLOCK`, `REVIEW`, or `LOW_CONCERN`.
 - A focused repair prompt for tightening the original patch without expanding scope.
 
-## What ForgeBench Is Not
+## Code-Review CLI Boundaries
 
 - Not a hosted web app or SaaS dashboard (local policy dashboard export only).
 - Not a hosted review service.
-- Not a generic eval platform.
+- The legacy diff reviewer is separate from the LLM test bench above.
 - Not a GitHub App or hosted PR review service.
 - Not an automatic PR commenter unless `--post-comment` is explicitly passed.
 - Not a replacement for human review.

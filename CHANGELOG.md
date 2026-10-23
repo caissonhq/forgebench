@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased - Local LLM Test Bench
+
+- New `forgebench serve` command opens a loopback-only visual LLM testing app.
+- Twelve synthetic trials cover instruction boundaries, grounding, output contracts, and reasoning constraints.
+- Editable trials, deterministic assertions, live progress, cancellation, local SQLite history, run comparison, and JSON export.
+- Explicitly labeled offline demo profiles and an opt-in OpenAI-compatible model endpoint; no provider SDK or new runtime dependencies.
+- API keys stay in the server environment. No shell execution, telemetry, automatic approvals, or model-generated verdicts in the bench.
+- Existing code-review CLI behavior and calibration expectations are unchanged.
+
 ## 1.0.3 — 2026-06-06
 
 **EO-020: Launch Execution & First Traction** — v1.0.0 go-live orchestration.
